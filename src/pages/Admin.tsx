@@ -6,14 +6,40 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { Card } from '@/components/shared/Card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Users, FileText, TrendingUp, Save, Loader2 } from 'lucide-react';
+import { Users, FileText, TrendingUp, Save, Loader2, Building2, Activity } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 
 type Stats = {
   totalUsers: number;
   totalDiagnoses: number;
   totalCompanies: number;
+};
+
+type UserWithDetails = {
+  id: string;
+  email: string;
+  full_name: string;
+  created_at: string;
+  company_id: string | null;
+  company?: {
+    id: string;
+    name: string;
+    industry: string | null;
+  };
+  diagnoses: {
+    id: string;
+    maturity_level: string | null;
+    strategy_score: number | null;
+    operations_score: number | null;
+    finance_score: number | null;
+    marketing_score: number | null;
+    legal_score: number | null;
+    technology_score: number | null;
+    created_at: string;
+  }[];
 };
 
 export default function Admin() {
@@ -31,6 +57,9 @@ export default function Admin() {
   const [loadingStats, setLoadingStats] = useState(true);
   const [loadingPrompt, setLoadingPrompt] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [users, setUsers] = useState<UserWithDetails[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(true);
+  const [activeTab, setActiveTab] = useState('overview');
 
   useEffect(() => {
     if (authLoading || adminLoading) return;
@@ -43,6 +72,7 @@ export default function Admin() {
     // Solo cargar datos si el usuario es admin
     loadStats();
     loadSystemPrompt();
+    loadUsers();
   }, [user, isAdmin, authLoading, adminLoading, navigate]);
 
   const loadStats = async () => {
@@ -165,6 +195,108 @@ export default function Admin() {
     return <Navigate to="/" />;
   }
 
+  const loadUsers = async () => {
+    try {
+      setLoadingUsers(true);
+
+      // Obtener usuarios con sus perfiles
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (profilesError) throw profilesError;
+
+      // Para cada usuario, obtener sus empresas y diagnósticos
+      const usersWithDetails = await Promise.all(
+        (profiles || []).map(async (profile) => {
+          // Obtener empresa si existe
+          let company = null;
+          if (profile.company_id) {
+            const { data: companyData } = await supabase
+              .from('companies')
+              .select('id, name, industry')
+              .eq('id', profile.company_id)
+              .single();
+            company = companyData;
+          }
+
+          // Obtener diagnósticos del usuario
+          const { data: diagnosesData } = await supabase
+            .from('diagnoses')
+            .select('id, maturity_level, strategy_score, operations_score, finance_score, marketing_score, legal_score, technology_score, created_at')
+            .eq('user_id', profile.id)
+            .order('created_at', { ascending: false });
+
+          return {
+            id: profile.id,
+            email: profile.email,
+            full_name: profile.full_name || '',
+            created_at: profile.created_at,
+            company_id: profile.company_id,
+            company: company || undefined,
+            diagnoses: diagnosesData || []
+          };
+        })
+      );
+
+      setUsers(usersWithDetails);
+    } catch (error) {
+      console.error('Error loading users:', error);
+      toast({
+        title: 'Error',
+        description: 'No se pudieron cargar los usuarios',
+        variant: 'destructive'
+      });
+    } finally {
+      setLoadingUsers(false);
+    }
+  };
+
+  const getMaturityColor = (level: string | null) => {
+    switch (level) {
+      case 'idea':
+        return 'bg-red-500';
+      case 'startup':
+        return 'bg-orange-500';
+      case 'growth':
+        return 'bg-yellow-500';
+      case 'mature':
+        return 'bg-green-500';
+      default:
+        return 'bg-gray-500';
+    }
+  };
+
+  const getMaturityLabel = (level: string | null) => {
+    switch (level) {
+      case 'idea':
+        return 'Idea';
+      case 'startup':
+        return 'Startup';
+      case 'growth':
+        return 'Crecimiento';
+      case 'mature':
+        return 'Maduro';
+      default:
+        return 'Sin diagnóstico';
+    }
+  };
+
+  const getAverageScore = (diagnosis: UserWithDetails['diagnoses'][0]) => {
+    const scores = [
+      diagnosis.strategy_score,
+      diagnosis.operations_score,
+      diagnosis.finance_score,
+      diagnosis.marketing_score,
+      diagnosis.legal_score,
+      diagnosis.technology_score
+    ].filter((score): score is number => score !== null);
+
+    if (scores.length === 0) return 0;
+    return Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
+  };
+
   const hasChanges = systemPrompt !== originalPrompt;
 
   return (
@@ -173,12 +305,21 @@ export default function Admin() {
         <div>
           <h1 className="text-3xl font-bold text-foreground">Panel de Administración</h1>
           <p className="text-muted-foreground mt-2">
-            Gestiona la configuración del sistema y revisa estadísticas
+            Gestiona usuarios, configuración del sistema y revisa estadísticas
           </p>
         </div>
 
-        {/* Estadísticas */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="overview">Resumen</TabsTrigger>
+            <TabsTrigger value="users">Usuarios</TabsTrigger>
+            <TabsTrigger value="config">Configuración</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="overview" className="space-y-6 mt-6">
+
+            {/* Estadísticas */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <Card variant="content">
             <div className="flex items-center gap-4">
               <div className="p-3 rounded-lg bg-primary/10">
@@ -220,10 +361,151 @@ export default function Admin() {
               </div>
             </div>
           </Card>
-        </div>
+            </div>
+          </TabsContent>
 
-        {/* System Prompt Editor */}
-        <Card variant="content">
+          <TabsContent value="users" className="space-y-6 mt-6">
+            {loadingUsers ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {users.map((user) => (
+                  <Card key={user.id} variant="content">
+                    <div className="space-y-4">
+                      {/* Información del usuario */}
+                      <div className="flex items-start justify-between">
+                        <div className="space-y-1">
+                          <h3 className="text-lg font-semibold text-foreground">
+                            {user.full_name || 'Sin nombre'}
+                          </h3>
+                          <p className="text-sm text-muted-foreground">{user.email}</p>
+                          <p className="text-xs text-muted-foreground">
+                            Registrado: {new Date(user.created_at).toLocaleDateString('es-ES')}
+                          </p>
+                        </div>
+                        <Badge variant="outline">
+                          {user.diagnoses.length} diagnóstico{user.diagnoses.length !== 1 ? 's' : ''}
+                        </Badge>
+                      </div>
+
+                      {/* Empresa asociada */}
+                      {user.company && (
+                        <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg">
+                          <Building2 className="h-4 w-4 text-muted-foreground" />
+                          <div>
+                            <p className="text-sm font-medium text-foreground">{user.company.name}</p>
+                            {user.company.industry && (
+                              <p className="text-xs text-muted-foreground">{user.company.industry}</p>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Diagnósticos */}
+                      {user.diagnoses.length > 0 && (
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                            <Activity className="h-4 w-4" />
+                            Diagnósticos Realizados
+                          </div>
+                          <div className="space-y-2">
+                            {user.diagnoses.map((diagnosis) => (
+                              <div
+                                key={diagnosis.id}
+                                className="p-3 border border-border rounded-lg space-y-2"
+                              >
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-2">
+                                    <div
+                                      className={`w-2 h-2 rounded-full ${getMaturityColor(diagnosis.maturity_level)}`}
+                                    />
+                                    <span className="text-sm font-medium text-foreground">
+                                      {getMaturityLabel(diagnosis.maturity_level)}
+                                    </span>
+                                  </div>
+                                  <span className="text-xs text-muted-foreground">
+                                    {new Date(diagnosis.created_at).toLocaleDateString('es-ES')}
+                                  </span>
+                                </div>
+
+                                <div className="grid grid-cols-3 gap-2 text-xs">
+                                  <div className="space-y-1">
+                                    <p className="text-muted-foreground">Estrategia</p>
+                                    <p className="font-semibold text-foreground">
+                                      {diagnosis.strategy_score ?? '-'}/100
+                                    </p>
+                                  </div>
+                                  <div className="space-y-1">
+                                    <p className="text-muted-foreground">Operaciones</p>
+                                    <p className="font-semibold text-foreground">
+                                      {diagnosis.operations_score ?? '-'}/100
+                                    </p>
+                                  </div>
+                                  <div className="space-y-1">
+                                    <p className="text-muted-foreground">Finanzas</p>
+                                    <p className="font-semibold text-foreground">
+                                      {diagnosis.finance_score ?? '-'}/100
+                                    </p>
+                                  </div>
+                                  <div className="space-y-1">
+                                    <p className="text-muted-foreground">Marketing</p>
+                                    <p className="font-semibold text-foreground">
+                                      {diagnosis.marketing_score ?? '-'}/100
+                                    </p>
+                                  </div>
+                                  <div className="space-y-1">
+                                    <p className="text-muted-foreground">Legal</p>
+                                    <p className="font-semibold text-foreground">
+                                      {diagnosis.legal_score ?? '-'}/100
+                                    </p>
+                                  </div>
+                                  <div className="space-y-1">
+                                    <p className="text-muted-foreground">Tecnología</p>
+                                    <p className="font-semibold text-foreground">
+                                      {diagnosis.technology_score ?? '-'}/100
+                                    </p>
+                                  </div>
+                                </div>
+
+                                <div className="pt-2 border-t border-border">
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-xs text-muted-foreground">Promedio General</span>
+                                    <span className="text-sm font-bold text-primary">
+                                      {getAverageScore(diagnosis)}/100
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {user.diagnoses.length === 0 && (
+                        <p className="text-sm text-muted-foreground italic py-4 text-center">
+                          Este usuario aún no ha realizado ningún diagnóstico
+                        </p>
+                      )}
+                    </div>
+                  </Card>
+                ))}
+
+                {users.length === 0 && (
+                  <Card variant="content">
+                    <p className="text-center text-muted-foreground py-8">
+                      No hay usuarios registrados
+                    </p>
+                  </Card>
+                )}
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="config" className="space-y-6 mt-6">
+            {/* System Prompt Editor */}
+            <Card variant="content">
           <div className="space-y-4">
             <div>
               <h2 className="text-xl font-semibold text-foreground">System Prompt del Diagnóstico</h2>
@@ -280,8 +562,10 @@ export default function Admin() {
                 </div>
               </>
             )}
-          </div>
-        </Card>
+              </div>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
     </MainLayout>
   );
