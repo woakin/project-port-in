@@ -77,6 +77,68 @@ export type Database = {
         }
         Relationships: []
       }
+      diagnoses: {
+        Row: {
+          company_id: string
+          created_at: string | null
+          finance_score: number | null
+          form_responses: Json | null
+          id: string
+          insights: Json | null
+          legal_score: number | null
+          marketing_score: number | null
+          maturity_level: string | null
+          operations_score: number | null
+          strategy_score: number | null
+          technology_score: number | null
+          updated_at: string | null
+          user_id: string
+          version: number | null
+        }
+        Insert: {
+          company_id: string
+          created_at?: string | null
+          finance_score?: number | null
+          form_responses?: Json | null
+          id?: string
+          insights?: Json | null
+          legal_score?: number | null
+          marketing_score?: number | null
+          maturity_level?: string | null
+          operations_score?: number | null
+          strategy_score?: number | null
+          technology_score?: number | null
+          updated_at?: string | null
+          user_id: string
+          version?: number | null
+        }
+        Update: {
+          company_id?: string
+          created_at?: string | null
+          finance_score?: number | null
+          form_responses?: Json | null
+          id?: string
+          insights?: Json | null
+          legal_score?: number | null
+          marketing_score?: number | null
+          maturity_level?: string | null
+          operations_score?: number | null
+          strategy_score?: number | null
+          technology_score?: number | null
+          updated_at?: string | null
+          user_id?: string
+          version?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "diagnoses_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null

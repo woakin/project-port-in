@@ -50,7 +50,10 @@ const Index = () => {
               <p className="text-base text-muted-foreground">
                 Aún no tienes un plan de acción activo. Comienza realizando un diagnóstico de tu negocio.
               </p>
-              <Button className="bg-primary text-primary-foreground hover:bg-primary/90 w-fit">
+              <Button 
+                className="bg-primary text-primary-foreground hover:bg-primary/90 w-fit"
+                onClick={() => window.location.href = '/onboarding'}
+              >
                 Iniciar Diagnóstico
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>

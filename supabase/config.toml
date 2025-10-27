@@ -1,1 +1,4 @@
 project_id = "ragxwkdediazundeclwb"
+
+[functions.diagnose-company]
+verify_jwt = true
