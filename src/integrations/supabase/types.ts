@@ -14,6 +14,66 @@ export type Database = {
   }
   public: {
     Tables: {
+      action_plans: {
+        Row: {
+          company_id: string
+          complexity_level: string | null
+          created_at: string | null
+          description: string | null
+          diagnosis_id: string | null
+          id: string
+          metadata: Json | null
+          status: string | null
+          time_horizon: number | null
+          title: string
+          updated_at: string | null
+          version: string | null
+        }
+        Insert: {
+          company_id: string
+          complexity_level?: string | null
+          created_at?: string | null
+          description?: string | null
+          diagnosis_id?: string | null
+          id?: string
+          metadata?: Json | null
+          status?: string | null
+          time_horizon?: number | null
+          title: string
+          updated_at?: string | null
+          version?: string | null
+        }
+        Update: {
+          company_id?: string
+          complexity_level?: string | null
+          created_at?: string | null
+          description?: string | null
+          diagnosis_id?: string | null
+          id?: string
+          metadata?: Json | null
+          status?: string | null
+          time_horizon?: number | null
+          title?: string
+          updated_at?: string | null
+          version?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "action_plans_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "action_plans_diagnosis_id_fkey"
+            columns: ["diagnosis_id"]
+            isOneToOne: false
+            referencedRelation: "diagnoses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_logs: {
         Row: {
           action: string
@@ -142,6 +202,76 @@ export type Database = {
           },
         ]
       }
+      plan_areas: {
+        Row: {
+          description: string | null
+          id: string
+          name: string
+          order_index: number | null
+          plan_id: string
+          target_score: number | null
+        }
+        Insert: {
+          description?: string | null
+          id?: string
+          name: string
+          order_index?: number | null
+          plan_id: string
+          target_score?: number | null
+        }
+        Update: {
+          description?: string | null
+          id?: string
+          name?: string
+          order_index?: number | null
+          plan_id?: string
+          target_score?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_areas_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "action_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      plan_objectives: {
+        Row: {
+          area_id: string
+          description: string | null
+          id: string
+          order_index: number | null
+          priority: string | null
+          title: string
+        }
+        Insert: {
+          area_id: string
+          description?: string | null
+          id?: string
+          order_index?: number | null
+          priority?: string | null
+          title: string
+        }
+        Update: {
+          area_id?: string
+          description?: string | null
+          id?: string
+          order_index?: number | null
+          priority?: string | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_objectives_area_id_fkey"
+            columns: ["area_id"]
+            isOneToOne: false
+            referencedRelation: "plan_areas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -209,6 +339,110 @@ export type Database = {
           value?: Json
         }
         Relationships: []
+      }
+      task_kpis: {
+        Row: {
+          current_value: number | null
+          id: string
+          name: string
+          target_value: number | null
+          task_id: string
+          unit: string | null
+        }
+        Insert: {
+          current_value?: number | null
+          id?: string
+          name: string
+          target_value?: number | null
+          task_id: string
+          unit?: string | null
+        }
+        Update: {
+          current_value?: number | null
+          id?: string
+          name?: string
+          target_value?: number | null
+          task_id?: string
+          unit?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_kpis_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tasks: {
+        Row: {
+          assigned_to: string | null
+          completed_at: string | null
+          created_at: string | null
+          depends_on: string | null
+          description: string | null
+          due_date: string | null
+          estimated_effort: number | null
+          id: string
+          metadata: Json | null
+          objective_id: string
+          priority: string | null
+          start_date: string | null
+          status: string | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          assigned_to?: string | null
+          completed_at?: string | null
+          created_at?: string | null
+          depends_on?: string | null
+          description?: string | null
+          due_date?: string | null
+          estimated_effort?: number | null
+          id?: string
+          metadata?: Json | null
+          objective_id: string
+          priority?: string | null
+          start_date?: string | null
+          status?: string | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          assigned_to?: string | null
+          completed_at?: string | null
+          created_at?: string | null
+          depends_on?: string | null
+          description?: string | null
+          due_date?: string | null
+          estimated_effort?: number | null
+          id?: string
+          metadata?: Json | null
+          objective_id?: string
+          priority?: string | null
+          start_date?: string | null
+          status?: string | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tasks_depends_on_fkey"
+            columns: ["depends_on"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_objective_id_fkey"
+            columns: ["objective_id"]
+            isOneToOne: false
+            referencedRelation: "plan_objectives"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {

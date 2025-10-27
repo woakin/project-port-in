@@ -5,3 +5,6 @@ verify_jwt = true
 
 [functions.chat-diagnosis]
 verify_jwt = true
+
+[functions.generate-action-plan]
+verify_jwt = true

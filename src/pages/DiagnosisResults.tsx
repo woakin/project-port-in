@@ -5,8 +5,9 @@ import { Card } from '@/components/shared/Card';
 import { Badge } from '@/components/shared/Badge';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
+import { usePlan } from '@/hooks/usePlan';
 import { toast } from '@/hooks/use-toast';
-import { ArrowRight, TrendingUp, TrendingDown } from 'lucide-react';
+import { ArrowRight, TrendingUp, TrendingDown, Loader2 } from 'lucide-react';
 import { 
   Radar, 
   RadarChart, 
@@ -41,6 +42,7 @@ export default function DiagnosisResults() {
   const navigate = useNavigate();
   const [diagnosis, setDiagnosis] = useState<DiagnosisData | null>(null);
   const [loading, setLoading] = useState(true);
+  const { generatePlan, loading: generatingPlan } = usePlan();
 
   useEffect(() => {
     fetchDiagnosis();
@@ -74,6 +76,20 @@ export default function DiagnosisResults() {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleGeneratePlan = async () => {
+    if (!id) return;
+
+    const plan = await generatePlan({
+      diagnosisId: id,
+      timeHorizon: 6,
+      complexityLevel: 'medium'
+    });
+
+    if (plan) {
+      navigate(`/plans/${plan.id}`);
     }
   };
 
@@ -286,9 +302,18 @@ export default function DiagnosisResults() {
                 Genera un plan de acción personalizado basado en este diagnóstico
               </p>
             </div>
-            <Button>
-              Crear Plan de Acción
-              <ArrowRight className="ml-2 h-4 w-4" />
+            <Button onClick={handleGeneratePlan} disabled={generatingPlan}>
+              {generatingPlan ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Generando...
+                </>
+              ) : (
+                <>
+                  Crear Plan de Acción
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </>
+              )}
             </Button>
           </div>
         </Card>
