@@ -79,7 +79,7 @@ export default function Onboarding() {
           .insert({
             name: companyName,
             industry,
-            size: companySize,
+            size: companySize === 'idea' ? 'startup' : companySize,
             created_by: user.id
           })
           .select()
