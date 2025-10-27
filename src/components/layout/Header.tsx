@@ -1,4 +1,4 @@
-import { Bell, LogOut, User } from "lucide-react";
+import { Bell, LogOut, User, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { Link, useNavigate } from "react-router-dom";
@@ -38,6 +38,12 @@ export function Header() {
       <div className="flex items-center gap-4">
         {!loading && user ? (
           <>
+            <Link to="/chat-diagnosis">
+              <Button variant="ghost" size="icon" title="Consultor AI">
+                <MessageCircle className="h-5 w-5" />
+              </Button>
+            </Link>
+            
             <Button variant="ghost" size="icon" className="relative">
               <Bell className="h-5 w-5" />
               <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-destructive rounded-full" />

@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Card } from '@/components/shared/Card';
 import { toast } from '@/hooks/use-toast';
 import { Send, Loader2 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 type Message = {
   role: 'user' | 'assistant';
@@ -81,13 +82,19 @@ export default function ChatDiagnosis() {
     setSending(true);
 
     try {
+      // Obtener token de la sesión actual
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error('No hay sesión activa');
+      }
+
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat-diagnosis`,
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+            'Authorization': `Bearer ${session.access_token}`,
           },
           body: JSON.stringify({
             messages: newMessages,
@@ -158,13 +165,19 @@ export default function ChatDiagnosis() {
     setGeneratingDiagnosis(true);
 
     try {
+      // Obtener token de la sesión actual
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error('No hay sesión activa');
+      }
+
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat-diagnosis`,
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+            'Authorization': `Bearer ${session.access_token}`,
           },
           body: JSON.stringify({
             messages,
