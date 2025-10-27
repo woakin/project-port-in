@@ -19,11 +19,11 @@ type CompanyInfo = {
 };
 
 export default function ChatDiagnosis() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [sending, setSending] = useState(false);
   const [companyInfo, setCompanyInfo] = useState<CompanyInfo | null>(null);
   const [step, setStep] = useState<'company-info' | 'chat'>('company-info');
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -35,10 +35,11 @@ export default function ChatDiagnosis() {
   const [tempStage, setTempStage] = useState<'idea' | 'startup' | 'pyme' | 'corporate'>('startup');
 
   useEffect(() => {
+    if (authLoading) return;
     if (!user) {
       navigate('/auth');
     }
-  }, [user, navigate]);
+  }, [user, authLoading, navigate]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -71,13 +72,13 @@ export default function ChatDiagnosis() {
   };
 
   const sendMessage = async () => {
-    if (!input.trim() || loading || !companyInfo) return;
+    if (!input.trim() || sending || !companyInfo) return;
 
     const userMessage: Message = { role: 'user', content: input };
     const newMessages = [...messages, userMessage];
     setMessages(newMessages);
     setInput('');
-    setLoading(true);
+    setSending(true);
 
     try {
       const response = await fetch(
@@ -147,7 +148,7 @@ export default function ChatDiagnosis() {
         variant: 'destructive'
       });
     } finally {
-      setLoading(false);
+      setSending(false);
     }
   };
 
@@ -298,7 +299,7 @@ export default function ChatDiagnosis() {
               </div>
             </div>
           ))}
-          {loading && (
+          {sending && (
             <div className="flex justify-start">
               <div className="bg-muted rounded-lg p-4">
                 <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
@@ -335,9 +336,9 @@ export default function ChatDiagnosis() {
               onChange={(e) => setInput(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && sendMessage()}
               placeholder="Escribe tu respuesta..."
-              disabled={loading || generatingDiagnosis}
+              disabled={sending || generatingDiagnosis}
             />
-            <Button onClick={sendMessage} disabled={loading || generatingDiagnosis}>
+            <Button onClick={sendMessage} disabled={sending || generatingDiagnosis}>
               <Send className="h-4 w-4" />
             </Button>
           </div>

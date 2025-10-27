@@ -1,7 +1,7 @@
 import { Bell, LogOut, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 export function Header() {
   const { user, signOut, loading } = useAuth();
@@ -20,18 +20,18 @@ export function Header() {
 
       {user && (
         <nav className="flex items-center gap-8">
-          <a href="/" className="text-base text-foreground hover:text-primary transition-colors">
+          <Link to="/" className="text-base text-foreground hover:text-primary transition-colors">
             Dashboard
-          </a>
-          <a href="#" className="text-base text-muted-foreground hover:text-foreground transition-colors">
+          </Link>
+          <Link to="/chat-diagnosis" className="text-base text-muted-foreground hover:text-foreground transition-colors">
             Diagnóstico
-          </a>
-          <a href="#" className="text-base text-muted-foreground hover:text-foreground transition-colors">
+          </Link>
+          <span className="text-base text-muted-foreground cursor-not-allowed opacity-60">
             Planes
-          </a>
-          <a href="#" className="text-base text-muted-foreground hover:text-foreground transition-colors">
+          </span>
+          <span className="text-base text-muted-foreground cursor-not-allowed opacity-60">
             Documentos
-          </a>
+          </span>
         </nav>
       )}
 
