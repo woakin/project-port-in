@@ -310,61 +310,60 @@ export default function Admin() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-3 mb-6">
             <TabsTrigger value="overview">Resumen</TabsTrigger>
             <TabsTrigger value="users">Usuarios</TabsTrigger>
             <TabsTrigger value="config">Configuración</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="overview" className="space-y-6 mt-6">
-
+          <TabsContent value="overview" className="space-y-6">
             {/* Estadísticas */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card variant="content">
-            <div className="flex items-center gap-4">
-              <div className="p-3 rounded-lg bg-primary/10">
-                <Users className="h-6 w-6 text-primary" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Usuarios Registrados</p>
-                <p className="text-2xl font-bold text-foreground">
-                  {loadingStats ? '...' : stats.totalUsers}
-                </p>
-              </div>
-            </div>
-          </Card>
+              <Card variant="service">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 rounded-lg bg-primary/10">
+                    <Users className="h-6 w-6 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Usuarios Registrados</p>
+                    <p className="text-2xl font-bold text-foreground">
+                      {loadingStats ? '...' : stats.totalUsers}
+                    </p>
+                  </div>
+                </div>
+              </Card>
 
-          <Card variant="content">
-            <div className="flex items-center gap-4">
-              <div className="p-3 rounded-lg bg-primary/10">
-                <FileText className="h-6 w-6 text-primary" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Diagnósticos Realizados</p>
-                <p className="text-2xl font-bold text-foreground">
-                  {loadingStats ? '...' : stats.totalDiagnoses}
-                </p>
-              </div>
-            </div>
-          </Card>
+              <Card variant="service">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 rounded-lg bg-primary/10">
+                    <FileText className="h-6 w-6 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Diagnósticos Realizados</p>
+                    <p className="text-2xl font-bold text-foreground">
+                      {loadingStats ? '...' : stats.totalDiagnoses}
+                    </p>
+                  </div>
+                </div>
+              </Card>
 
-          <Card variant="content">
-            <div className="flex items-center gap-4">
-              <div className="p-3 rounded-lg bg-primary/10">
-                <TrendingUp className="h-6 w-6 text-primary" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Empresas Registradas</p>
-                <p className="text-2xl font-bold text-foreground">
-                  {loadingStats ? '...' : stats.totalCompanies}
-                </p>
-              </div>
-            </div>
-          </Card>
+              <Card variant="service">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 rounded-lg bg-primary/10">
+                    <TrendingUp className="h-6 w-6 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Empresas Registradas</p>
+                    <p className="text-2xl font-bold text-foreground">
+                      {loadingStats ? '...' : stats.totalCompanies}
+                    </p>
+                  </div>
+                </div>
+              </Card>
             </div>
           </TabsContent>
 
-          <TabsContent value="users" className="space-y-6 mt-6">
+          <TabsContent value="users" className="space-y-4">
             {loadingUsers ? (
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -503,65 +502,65 @@ export default function Admin() {
             )}
           </TabsContent>
 
-          <TabsContent value="config" className="space-y-6 mt-6">
+          <TabsContent value="config" className="space-y-4">
             {/* System Prompt Editor */}
             <Card variant="content">
-          <div className="space-y-4">
-            <div>
-              <h2 className="text-xl font-semibold text-foreground">System Prompt del Diagnóstico</h2>
-              <p className="text-sm text-muted-foreground mt-1">
-                Edita las instrucciones que guían al asistente durante el chat de diagnóstico
-              </p>
-            </div>
-
-            {loadingPrompt ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-6 w-6 animate-spin text-primary" />
-              </div>
-            ) : (
-              <>
-                <Textarea
-                  value={systemPrompt}
-                  onChange={(e) => setSystemPrompt(e.target.value)}
-                  placeholder="Escribe el system prompt aquí..."
-                  className="min-h-[400px] font-mono text-sm"
-                />
-
-                <div className="flex items-center justify-between">
-                  <p className="text-sm text-muted-foreground">
-                    {hasChanges && '● Hay cambios sin guardar'}
+              <div className="space-y-6">
+                <div>
+                  <h2 className="text-xl font-semibold text-foreground">System Prompt del Diagnóstico</h2>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Edita las instrucciones que guían al asistente durante el chat de diagnóstico
                   </p>
-                  <div className="flex gap-2">
-                    {hasChanges && (
-                      <Button
-                        variant="outline"
-                        onClick={() => setSystemPrompt(originalPrompt)}
-                        disabled={saving}
-                      >
-                        Descartar
-                      </Button>
-                    )}
-                    <Button
-                      onClick={saveSystemPrompt}
-                      disabled={saving || !hasChanges}
-                      className="gap-2"
-                    >
-                      {saving ? (
-                        <>
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          Guardando...
-                        </>
-                      ) : (
-                        <>
-                          <Save className="h-4 w-4" />
-                          Guardar Cambios
-                        </>
-                      )}
-                    </Button>
-                  </div>
                 </div>
-              </>
-            )}
+
+                {loadingPrompt ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                  </div>
+                ) : (
+                  <>
+                    <Textarea
+                      value={systemPrompt}
+                      onChange={(e) => setSystemPrompt(e.target.value)}
+                      placeholder="Escribe el system prompt aquí..."
+                      className="min-h-[400px] font-mono text-sm"
+                    />
+
+                    <div className="flex items-center justify-between pt-2">
+                      <p className="text-sm text-muted-foreground">
+                        {hasChanges && '● Hay cambios sin guardar'}
+                      </p>
+                      <div className="flex gap-2">
+                        {hasChanges && (
+                          <Button
+                            variant="outline"
+                            onClick={() => setSystemPrompt(originalPrompt)}
+                            disabled={saving}
+                          >
+                            Descartar
+                          </Button>
+                        )}
+                        <Button
+                          onClick={saveSystemPrompt}
+                          disabled={saving || !hasChanges}
+                          className="gap-2"
+                        >
+                          {saving ? (
+                            <>
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                              Guardando...
+                            </>
+                          ) : (
+                            <>
+                              <Save className="h-4 w-4" />
+                              Guardar Cambios
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
             </Card>
           </TabsContent>
