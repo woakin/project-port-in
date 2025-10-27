@@ -5,8 +5,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/shared/Card';
 import { toast } from '@/hooks/use-toast';
-import { Send, Loader2 } from 'lucide-react';
+import { Send, Loader2, CheckCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import ReactMarkdown from 'react-markdown';
 
 type Message = {
   role: 'user' | 'assistant';
@@ -28,6 +29,7 @@ export default function ChatDiagnosis() {
   const [companyInfo, setCompanyInfo] = useState<CompanyInfo | null>(null);
   const [step, setStep] = useState<'company-info' | 'chat'>('company-info');
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const [generatingDiagnosis, setGeneratingDiagnosis] = useState(false);
 
   // Formulario inicial
@@ -80,6 +82,9 @@ export default function ChatDiagnosis() {
     setMessages(newMessages);
     setInput('');
     setSending(true);
+    
+    // Mantener foco en el input
+    setTimeout(() => inputRef.current?.focus(), 100);
 
     try {
       // Obtener token de la sesión actual
@@ -192,13 +197,22 @@ export default function ChatDiagnosis() {
       }
 
       const data = await response.json();
+      
+      console.log('Diagnóstico generado:', data);
+
+      if (!data.diagnosis_id) {
+        throw new Error('No se recibió el ID del diagnóstico');
+      }
 
       toast({
         title: 'Diagnóstico generado',
-        description: 'Tu análisis está listo'
+        description: 'Redirigiendo a los resultados...'
       });
 
-      navigate(`/diagnosis/${data.diagnosis_id}`);
+      // Pequeña pausa para que el usuario vea el toast
+      setTimeout(() => {
+        navigate(`/diagnosis/${data.diagnosis_id}`);
+      }, 500);
 
     } catch (error) {
       console.error('Error:', error);
@@ -283,14 +297,37 @@ export default function ChatDiagnosis() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <header className="border-b border-border p-4">
-        <div className="max-w-4xl mx-auto">
-          <h1 className="text-xl font-bold text-foreground">
-            Diagnóstico: {companyInfo?.name}
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            {companyInfo?.industry} · {companyInfo?.stage}
-          </p>
+      <header className="border-b border-border p-4 bg-card">
+        <div className="max-w-4xl mx-auto flex items-center justify-between">
+          <div>
+            <h1 className="text-xl font-bold text-foreground">
+              Diagnóstico: {companyInfo?.name}
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              {companyInfo?.industry} · {companyInfo?.stage}
+            </p>
+          </div>
+          
+          {messages.length > 6 && (
+            <Button
+              onClick={generateDiagnosis}
+              disabled={generatingDiagnosis}
+              size="lg"
+              className="gap-2"
+            >
+              {generatingDiagnosis ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Generando...
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="h-4 w-4" />
+                  Generar Diagnóstico
+                </>
+              )}
+            </Button>
+          )}
         </div>
       </header>
 
@@ -308,7 +345,13 @@ export default function ChatDiagnosis() {
                     : 'bg-muted text-foreground'
                 }`}
               >
-                <p className="whitespace-pre-wrap">{message.content}</p>
+                {message.role === 'assistant' ? (
+                  <div className="prose prose-sm dark:prose-invert max-w-none [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
+                    <ReactMarkdown>{message.content}</ReactMarkdown>
+                  </div>
+                ) : (
+                  <p className="whitespace-pre-wrap">{message.content}</p>
+                )}
               </div>
             </div>
           ))}
@@ -323,35 +366,19 @@ export default function ChatDiagnosis() {
         </div>
       </div>
 
-      <div className="border-t border-border p-4">
-        <div className="max-w-4xl mx-auto space-y-3">
-          {messages.length > 6 && (
-            <Button
-              onClick={generateDiagnosis}
-              disabled={generatingDiagnosis}
-              variant="outline"
-              className="w-full"
-            >
-              {generatingDiagnosis ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Generando diagnóstico...
-                </>
-              ) : (
-                'Generar Diagnóstico Ahora'
-              )}
-            </Button>
-          )}
-          
+      <div className="border-t border-border p-4 bg-card">
+        <div className="max-w-4xl mx-auto">
           <div className="flex gap-2">
             <Input
+              ref={inputRef}
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && sendMessage()}
               placeholder="Escribe tu respuesta..."
               disabled={sending || generatingDiagnosis}
+              autoFocus
             />
-            <Button onClick={sendMessage} disabled={sending || generatingDiagnosis}>
+            <Button onClick={sendMessage} disabled={sending || generatingDiagnosis || !input.trim()}>
               <Send className="h-4 w-4" />
             </Button>
           </div>

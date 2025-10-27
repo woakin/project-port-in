@@ -174,7 +174,12 @@ Responde SOLO con un JSON válido en este formato exacto:
         .select()
         .single();
 
-      if (diagnosisError) throw diagnosisError;
+      if (diagnosisError) {
+        console.error('Error saving diagnosis:', diagnosisError);
+        throw diagnosisError;
+      }
+
+      console.log('Diagnosis saved successfully:', diagnosisData.id);
 
       return new Response(
         JSON.stringify({ 
