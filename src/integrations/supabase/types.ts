@@ -53,6 +53,7 @@ export type Database = {
       companies: {
         Row: {
           created_at: string | null
+          created_by: string | null
           id: string
           industry: string | null
           name: string
@@ -61,6 +62,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          created_by?: string | null
           id?: string
           industry?: string | null
           name: string
@@ -69,6 +71,7 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          created_by?: string | null
           id?: string
           industry?: string | null
           name?: string

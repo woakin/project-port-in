@@ -79,7 +79,8 @@ export default function Onboarding() {
           .insert({
             name: companyName,
             industry,
-            size: companySize
+            size: companySize,
+            created_by: user.id
           })
           .select()
           .single();
