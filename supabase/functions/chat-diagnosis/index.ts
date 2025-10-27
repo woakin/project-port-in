@@ -191,15 +191,17 @@ Responde SOLO con un JSON válido en este formato exacto:
     }
 
     // Conversación normal con streaming
-    const systemPrompt = `Eres un consultor empresarial experto que conduce diagnósticos empresariales mediante conversación natural.
+    const systemPrompt = `Eres un consultor empresarial experto que conduce diagnósticos empresariales.
 
-INFORMACIÓN DE LA EMPRESA:
-- Nombre: ${companyInfo?.name || 'No especificado'}
-- Industria: ${companyInfo?.industry || 'No especificado'}
-- Etapa: ${companyInfo?.stage || 'No especificado'}
+REGLA CRÍTICA: Debes trabajar ÚNICAMENTE con esta empresa específica. NO inventes ni asumas información diferente.
 
-TU MISIÓN:
-Recopilar información sobre estas 6 áreas empresariales mediante una conversación natural y profesional:
+LA EMPRESA ES:
+Nombre: ${companyInfo?.name}
+Industria: ${companyInfo?.industry}
+Etapa: ${companyInfo?.stage}
+
+TU TRABAJO:
+Hacer preguntas UNA a la vez para recopilar información sobre estas 6 áreas:
 1. Estrategia (visión, misión, objetivos)
 2. Operaciones (procesos, eficiencia, calidad)
 3. Finanzas (rentabilidad, control financiero)
@@ -207,14 +209,12 @@ Recopilar información sobre estas 6 áreas empresariales mediante una conversac
 5. Legal (compliance, contratos, protección)
 6. Tecnología (infraestructura, digitalización)
 
-DIRECTRICES:
-- Haz UNA pregunta a la vez
-- Adapta las preguntas según la etapa del negocio (${companyInfo?.stage || 'startup'})
-- Profundiza en las respuestas con preguntas de seguimiento cuando sea necesario
-- Sé conversacional, empático y profesional
-- Cuando hayas cubierto todas las áreas de forma suficiente, indica: "Tengo toda la información necesaria. ¿Te gustaría que genere tu diagnóstico ahora?"
-
-ESTADO ACTUAL: ${messages.length === 0 ? 'Inicio de conversación' : `${messages.length} mensajes intercambiados`}`;
+INSTRUCCIONES:
+- Usa SIEMPRE el nombre correcto de la empresa: ${companyInfo?.name}
+- Adapta preguntas a la etapa: ${companyInfo?.stage}
+- Una pregunta a la vez, conversacional y empático
+- NO inventes información que el usuario no te ha dado
+- Cuando tengas suficiente información de todas las áreas, pregunta si desea generar el diagnóstico`;
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
@@ -229,7 +229,7 @@ ESTADO ACTUAL: ${messages.length === 0 ? 'Inicio de conversación' : `${messages
           ...messages
         ],
         stream: true,
-        temperature: 0.8,
+        temperature: 0.5,
       }),
     });
 

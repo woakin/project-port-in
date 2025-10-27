@@ -70,7 +70,7 @@ export default function ChatDiagnosis() {
     // Mensaje inicial del asistente
     setMessages([{
       role: 'assistant',
-      content: `¡Hola! Soy tu consultor virtual. Veo que tienes ${info.name} en el sector de ${info.industry}. Me encantaría conocer más sobre tu negocio para poder ayudarte. ¿Podrías contarme cuál es tu visión principal y qué objetivos tienes para tu empresa?`
+      content: `¡Hola! Soy tu consultor virtual para **${info.name}** en el sector de **${info.industry}**. \n\nMe encantaría conocer más sobre tu negocio para poder ayudarte. ¿Podrías contarme cuál es tu visión principal y qué objetivos tienes para tu empresa?`
     }]);
   };
 
