@@ -231,9 +231,19 @@ export default function ChatDiagnosis() {
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <Card variant="content" className="w-full max-w-md">
           <div className="space-y-6">
-            <div>
-              <h1 className="text-3xl font-bold text-foreground mb-2">Diagnóstico Conversacional</h1>
-              <p className="text-muted-foreground">Primero, cuéntanos sobre tu empresa</p>
+            <div className="flex items-start justify-between">
+              <div>
+                <h1 className="text-3xl font-bold text-foreground mb-2">Diagnóstico Conversacional</h1>
+                <p className="text-muted-foreground">Primero, cuéntanos sobre tu empresa</p>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => navigate('/')}
+                className="shrink-0"
+              >
+                <Home className="h-5 w-5" />
+              </Button>
             </div>
 
             <div className="space-y-4">
