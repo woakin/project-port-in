@@ -41,8 +41,9 @@ export function Header() {
         {!loading && user ? (
           <>
             <Link to="/chat-diagnosis">
-              <Button variant="ghost" size="icon" title="Consultor AI">
-                <MessageCircle className="h-5 w-5" />
+              <Button className="gap-2">
+                <MessageCircle className="h-4 w-4" />
+                Consultor IA
               </Button>
             </Link>
             {isAdmin && (
