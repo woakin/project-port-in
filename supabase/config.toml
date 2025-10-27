@@ -2,3 +2,6 @@ project_id = "ragxwkdediazundeclwb"
 
 [functions.diagnose-company]
 verify_jwt = true
+
+[functions.chat-diagnosis]
+verify_jwt = true

@@ -1,0 +1,348 @@
+import { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/hooks/useAuth';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card } from '@/components/shared/Card';
+import { toast } from '@/hooks/use-toast';
+import { Send, Loader2 } from 'lucide-react';
+
+type Message = {
+  role: 'user' | 'assistant';
+  content: string;
+};
+
+type CompanyInfo = {
+  name: string;
+  industry: string;
+  stage: 'idea' | 'startup' | 'pyme' | 'corporate';
+};
+
+export default function ChatDiagnosis() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [companyInfo, setCompanyInfo] = useState<CompanyInfo | null>(null);
+  const [step, setStep] = useState<'company-info' | 'chat'>('company-info');
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [generatingDiagnosis, setGeneratingDiagnosis] = useState(false);
+
+  // Formulario inicial
+  const [tempName, setTempName] = useState('');
+  const [tempIndustry, setTempIndustry] = useState('');
+  const [tempStage, setTempStage] = useState<'idea' | 'startup' | 'pyme' | 'corporate'>('startup');
+
+  useEffect(() => {
+    if (!user) {
+      navigate('/auth');
+    }
+  }, [user, navigate]);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  const startChat = () => {
+    if (!tempName || !tempIndustry) {
+      toast({
+        title: 'Campos requeridos',
+        description: 'Por favor completa el nombre e industria',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    const info: CompanyInfo = {
+      name: tempName,
+      industry: tempIndustry,
+      stage: tempStage
+    };
+    
+    setCompanyInfo(info);
+    setStep('chat');
+
+    // Mensaje inicial del asistente
+    setMessages([{
+      role: 'assistant',
+      content: `¡Hola! Soy tu consultor virtual. Veo que tienes ${info.name} en el sector de ${info.industry}. Me encantaría conocer más sobre tu negocio para poder ayudarte. ¿Podrías contarme cuál es tu visión principal y qué objetivos tienes para tu empresa?`
+    }]);
+  };
+
+  const sendMessage = async () => {
+    if (!input.trim() || loading || !companyInfo) return;
+
+    const userMessage: Message = { role: 'user', content: input };
+    const newMessages = [...messages, userMessage];
+    setMessages(newMessages);
+    setInput('');
+    setLoading(true);
+
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat-diagnosis`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+          body: JSON.stringify({
+            messages: newMessages,
+            companyInfo,
+            isComplete: false
+          }),
+        }
+      );
+
+      if (!response.ok || !response.body) {
+        throw new Error('Error al conectar con el asistente');
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let assistantMessage = '';
+      let textBuffer = '';
+
+      // Agregar mensaje del asistente vacío que iremos llenando
+      setMessages([...newMessages, { role: 'assistant', content: '' }]);
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        textBuffer += decoder.decode(value, { stream: true });
+
+        let newlineIndex: number;
+        while ((newlineIndex = textBuffer.indexOf('\n')) !== -1) {
+          let line = textBuffer.slice(0, newlineIndex);
+          textBuffer = textBuffer.slice(newlineIndex + 1);
+
+          if (line.endsWith('\r')) line = line.slice(0, -1);
+          if (line.startsWith(':') || line.trim() === '') continue;
+          if (!line.startsWith('data: ')) continue;
+
+          const jsonStr = line.slice(6).trim();
+          if (jsonStr === '[DONE]') continue;
+
+          try {
+            const parsed = JSON.parse(jsonStr);
+            const content = parsed.choices?.[0]?.delta?.content;
+            if (content) {
+              assistantMessage += content;
+              setMessages([...newMessages, { role: 'assistant', content: assistantMessage }]);
+            }
+          } catch (e) {
+            console.error('Error parsing JSON:', e);
+          }
+        }
+      }
+
+    } catch (error) {
+      console.error('Error:', error);
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Error al enviar mensaje',
+        variant: 'destructive'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const generateDiagnosis = async () => {
+    if (!companyInfo) return;
+    
+    setGeneratingDiagnosis(true);
+
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat-diagnosis`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+          body: JSON.stringify({
+            messages,
+            companyInfo,
+            isComplete: true
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Error al generar diagnóstico');
+      }
+
+      const data = await response.json();
+
+      toast({
+        title: 'Diagnóstico generado',
+        description: 'Tu análisis está listo'
+      });
+
+      navigate(`/diagnosis/${data.diagnosis_id}`);
+
+    } catch (error) {
+      console.error('Error:', error);
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Error al generar diagnóstico',
+        variant: 'destructive'
+      });
+    } finally {
+      setGeneratingDiagnosis(false);
+    }
+  };
+
+  if (step === 'company-info') {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <Card variant="content" className="w-full max-w-md">
+          <div className="space-y-6">
+            <div>
+              <h1 className="text-3xl font-bold text-foreground mb-2">Diagnóstico Conversacional</h1>
+              <p className="text-muted-foreground">Primero, cuéntanos sobre tu empresa</p>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-2">
+                  Nombre de la empresa *
+                </label>
+                <Input
+                  value={tempName}
+                  onChange={(e) => setTempName(e.target.value)}
+                  placeholder="Mi Empresa S.A."
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-2">
+                  Industria o sector *
+                </label>
+                <Input
+                  value={tempIndustry}
+                  onChange={(e) => setTempIndustry(e.target.value)}
+                  placeholder="Ej: Tecnología, Alimentos..."
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-2">
+                  Etapa de tu negocio
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    { value: 'idea', label: 'Solo una idea' },
+                    { value: 'startup', label: 'Startup' },
+                    { value: 'pyme', label: 'PyME' },
+                    { value: 'corporate', label: 'Corporativo' }
+                  ].map(option => (
+                    <button
+                      key={option.value}
+                      onClick={() => setTempStage(option.value as typeof tempStage)}
+                      className={`p-3 rounded-md border-2 transition-colors ${
+                        tempStage === option.value
+                          ? 'border-primary bg-primary/10'
+                          : 'border-border hover:border-primary/50'
+                      }`}
+                    >
+                      <span className="font-medium text-sm text-foreground">{option.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <Button onClick={startChat} className="w-full" size="lg">
+                Comenzar Conversación
+              </Button>
+            </div>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-background flex flex-col">
+      <header className="border-b border-border p-4">
+        <div className="max-w-4xl mx-auto">
+          <h1 className="text-xl font-bold text-foreground">
+            Diagnóstico: {companyInfo?.name}
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            {companyInfo?.industry} · {companyInfo?.stage}
+          </p>
+        </div>
+      </header>
+
+      <div className="flex-1 overflow-y-auto p-4">
+        <div className="max-w-4xl mx-auto space-y-4">
+          {messages.map((message, idx) => (
+            <div
+              key={idx}
+              className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+            >
+              <div
+                className={`max-w-[80%] rounded-lg p-4 ${
+                  message.role === 'user'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-muted text-foreground'
+                }`}
+              >
+                <p className="whitespace-pre-wrap">{message.content}</p>
+              </div>
+            </div>
+          ))}
+          {loading && (
+            <div className="flex justify-start">
+              <div className="bg-muted rounded-lg p-4">
+                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+              </div>
+            </div>
+          )}
+          <div ref={messagesEndRef} />
+        </div>
+      </div>
+
+      <div className="border-t border-border p-4">
+        <div className="max-w-4xl mx-auto space-y-3">
+          {messages.length > 6 && (
+            <Button
+              onClick={generateDiagnosis}
+              disabled={generatingDiagnosis}
+              variant="outline"
+              className="w-full"
+            >
+              {generatingDiagnosis ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Generando diagnóstico...
+                </>
+              ) : (
+                'Generar Diagnóstico Ahora'
+              )}
+            </Button>
+          )}
+          
+          <div className="flex gap-2">
+            <Input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && sendMessage()}
+              placeholder="Escribe tu respuesta..."
+              disabled={loading || generatingDiagnosis}
+            />
+            <Button onClick={sendMessage} disabled={loading || generatingDiagnosis}>
+              <Send className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
