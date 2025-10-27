@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/shared/Card';
 import { toast } from '@/hooks/use-toast';
-import { Send, Loader2, CheckCircle } from 'lucide-react';
+import { Send, Loader2, CheckCircle, Home } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import ReactMarkdown from 'react-markdown';
 
@@ -299,13 +299,23 @@ export default function ChatDiagnosis() {
     <div className="min-h-screen bg-background flex flex-col">
       <header className="border-b border-border p-4 bg-card">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-bold text-foreground">
-              Diagnóstico: {companyInfo?.name}
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              {companyInfo?.industry} · {companyInfo?.stage}
-            </p>
+          <div className="flex items-center gap-3">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate('/')}
+              className="shrink-0"
+            >
+              <Home className="h-5 w-5" />
+            </Button>
+            <div>
+              <h1 className="text-xl font-bold text-foreground">
+                Diagnóstico: {companyInfo?.name}
+              </h1>
+              <p className="text-sm text-muted-foreground">
+                {companyInfo?.industry} · {companyInfo?.stage}
+              </p>
+            </div>
           </div>
           
           {messages.length > 6 && (
