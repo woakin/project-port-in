@@ -1,10 +1,12 @@
-import { Bell, LogOut, User, MessageCircle } from "lucide-react";
+import { Bell, LogOut, User, MessageCircle, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
+import { useAdmin } from "@/hooks/useAdmin";
 import { Link, useNavigate } from "react-router-dom";
 
 export function Header() {
   const { user, signOut, loading } = useAuth();
+  const { isAdmin } = useAdmin();
   const navigate = useNavigate();
 
   return (
@@ -43,6 +45,13 @@ export function Header() {
                 <MessageCircle className="h-5 w-5" />
               </Button>
             </Link>
+            {isAdmin && (
+              <Link to="/admin">
+                <Button variant="ghost" size="icon" title="Administración">
+                  <Shield className="h-5 w-5" />
+                </Button>
+              </Link>
+            )}
             
             <Button variant="ghost" size="icon" className="relative">
               <Bell className="h-5 w-5" />

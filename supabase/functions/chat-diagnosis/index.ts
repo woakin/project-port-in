@@ -191,14 +191,16 @@ Responde SOLO con un JSON válido en este formato exacto:
     }
 
     // Conversación normal con streaming
-    const systemPrompt = `Eres un consultor empresarial experto que conduce diagnósticos empresariales.
+    
+    // Obtener el system prompt desde la configuración
+    let systemPromptTemplate = `Eres un consultor empresarial experto que conduce diagnósticos empresariales.
 
 REGLA CRÍTICA: Debes trabajar ÚNICAMENTE con esta empresa específica. NO inventes ni asumas información diferente.
 
 LA EMPRESA ES:
-Nombre: ${companyInfo?.name}
-Industria: ${companyInfo?.industry}
-Etapa: ${companyInfo?.stage}
+Nombre: {{COMPANY_NAME}}
+Industria: {{COMPANY_INDUSTRY}}
+Etapa: {{COMPANY_STAGE}}
 
 TU TRABAJO:
 Hacer preguntas UNA a la vez para recopilar información sobre estas 6 áreas:
@@ -210,11 +212,38 @@ Hacer preguntas UNA a la vez para recopilar información sobre estas 6 áreas:
 6. Tecnología (infraestructura, digitalización)
 
 INSTRUCCIONES:
-- Usa SIEMPRE el nombre correcto de la empresa: ${companyInfo?.name}
-- Adapta preguntas a la etapa: ${companyInfo?.stage}
+- Usa SIEMPRE el nombre correcto de la empresa: {{COMPANY_NAME}}
+- Adapta preguntas a la etapa: {{COMPANY_STAGE}}
 - Una pregunta a la vez, conversacional y empático
 - NO inventes información que el usuario no te ha dado
 - Cuando tengas suficiente información de todas las áreas, pregunta si desea generar el diagnóstico`;
+
+    try {
+      const authHeader = req.headers.get('Authorization');
+      if (authHeader) {
+        const token = authHeader.replace('Bearer ', '');
+        const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+        const supabaseClient = createClient(supabaseUrl, token);
+        
+        const { data: configData, error: configError } = await supabaseClient
+          .from('system_config')
+          .select('value')
+          .eq('key', 'chat_diagnosis_system_prompt')
+          .maybeSingle();
+
+        if (!configError && configData) {
+          systemPromptTemplate = (configData.value as any).prompt || systemPromptTemplate;
+        }
+      }
+    } catch (e) {
+      console.log('Using default system prompt:', e);
+    }
+
+    // Reemplazar variables en el template
+    const systemPrompt = systemPromptTemplate
+      .replace(/\{\{COMPANY_NAME\}\}/g, companyInfo?.name || 'tu empresa')
+      .replace(/\{\{COMPANY_INDUSTRY\}\}/g, companyInfo?.industry || 'No especificado')
+      .replace(/\{\{COMPANY_STAGE\}\}/g, companyInfo?.stage || 'startup');
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',

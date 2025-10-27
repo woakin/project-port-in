@@ -9,6 +9,7 @@ import ForgotPassword from "./pages/ForgotPassword";
 import Onboarding from "./pages/Onboarding";
 import ChatDiagnosis from "./pages/ChatDiagnosis";
 import DiagnosisResults from "./pages/DiagnosisResults";
+import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -26,6 +27,7 @@ const App = () => (
           <Route path="/onboarding" element={<Onboarding />} />
           <Route path="/chat-diagnosis" element={<ChatDiagnosis />} />
           <Route path="/diagnosis/:id" element={<DiagnosisResults />} />
+          <Route path="/admin" element={<Admin />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
