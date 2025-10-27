@@ -34,16 +34,16 @@ export default function Admin() {
 
   useEffect(() => {
     if (authLoading || adminLoading) return;
+    
     if (!user || !isAdmin) {
       navigate('/');
+      return;
     }
-  }, [user, isAdmin, authLoading, adminLoading, navigate]);
 
-  useEffect(() => {
-    if (!isAdmin) return;
+    // Solo cargar datos si el usuario es admin
     loadStats();
     loadSystemPrompt();
-  }, [isAdmin]);
+  }, [user, isAdmin, authLoading, adminLoading, navigate]);
 
   const loadStats = async () => {
     try {
