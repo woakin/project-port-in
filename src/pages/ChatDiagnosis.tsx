@@ -336,46 +336,23 @@ export default function ChatDiagnosis() {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <header className="border-b border-border p-4 bg-card">
-        <div className="max-w-4xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => navigate('/')}
-              className="shrink-0"
-            >
-              <Home className="h-5 w-5" />
-            </Button>
-            <div>
-              <h1 className="text-xl font-bold text-foreground">
-                {companyInfo?.projectName}
-              </h1>
-              <p className="text-sm text-muted-foreground">
-                {companyInfo?.name} · {companyInfo?.industry}
-              </p>
-            </div>
+        <div className="max-w-4xl mx-auto flex items-center gap-3">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => navigate('/')}
+            className="shrink-0"
+          >
+            <Home className="h-5 w-5" />
+          </Button>
+          <div>
+            <h1 className="text-xl font-bold text-foreground">
+              {companyInfo?.projectName}
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              {companyInfo?.name} · {companyInfo?.industry}
+            </p>
           </div>
-          
-          {messages.length > 6 && (
-            <Button
-              onClick={generateDiagnosis}
-              disabled={generatingDiagnosis}
-              size="lg"
-              className="gap-2"
-            >
-              {generatingDiagnosis ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Generando...
-                </>
-              ) : (
-                <>
-                  <CheckCircle className="h-4 w-4" />
-                  Generar Diagnóstico
-                </>
-              )}
-            </Button>
-          )}
         </div>
       </header>
 
@@ -414,8 +391,30 @@ export default function ChatDiagnosis() {
         </div>
       </div>
 
-      <div className="border-t border-border p-4 bg-card">
-        <div className="max-w-4xl mx-auto">
+      <div className="border-t border-border bg-card">
+        <div className="max-w-4xl mx-auto p-4 space-y-3">
+          {messages.length > 6 && (
+            <div className="flex justify-center">
+              <Button
+                onClick={generateDiagnosis}
+                disabled={generatingDiagnosis}
+                size="lg"
+                className="gap-2 w-full max-w-md"
+              >
+                {generatingDiagnosis ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Generando diagnóstico...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="h-4 w-4" />
+                    Generar Diagnóstico y Plan
+                  </>
+                )}
+              </Button>
+            </div>
+          )}
           <div className="flex gap-2">
             <Input
               ref={inputRef}

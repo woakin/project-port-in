@@ -65,10 +65,24 @@ serve(async (req) => {
 
     // Si el usuario indica que terminó, generamos el diagnóstico final
     if (isComplete) {
-      const authHeader = req.headers.get('Authorization')!;
-      const token = authHeader.replace('Bearer ', '');
+      const authHeader = req.headers.get('Authorization');
+      if (!authHeader) {
+        throw new Error('No authorization header');
+      }
+      
       const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-      const supabase = createClient(supabaseUrl, token);
+      const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+      const supabase = createClient(supabaseUrl, supabaseServiceKey);
+      
+      // Obtener el usuario del token JWT
+      const token = authHeader.replace('Bearer ', '');
+      const supabaseClient = createClient(supabaseUrl, Deno.env.get('SUPABASE_ANON_KEY')!);
+      const { data: { user }, error: userError } = await supabaseClient.auth.getUser(token);
+      
+      if (userError || !user) {
+        console.error('Auth error:', userError);
+        throw new Error('Usuario no autenticado');
+      }
 
       // Extraer información de los mensajes
       const conversationHistory = messages.map((m: Message) => 
@@ -188,12 +202,6 @@ Responde SOLO con un JSON válido en este formato exacto:
       }
       
       const diagnosis = JSON.parse(jsonMatch[0]);
-
-      // Obtener el usuario autenticado
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError || !user) {
-        throw new Error('Usuario no autenticado');
-      }
 
       // Crear o actualizar empresa
       const { data: existingCompany } = await supabase
