@@ -22,18 +22,12 @@ export function Header() {
       </div>
 
       {user && (
-        <nav className="flex items-center gap-8">
+        <nav className="flex items-center gap-6">
           <Link to="/" className="text-base text-foreground hover:text-primary transition-colors">
             Dashboard
           </Link>
-          <Link to="/plans" className="text-base text-muted-foreground hover:text-foreground transition-colors">
-            Planes
-          </Link>
           <Link to="/tasks" className="text-base text-muted-foreground hover:text-foreground transition-colors">
             Tareas
-          </Link>
-          <Link to="/projects" className="text-base text-muted-foreground hover:text-foreground transition-colors">
-            Proyectos
           </Link>
           <span className="text-base text-muted-foreground cursor-not-allowed opacity-60">
             Documentos
@@ -44,25 +38,22 @@ export function Header() {
       <div className="flex items-center gap-4">
         {!loading && user ? (
           <>
-            <ProjectSelector />
+            <div className="flex items-center gap-3 border-l border-border pl-4">
+              <ProjectSelector />
+            </div>
+            
             <Link to="/chat-diagnosis">
               <Button className="gap-2">
                 <MessageCircle className="h-4 w-4" />
                 Consultor IA
               </Button>
             </Link>
-            {isAdmin && (
-              <Link to="/admin">
-                <Button variant="ghost" size="icon" title="Administración">
-                  <Shield className="h-5 w-5" />
-                </Button>
-              </Link>
-            )}
             
             <Button variant="ghost" size="icon" className="relative">
               <Bell className="h-5 w-5" />
               <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-destructive rounded-full" />
             </Button>
+            
             <div className="flex items-center gap-2 border-l border-border pl-4">
               <User className="h-4 w-4 text-muted-foreground" />
               <span className="text-sm text-muted-foreground">{user.email}</span>
@@ -75,6 +66,14 @@ export function Header() {
                 <LogOut className="h-4 w-4" />
               </Button>
             </div>
+            
+            {isAdmin && (
+              <Link to="/admin">
+                <Button variant="ghost" size="icon" title="Administración">
+                  <Shield className="h-5 w-5" />
+                </Button>
+              </Link>
+            )}
           </>
         ) : !loading && !user ? (
           <Button onClick={() => navigate('/auth')}>

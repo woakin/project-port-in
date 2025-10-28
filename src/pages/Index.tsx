@@ -260,15 +260,43 @@ const Index = () => {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-standard">
           <div className="lg:col-span-2">
+            <Card variant="service">
+              <h3 className="text-base font-semibold text-foreground mb-4">Próximas Tareas</h3>
+              {loadingTasks ? (
+                <div className="text-sm text-muted-foreground">Cargando tareas...</div>
+              ) : upcomingTasks.length === 0 ? (
+                <div className="text-sm text-muted-foreground py-8 text-center">
+                  No hay tareas próximas
+                </div>
+              ) : (
+                <TasksList 
+                  tasks={upcomingTasks.slice(0, 8)} 
+                  onUpdateStatus={handleTaskStatusUpdate}
+                />
+              )}
+              {upcomingTasks.length > 0 && (
+                <Button 
+                  variant="ghost" 
+                  className="w-full mt-4"
+                  onClick={() => navigate('/tasks')}
+                >
+                  Ver todas las tareas
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              )}
+            </Card>
+          </div>
+
+          <div className="space-y-standard">
             <Card variant="content">
               {latestDiagnosis ? (
                 <>
                   <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-base font-semibold text-foreground">Diagnóstico del Proyecto</h3>
+                    <h3 className="text-base font-semibold text-foreground">Diagnóstico</h3>
                     <Badge variant="default">Completado</Badge>
                   </div>
                   <div className="space-y-3 mb-4">
-                    <div className="grid grid-cols-3 gap-3">
+                    <div className="grid grid-cols-2 gap-2">
                       <div>
                         <p className="text-xs text-muted-foreground">Estrategia</p>
                         <p className="text-lg font-semibold text-foreground">{latestDiagnosis.strategy_score}%</p>
@@ -281,60 +309,40 @@ const Index = () => {
                         <p className="text-xs text-muted-foreground">Finanzas</p>
                         <p className="text-lg font-semibold text-foreground">{latestDiagnosis.finance_score}%</p>
                       </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Marketing</p>
+                        <p className="text-lg font-semibold text-foreground">{latestDiagnosis.marketing_score}%</p>
+                      </div>
                     </div>
-                    <p className="text-sm text-muted-foreground">
-                      Nivel de madurez: <span className="font-medium text-foreground capitalize">{latestDiagnosis.maturity_level}</span>
+                    <p className="text-xs text-muted-foreground">
+                      Nivel: <span className="font-medium text-foreground capitalize">{latestDiagnosis.maturity_level}</span>
                     </p>
                   </div>
                   <Button 
                     onClick={() => navigate(`/diagnosis/${latestDiagnosis.id}`)}
-                    variant="default"
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
                   >
-                    Ver Diagnóstico Completo
+                    Ver Completo
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
                 </>
               ) : (
                 <>
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-base font-semibold text-foreground">Plan de Acción Activo</h3>
-                    <Badge variant="default">En progreso</Badge>
-                  </div>
-                  <p className="text-base text-muted-foreground">
-                    Aún no tienes un plan de acción activo. Comienza realizando un diagnóstico de tu negocio.
+                  <h3 className="text-base font-semibold text-foreground mb-2">Diagnóstico</h3>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Realiza un diagnóstico de tu negocio
                   </p>
                   <Button 
                     onClick={() => navigate('/chat-diagnosis')}
-                    className="bg-primary text-primary-foreground hover:bg-primary/90 w-fit"
+                    size="sm"
+                    className="w-full"
                   >
                     Iniciar Diagnóstico
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
                 </>
-              )}
-            </Card>
-          </div>
-
-          <div className="space-y-standard">
-            <Card variant="service">
-              <h3 className="text-base font-semibold text-foreground mb-4">Próximas Tareas</h3>
-              {loadingTasks ? (
-                <div className="text-sm text-muted-foreground">Cargando tareas...</div>
-              ) : (
-                <TasksList 
-                  tasks={upcomingTasks} 
-                  onUpdateStatus={handleTaskStatusUpdate}
-                />
-              )}
-              {upcomingTasks.length > 0 && (
-                <Button 
-                  variant="ghost" 
-                  className="w-full mt-4"
-                  onClick={() => navigate('/plans')}
-                >
-                  Ver todas las tareas
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
               )}
             </Card>
 
