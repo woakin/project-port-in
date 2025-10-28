@@ -113,19 +113,20 @@ export default function Projects() {
 
   return (
     <MainLayout>
-      <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold">Proyectos</h1>
-            <p className="text-muted-foreground mt-2">
-              Gestiona todos tus proyectos y sus métricas principales
-            </p>
+      <div className="container mx-auto p-comfortable">
+        <div className="space-y-6">
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-3xl font-bold">Proyectos</h1>
+              <p className="text-muted-foreground mt-2">
+                Gestiona todos tus proyectos y sus métricas principales
+              </p>
+            </div>
+            <Button onClick={() => setCreateDialogOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Nuevo Proyecto
+            </Button>
           </div>
-          <Button onClick={() => setCreateDialogOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Nuevo Proyecto
-          </Button>
-        </div>
 
         {projects.length === 0 ? (
           <Card className="p-12 text-center">
@@ -277,6 +278,7 @@ export default function Projects() {
             })}
           </div>
         )}
+        </div>
       </div>
 
       <CreateProjectDialog
