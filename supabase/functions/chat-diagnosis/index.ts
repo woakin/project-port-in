@@ -83,13 +83,104 @@ serve(async (req) => {
         throw new Error('Usuario no autenticado');
       }
 
+      // Buscar diagnósticos previos y plan activo
+      let existingDiagnoses: any[] = [];
+      let latestVersion = 0;
+      let previousDiagnosis: any = null;
+      let activePlan: any = null;
+
+      // Buscar si existe proyecto con ese nombre
+      const { data: existingProjects } = await supabase
+        .from('projects')
+        .select('id')
+        .eq('name', companyInfo.projectName)
+        .limit(1);
+
+      if (existingProjects && existingProjects.length > 0) {
+        const projectId = existingProjects[0].id;
+
+        // Obtener diagnósticos previos
+        const { data: diagnoses } = await supabase
+          .from('diagnoses')
+          .select('*')
+          .eq('project_id', projectId)
+          .order('version', { ascending: false });
+
+        if (diagnoses && diagnoses.length > 0) {
+          existingDiagnoses = diagnoses;
+          previousDiagnosis = diagnoses[0];
+          latestVersion = previousDiagnosis.version || 0;
+        }
+
+        // Obtener plan activo con toda su estructura
+        const { data: plans } = await supabase
+          .from('action_plans')
+          .select(`
+            *,
+            plan_areas (
+              *,
+              plan_objectives (
+                *,
+                tasks (*)
+              )
+            )
+          `)
+          .eq('project_id', projectId)
+          .eq('status', 'active')
+          .maybeSingle();
+
+        activePlan = plans;
+      }
+
+      // Construir contexto histórico si existe
+      let historicalContext = '';
+      if (previousDiagnosis && activePlan) {
+        const allTasks = activePlan.plan_areas?.flatMap((a: any) => 
+          a.plan_objectives?.flatMap((o: any) => o.tasks || []) || []
+        ) || [];
+        const completedTasks = allTasks.filter((t: any) => t.status === 'completed');
+        const inProgressTasks = allTasks.filter((t: any) => t.status === 'in_progress');
+        
+        historicalContext = `
+CONTEXTO DEL PROYECTO EXISTENTE:
+- Nombre: ${companyInfo.projectName}
+- Diagnósticos previos: ${existingDiagnoses.length}
+- Última actualización: ${new Date(previousDiagnosis.created_at).toLocaleDateString()}
+
+DIAGNÓSTICO ANTERIOR (Versión ${previousDiagnosis.version}):
+- Maturity Level: ${previousDiagnosis.maturity_level}
+- Scores previos:
+  * Estrategia: ${previousDiagnosis.strategy_score}
+  * Operaciones: ${previousDiagnosis.operations_score}
+  * Finanzas: ${previousDiagnosis.finance_score}
+  * Marketing: ${previousDiagnosis.marketing_score}
+  * Legal: ${previousDiagnosis.legal_score}
+  * Tecnología: ${previousDiagnosis.technology_score}
+
+PLAN ACTUAL EN EJECUCIÓN (v${activePlan.version}):
+- Total de tareas: ${allTasks.length}
+- Tareas completadas: ${completedTasks.length}
+- Tareas en progreso: ${inProgressTasks.length}
+- Progreso general: ${allTasks.length > 0 ? Math.round((completedTasks.length / allTasks.length) * 100) : 0}%
+
+INSTRUCCIONES PARA ACTUALIZACIÓN:
+1. **Analiza la EVOLUCIÓN**: compara scores anteriores con la situación actual
+2. **Mantén continuidad**: identifica áreas/objetivos que deben continuar (usa "action": "keep")
+3. **NO recrees tareas existentes**: solo agrega tareas NUEVAS marcadas con "is_new": true
+4. **Ajusta prioridades**: basándote en progreso real
+5. **Genera insights de CAMBIO**: enfócate en evolución, no repitas análisis
+6. **Incluye changes_summary**: breve resumen de qué cambió
+
+`;
+      }
+
       // Extraer información de los mensajes
       const conversationHistory = messages.map((m: Message) => 
         `${m.role === 'user' ? 'Usuario' : 'Asistente'}: ${m.content}`
       ).join('\n\n');
 
       // Analizar con IA para generar diagnóstico
-      const analysisPrompt = `Analiza la siguiente conversación sobre una empresa y genera un diagnóstico empresarial completo y un plan de acción estratégico.
+      const analysisPrompt = `Analiza la siguiente conversación sobre una empresa y genera ${previousDiagnosis ? 'una ACTUALIZACIÓN del' : 'un'} diagnóstico empresarial completo y un plan de acción estratégico.
 
 Información de la empresa:
 - Nombre: ${companyInfo.name}
@@ -98,11 +189,13 @@ Información de la empresa:
 - Proyecto: ${companyInfo.projectName}
 ${companyInfo.projectDescription ? `- Descripción del proyecto: ${companyInfo.projectDescription}` : ''}
 
-Conversación:
+${historicalContext}
+
+Conversación${previousDiagnosis ? ' (Nueva información del usuario)' : ''}:
 ${conversationHistory}
 
 INSTRUCCIONES:
-1. Analiza la conversación y asigna scores (0-100) para cada área:
+1. Analiza la conversación y asigna scores (0-100) para cada área${previousDiagnosis ? ', considerando evolución' : ''}:
    - Estrategia
    - Operaciones
    - Finanzas
@@ -144,22 +237,26 @@ Responde SOLO con un JSON válido en este formato exacto:
     "technology": { "strengths": string[], "improvements": string[], "recommendations": string[] }
   },
   "action_plan": {
+    ${previousDiagnosis ? '"changes_summary": "Breve resumen de cambios principales",' : ''}
     "areas": [
       {
         "name": string,
         "description": string,
         "target_score": number,
+        ${previousDiagnosis ? '"action": "keep" | "update" | "new",' : ''}
         "objectives": [
           {
             "title": string,
             "description": string,
             "priority": "high" | "medium" | "low",
+            ${previousDiagnosis ? '"action": "keep" | "update" | "new",' : ''}
             "tasks": [
               {
                 "title": string,
                 "description": string,
                 "priority": "high" | "medium" | "low",
-                "estimated_effort": number
+                "estimated_effort": number,
+                ${previousDiagnosis ? '"is_new": true  // SOLO tareas NUEVAS' : ''}
               }
             ]
           }
@@ -167,7 +264,9 @@ Responde SOLO con un JSON válido en este formato exacto:
       }
     ]
   }
-}`;
+}${previousDiagnosis ? `
+
+IMPORTANTE: Solo incluye tareas marcadas con "is_new": true. NO incluyas tareas existentes.` : ''}`;
 
       const analysisResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
         method: 'POST',
@@ -247,28 +346,43 @@ Responde SOLO con un JSON válido en este formato exacto:
           .eq('id', user.id);
       }
 
-      // Crear proyecto
-      const { data: newProject, error: projectError } = await supabase
-        .from('projects')
-        .insert({
-          name: companyInfo.projectName,
-          description: companyInfo.projectDescription || null,
-          company_id: companyId,
-          status: 'active',
-          is_default: true
-        })
-        .select()
-        .single();
+      // Crear o actualizar proyecto
+      let projectData;
+      if (existingProjects && existingProjects.length > 0) {
+        // Usar proyecto existente
+        const { data: project } = await supabase
+          .from('projects')
+          .select('*')
+          .eq('id', existingProjects[0].id)
+          .single();
+        projectData = project;
+      } else {
+        // Crear nuevo proyecto
+        const { data: newProject, error: projectError } = await supabase
+          .from('projects')
+          .insert({
+            name: companyInfo.projectName,
+            description: companyInfo.projectDescription || null,
+            company_id: companyId,
+            status: 'active',
+            is_default: true
+          })
+          .select()
+          .single();
 
-      if (projectError) throw projectError;
+        if (projectError) throw projectError;
+        projectData = newProject;
+      }
 
-      // Guardar diagnóstico
+      // Guardar diagnóstico (nuevo o actualización)
+      const newVersion = latestVersion + 1;
       const { data: diagnosisData, error: diagnosisError } = await supabase
         .from('diagnoses')
         .insert({
           company_id: companyId,
           user_id: user.id,
-          project_id: newProject.id,
+          project_id: projectData.id,
+          version: newVersion,
           maturity_level: diagnosis.maturity_level,
           strategy_score: diagnosis.scores.strategy,
           operations_score: diagnosis.scores.operations,
@@ -277,92 +391,207 @@ Responde SOLO con un JSON válido en este formato exacto:
           legal_score: diagnosis.scores.legal,
           technology_score: diagnosis.scores.technology,
           insights: diagnosis.insights,
-          form_responses: { conversation: conversationHistory }
+          form_responses: { 
+            conversation: conversationHistory,
+            is_update: latestVersion > 0,
+            previous_version: latestVersion > 0 ? latestVersion : undefined
+          }
         })
         .select()
         .single();
 
       if (diagnosisError) {
         console.error('Error saving diagnosis:', diagnosisError);
-        console.error('Diagnosis data:', JSON.stringify({
-          maturity_level: diagnosis.maturity_level,
-          scores: diagnosis.scores
-        }));
         throw new Error(`Error al guardar diagnóstico: ${diagnosisError.message}`);
       }
 
-      console.log('Diagnosis saved successfully:', diagnosisData.id);
+      console.log(`Diagnosis v${newVersion} saved:`, diagnosisData.id);
 
-      // Crear plan de acción si está disponible
-      if (diagnosis.action_plan?.areas) {
-        const { data: planData, error: planError } = await supabase
+      // Crear o actualizar plan de acción
+      const incrementVersion = (v: string) => {
+        const parts = v.split('.');
+        const minor = parseInt(parts[1] || '0') + 1;
+        return `${parts[0]}.${minor}`;
+      };
+
+      let planData: any;
+      if (activePlan) {
+        // Actualizar plan existente
+        const newPlanVersion = incrementVersion(activePlan.version || '1.0');
+        const { data: updatedPlan, error: planError } = await supabase
+          .from('action_plans')
+          .update({
+            diagnosis_id: diagnosisData.id,
+            version: newPlanVersion,
+            description: `Plan actualizado - Diagnóstico v${newVersion}`,
+            updated_at: new Date().toISOString(),
+            metadata: {
+              ...activePlan.metadata,
+              previous_version: activePlan.version,
+              changes_summary: diagnosis.action_plan.changes_summary || 'Plan actualizado',
+              updated_at: new Date().toISOString()
+            }
+          })
+          .eq('id', activePlan.id)
+          .select()
+          .single();
+
+        if (planError) throw planError;
+        planData = updatedPlan;
+        console.log(`Plan updated to v${newPlanVersion}:`, planData.id);
+      } else {
+        // Crear nuevo plan
+        const { data: newPlan, error: planError } = await supabase
           .from('action_plans')
           .insert({
             company_id: companyId,
-            project_id: newProject.id,
+            project_id: projectData.id,
             diagnosis_id: diagnosisData.id,
             title: `Plan de Acción - ${companyInfo.projectName}`,
             description: `Plan generado automáticamente basado en el diagnóstico conversacional`,
+            version: '1.0',
             status: 'active',
             time_horizon: 90
           })
           .select()
           .single();
 
-        if (planError) {
-          console.error('Error creating action plan:', planError);
-        } else {
-          // Crear áreas del plan
-          for (const [index, area] of diagnosis.action_plan.areas.entries()) {
-            const { data: areaData, error: areaError } = await supabase
+        if (planError) throw planError;
+        planData = newPlan;
+        console.log('Plan v1.0 created:', planData.id);
+      }
+
+      // Procesar áreas, objetivos y tareas
+      if (diagnosis.action_plan?.areas) {
+        for (const area of diagnosis.action_plan.areas) {
+          const areaAction = area.action || 'new';
+          
+          let areaData: any;
+          
+          // Buscar área existente si es actualización
+          if (activePlan && (areaAction === 'keep' || areaAction === 'update')) {
+            const existingArea = activePlan.plan_areas?.find((a: any) => 
+              a.name.toLowerCase() === area.name.toLowerCase()
+            );
+
+            if (existingArea) {
+              if (areaAction === 'update') {
+                await supabase
+                  .from('plan_areas')
+                  .update({ target_score: area.target_score, description: area.description })
+                  .eq('id', existingArea.id);
+              }
+              areaData = existingArea;
+              console.log(`Area "${area.name}" kept/updated`);
+            } else {
+              // Crear si no existe
+              const { data: newArea, error: areaError } = await supabase
+                .from('plan_areas')
+                .insert({
+                  plan_id: planData.id,
+                  name: area.name,
+                  description: area.description,
+                  target_score: area.target_score,
+                  order_index: diagnosis.action_plan.areas.indexOf(area)
+                })
+                .select()
+                .single();
+
+              if (areaError) continue;
+              areaData = newArea;
+            }
+          } else {
+            // Crear nueva área
+            const { data: newArea, error: areaError } = await supabase
               .from('plan_areas')
               .insert({
                 plan_id: planData.id,
                 name: area.name,
                 description: area.description,
                 target_score: area.target_score,
-                order_index: index
+                order_index: diagnosis.action_plan.areas.indexOf(area)
               })
               .select()
               .single();
 
-            if (areaError) {
-              console.error('Error creating plan area:', areaError);
-              continue;
-            }
+            if (areaError) continue;
+            areaData = newArea;
+          }
 
-            // Crear objetivos y tareas
-            for (const [objIndex, objective] of area.objectives.entries()) {
-              const { data: objectiveData, error: objError } = await supabase
+          // Procesar objetivos
+          for (const objective of area.objectives) {
+            const objectiveAction = objective.action || 'new';
+            let objectiveData: any;
+
+            if (areaData.plan_objectives && (objectiveAction === 'keep' || objectiveAction === 'update')) {
+              const existingObjective = areaData.plan_objectives?.find((o: any) => 
+                o.title.toLowerCase().includes(objective.title.toLowerCase().substring(0, 20))
+              );
+
+              if (existingObjective) {
+                if (objectiveAction === 'update') {
+                  await supabase
+                    .from('plan_objectives')
+                    .update({ description: objective.description, priority: objective.priority })
+                    .eq('id', existingObjective.id);
+                }
+                objectiveData = existingObjective;
+              } else {
+                const { data: newObj } = await supabase
+                  .from('plan_objectives')
+                  .insert({
+                    area_id: areaData.id,
+                    title: objective.title,
+                    description: objective.description,
+                    priority: objective.priority,
+                    order_index: area.objectives.indexOf(objective)
+                  })
+                  .select()
+                  .single();
+                objectiveData = newObj;
+              }
+            } else {
+              const { data: newObj } = await supabase
                 .from('plan_objectives')
                 .insert({
                   area_id: areaData.id,
                   title: objective.title,
                   description: objective.description,
                   priority: objective.priority,
-                  order_index: objIndex
+                  order_index: area.objectives.indexOf(objective)
                 })
                 .select()
                 .single();
+              objectiveData = newObj;
+            }
 
-              if (objError) {
-                console.error('Error creating objective:', objError);
+            if (!objectiveData) continue;
+
+            // Procesar tareas (solo nuevas si es actualización)
+            for (const task of objective.tasks) {
+              // Si es actualización y no está marcada como nueva, saltarla
+              if (activePlan && !task.is_new && objectiveAction === 'keep') {
                 continue;
               }
 
-              // Crear tareas
-              for (const task of objective.tasks) {
-                await supabase
-                  .from('tasks')
-                  .insert({
-                    objective_id: objectiveData.id,
-                    title: task.title,
-                    description: task.description,
-                    priority: task.priority,
-                    estimated_effort: task.estimated_effort,
-                    status: 'pending'
-                  });
+              // Verificar duplicados
+              if (objectiveData.tasks) {
+                const exists = objectiveData.tasks.some((t: any) => 
+                  t.title.toLowerCase().includes(task.title.toLowerCase().substring(0, 15))
+                );
+                if (exists) continue;
               }
+
+              await supabase
+                .from('tasks')
+                .insert({
+                  objective_id: objectiveData.id,
+                  title: task.title,
+                  description: task.description,
+                  priority: task.priority,
+                  estimated_effort: task.estimated_effort,
+                  status: 'pending'
+                });
             }
           }
         }

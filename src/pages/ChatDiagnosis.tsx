@@ -42,6 +42,8 @@ export default function ChatDiagnosis() {
   const [tempStage, setTempStage] = useState<'idea' | 'startup' | 'pyme' | 'corporate'>('startup');
   const [tempProjectName, setTempProjectName] = useState('');
   const [tempProjectDescription, setTempProjectDescription] = useState('');
+  const [diagnosisVersion, setDiagnosisVersion] = useState<number>(0);
+  const [hasPreviousDiagnosis, setHasPreviousDiagnosis] = useState(false);
 
   useEffect(() => {
     if (authLoading || projectLoading) return;
@@ -50,7 +52,7 @@ export default function ChatDiagnosis() {
       return;
     }
 
-    // Si hay proyecto activo, ir directo al chat
+    // Si hay proyecto activo, ir directo al chat y cargar diagnóstico previo
     if (currentProject && step === 'company-info') {
       const info: CompanyInfo = {
         name: currentProject.name,
@@ -61,6 +63,24 @@ export default function ChatDiagnosis() {
       };
       
       setCompanyInfo(info);
+      
+      // Buscar diagnóstico previo
+      const fetchPreviousDiagnosis = async () => {
+        const { data } = await supabase
+          .from('diagnoses')
+          .select('version')
+          .eq('project_id', currentProject.id)
+          .order('version', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (data) {
+          setDiagnosisVersion(data.version);
+          setHasPreviousDiagnosis(true);
+        }
+      };
+
+      fetchPreviousDiagnosis();
       setStep('chat');
       
       // Mensaje inicial

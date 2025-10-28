@@ -105,21 +105,28 @@ export default function PlanView() {
           </Button>
 
           <div className="flex items-start justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-foreground mb-2">
-                {plan.title}
-              </h1>
+            <div className="flex-1">
+              <div className="flex items-center gap-3 mb-2">
+                <h1 className="text-3xl font-bold text-foreground">
+                  {plan.title}
+                </h1>
+                <Badge variant="default">v{plan.version}</Badge>
+              </div>
               <p className="text-muted-foreground mb-4">{plan.description}</p>
+              {plan.metadata?.changes_summary && (
+                <div className="p-3 bg-muted rounded-md mb-4">
+                  <p className="text-sm text-foreground">
+                    <span className="font-medium">Últimos cambios:</span> {plan.metadata.changes_summary}
+                  </p>
+                </div>
+              )}
               <div className="flex gap-2">
                 <Badge variant={plan.status === 'active' ? 'success' : 'default'}>
                   {plan.status}
                 </Badge>
-                <Badge variant="default">
-                  v{plan.version}
-                </Badge>
                 {plan.time_horizon && (
                   <Badge variant="default">
-                    {plan.time_horizon} meses
+                    {plan.time_horizon} días
                   </Badge>
                 )}
               </div>

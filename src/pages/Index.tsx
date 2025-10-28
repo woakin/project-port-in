@@ -293,9 +293,17 @@ const Index = () => {
                 <>
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-base font-semibold text-foreground">Diagnóstico</h3>
-                    <Badge variant="default">Completado</Badge>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="default" className="text-xs">v{latestDiagnosis.version}</Badge>
+                      <Badge variant="default">Completado</Badge>
+                    </div>
                   </div>
                   <div className="space-y-3 mb-4">
+                    {latestDiagnosis.version > 1 && (
+                      <div className="text-xs text-muted-foreground pb-2 border-b border-border">
+                        Actualizado hace {Math.floor((Date.now() - new Date(latestDiagnosis.updated_at || latestDiagnosis.created_at).getTime()) / (1000 * 60 * 60 * 24))} días
+                      </div>
+                    )}
                     <div className="grid grid-cols-2 gap-2">
                       <div>
                         <p className="text-xs text-muted-foreground">Estrategia</p>
@@ -318,15 +326,25 @@ const Index = () => {
                       Nivel: <span className="font-medium text-foreground capitalize">{latestDiagnosis.maturity_level}</span>
                     </p>
                   </div>
-                  <Button 
-                    onClick={() => navigate(`/diagnosis/${latestDiagnosis.id}`)}
-                    variant="outline"
-                    size="sm"
-                    className="w-full"
-                  >
-                    Ver Completo
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button 
+                      onClick={() => navigate(`/diagnosis/${latestDiagnosis.id}`)}
+                      variant="outline"
+                      size="sm"
+                      className="flex-1"
+                    >
+                      Ver Completo
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
+                    <Button 
+                      onClick={() => navigate('/chat-diagnosis')}
+                      variant="default"
+                      size="sm"
+                      className="flex-1"
+                    >
+                      Actualizar
+                    </Button>
+                  </div>
                 </>
               ) : (
                 <>
