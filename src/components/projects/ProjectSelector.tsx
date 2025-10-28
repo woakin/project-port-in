@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Check, ChevronDown, FolderOpen, Plus } from 'lucide-react';
+import { Check, ChevronDown, FolderOpen, Plus, Grid3x3 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -13,6 +14,7 @@ import { useProjectContext } from '@/contexts/ProjectContext';
 import { CreateProjectDialog } from './CreateProjectDialog';
 
 export function ProjectSelector() {
+  const navigate = useNavigate();
   const { projects, currentProject, setCurrentProject, loading } = useProjectContext();
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
@@ -68,6 +70,13 @@ export function ProjectSelector() {
             </DropdownMenuItem>
           ))}
           <DropdownMenuSeparator />
+          <DropdownMenuItem
+            onClick={() => navigate('/projects')}
+            className="cursor-pointer"
+          >
+            <Grid3x3 className="h-4 w-4 mr-2" />
+            Ver Todos los Proyectos
+          </DropdownMenuItem>
           <DropdownMenuItem
             onClick={() => setCreateDialogOpen(true)}
             className="cursor-pointer text-primary"

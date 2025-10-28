@@ -1,52 +1,91 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { FolderOpen, Plus, Calendar, BarChart3 } from 'lucide-react';
+import { FolderOpen, Plus, Calendar, BarChart3, CheckCircle, ListTodo, FileText, TrendingUp } from 'lucide-react';
 import { useProjectContext } from '@/contexts/ProjectContext';
 import { useAuth } from '@/hooks/useAuth';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+import { supabase } from '@/integrations/supabase/client';
+import { CreateProjectDialog } from '@/components/projects/CreateProjectDialog';
+
+interface ProjectMetrics {
+  diagnoses: number;
+  tasks: number;
+  tasksCompleted: number;
+  kpis: number;
+  lastActivity: string | null;
+}
 
 export default function Projects() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { projects, loading, createProject, setCurrentProject } = useProjectContext();
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [newProjectName, setNewProjectName] = useState('');
-  const [newProjectDescription, setNewProjectDescription] = useState('');
-  const [isCreating, setIsCreating] = useState(false);
+  const { projects, loading, setCurrentProject } = useProjectContext();
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [projectMetrics, setProjectMetrics] = useState<Record<string, ProjectMetrics>>({});
 
-  const handleCreateProject = async () => {
-    if (!newProjectName.trim() || !user?.user_metadata?.company_id) return;
-
-    setIsCreating(true);
-    const project = await createProject(
-      newProjectName,
-      newProjectDescription,
-      user.user_metadata.company_id
-    );
-
-    if (project) {
-      setIsDialogOpen(false);
-      setNewProjectName('');
-      setNewProjectDescription('');
-      setCurrentProject(project);
-      navigate('/');
+  useEffect(() => {
+    if (projects.length > 0) {
+      fetchProjectMetrics();
     }
-    setIsCreating(false);
+  }, [projects]);
+
+  const fetchProjectMetrics = async () => {
+    const metrics: Record<string, ProjectMetrics> = {};
+
+    for (const project of projects) {
+      // Fetch diagnoses count
+      const { count: diagnosesCount } = await supabase
+        .from('diagnoses')
+        .select('*', { count: 'exact', head: true })
+        .eq('project_id', project.id);
+
+      // Fetch tasks
+      const { data: planData } = await supabase
+        .from('action_plans')
+        .select(`
+          plan_areas (
+            plan_objectives (
+              tasks (id, status, updated_at)
+            )
+          )
+        `)
+        .eq('project_id', project.id)
+        .eq('status', 'active')
+        .maybeSingle();
+
+      const allTasks = planData?.plan_areas?.flatMap((a: any) =>
+        a.plan_objectives?.flatMap((o: any) => o.tasks || []) || []
+      ) || [];
+
+      const tasksCompleted = allTasks.filter((t: any) => t.status === 'completed').length;
+
+      // Get last activity
+      const lastTaskUpdate = allTasks.reduce((latest: string | null, task: any) => {
+        if (!task.updated_at) return latest;
+        if (!latest || new Date(task.updated_at) > new Date(latest)) {
+          return task.updated_at;
+        }
+        return latest;
+      }, null);
+
+      // Fetch KPIs count
+      const { count: kpisCount } = await supabase
+        .from('kpis')
+        .select('*', { count: 'exact', head: true })
+        .eq('company_id', project.company_id);
+
+      metrics[project.id] = {
+        diagnoses: diagnosesCount || 0,
+        tasks: allTasks.length,
+        tasksCompleted,
+        kpis: kpisCount || 0,
+        lastActivity: lastTaskUpdate
+      };
+    }
+
+    setProjectMetrics(metrics);
   };
 
   const handleSelectProject = (project: any) => {
@@ -79,54 +118,13 @@ export default function Projects() {
           <div>
             <h1 className="text-3xl font-bold">Proyectos</h1>
             <p className="text-muted-foreground mt-2">
-              Gestiona todos tus proyectos y sus diagnósticos
+              Gestiona todos tus proyectos y sus métricas principales
             </p>
           </div>
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                Nuevo Proyecto
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Crear Nuevo Proyecto</DialogTitle>
-                <DialogDescription>
-                  Define un proyecto para organizar tus diagnósticos y planes de acción
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Nombre del Proyecto</Label>
-                  <Input
-                    id="name"
-                    placeholder="Ej: Transformación Digital 2025"
-                    value={newProjectName}
-                    onChange={(e) => setNewProjectName(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="description">Descripción</Label>
-                  <Textarea
-                    id="description"
-                    placeholder="Describe brevemente el objetivo del proyecto"
-                    value={newProjectDescription}
-                    onChange={(e) => setNewProjectDescription(e.target.value)}
-                    rows={3}
-                  />
-                </div>
-              </div>
-              <DialogFooter>
-                <Button
-                  onClick={handleCreateProject}
-                  disabled={!newProjectName.trim() || isCreating}
-                >
-                  {isCreating ? 'Creando...' : 'Crear Proyecto'}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+          <Button onClick={() => setCreateDialogOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Nuevo Proyecto
+          </Button>
         </div>
 
         {projects.length === 0 ? (
@@ -143,71 +141,148 @@ export default function Projects() {
           </Card>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {projects.map((project) => (
-              <Card
-                key={project.id}
-                className="p-6 hover:shadow-lg transition-shadow cursor-pointer"
-                onClick={() => handleSelectProject(project)}
-              >
-                <div className="space-y-4">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-2">
-                      <FolderOpen className="h-5 w-5 text-primary" />
-                      <h3 className="font-semibold text-lg line-clamp-1">
-                        {project.name}
-                      </h3>
-                    </div>
-                    <Badge
-                      variant={
-                        project.status === 'active'
-                          ? 'default'
+            {projects.map((project) => {
+              const metrics = projectMetrics[project.id];
+              const completionRate = metrics?.tasks > 0 
+                ? Math.round((metrics.tasksCompleted / metrics.tasks) * 100)
+                : 0;
+
+              return (
+                <Card
+                  key={project.id}
+                  className="p-6 hover:shadow-lg transition-all hover:border-primary/50 cursor-pointer group"
+                  onClick={() => handleSelectProject(project)}
+                >
+                  <div className="space-y-4">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-2">
+                        <FolderOpen className="h-5 w-5 text-primary group-hover:scale-110 transition-transform" />
+                        <h3 className="font-semibold text-lg line-clamp-1">
+                          {project.name}
+                        </h3>
+                      </div>
+                      <Badge
+                        variant={
+                          project.status === 'active'
+                            ? 'default'
+                            : project.status === 'completed'
+                            ? 'secondary'
+                            : 'outline'
+                        }
+                      >
+                        {project.status === 'active'
+                          ? 'Activo'
                           : project.status === 'completed'
-                          ? 'secondary'
-                          : 'outline'
-                      }
-                    >
-                      {project.status === 'active'
-                        ? 'Activo'
-                        : project.status === 'completed'
-                        ? 'Completado'
-                        : 'Archivado'}
-                    </Badge>
-                  </div>
-
-                  {project.description && (
-                    <p className="text-sm text-muted-foreground line-clamp-2">
-                      {project.description}
-                    </p>
-                  )}
-
-                  <div className="flex items-center gap-4 text-xs text-muted-foreground pt-4 border-t">
-                    <div className="flex items-center gap-1">
-                      <Calendar className="h-3 w-3" />
-                      <span>
-                        {new Date(project.created_at).toLocaleDateString('es-ES', {
-                          day: 'numeric',
-                          month: 'short',
-                          year: 'numeric',
-                        })}
-                      </span>
-                    </div>
-                    {project.is_default && (
-                      <Badge variant="outline" className="text-xs">
-                        Por defecto
+                          ? 'Completado'
+                          : 'Archivado'}
                       </Badge>
-                    )}
-                  </div>
+                    </div>
 
-                  <Button className="w-full" variant="outline">
-                    <BarChart3 className="h-4 w-4 mr-2" />
-                    Ver Dashboard
-                  </Button>
-                </div>
-              </Card>
-            ))}
+                    {project.description && (
+                      <p className="text-sm text-muted-foreground line-clamp-2">
+                        {project.description}
+                      </p>
+                    )}
+
+                    {/* Métricas principales */}
+                    {metrics && (
+                      <div className="grid grid-cols-2 gap-3 pt-2">
+                        <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
+                          <FileText className="h-4 w-4 text-primary" />
+                          <div className="flex flex-col">
+                            <span className="text-xs text-muted-foreground">Diagnósticos</span>
+                            <span className="text-sm font-semibold">{metrics.diagnoses}</span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
+                          <BarChart3 className="h-4 w-4 text-blue-500" />
+                          <div className="flex flex-col">
+                            <span className="text-xs text-muted-foreground">KPIs</span>
+                            <span className="text-sm font-semibold">{metrics.kpis}</span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
+                          <ListTodo className="h-4 w-4 text-orange-500" />
+                          <div className="flex flex-col">
+                            <span className="text-xs text-muted-foreground">Tareas</span>
+                            <span className="text-sm font-semibold">{metrics.tasks}</span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
+                          <CheckCircle className="h-4 w-4 text-green-500" />
+                          <div className="flex flex-col">
+                            <span className="text-xs text-muted-foreground">Completadas</span>
+                            <span className="text-sm font-semibold">{metrics.tasksCompleted}</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Progreso */}
+                    {metrics && metrics.tasks > 0 && (
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-muted-foreground">Progreso del plan</span>
+                          <span className="font-semibold">{completionRate}%</span>
+                        </div>
+                        <div className="h-2 bg-muted rounded-full overflow-hidden">
+                          <div 
+                            className="h-full bg-gradient-to-r from-primary to-primary/80 transition-all"
+                            style={{ width: `${completionRate}%` }}
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="flex items-center justify-between gap-4 text-xs text-muted-foreground pt-4 border-t">
+                      <div className="flex items-center gap-1">
+                        <Calendar className="h-3 w-3" />
+                        <span>
+                          {new Date(project.created_at).toLocaleDateString('es-ES', {
+                            day: 'numeric',
+                            month: 'short',
+                            year: 'numeric',
+                          })}
+                        </span>
+                      </div>
+                      {metrics?.lastActivity && (
+                        <div className="flex items-center gap-1">
+                          <TrendingUp className="h-3 w-3" />
+                          <span>
+                            Actualizado{' '}
+                            {new Date(metrics.lastActivity).toLocaleDateString('es-ES', {
+                              day: 'numeric',
+                              month: 'short',
+                            })}
+                          </span>
+                        </div>
+                      )}
+                      {project.is_default && (
+                        <Badge variant="outline" className="text-xs">
+                          Por defecto
+                        </Badge>
+                      )}
+                    </div>
+
+                    <Button className="w-full group-hover:bg-primary group-hover:text-primary-foreground transition-colors" variant="outline">
+                      <BarChart3 className="h-4 w-4 mr-2" />
+                      Abrir Proyecto
+                    </Button>
+                  </div>
+                </Card>
+              );
+            })}
           </div>
         )}
       </div>
+
+      <CreateProjectDialog
+        open={createDialogOpen}
+        onOpenChange={setCreateDialogOpen}
+      />
     </MainLayout>
   );
 }
