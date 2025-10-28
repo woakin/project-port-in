@@ -18,6 +18,8 @@ type CompanyInfo = {
   name: string;
   industry: string;
   stage: 'idea' | 'startup' | 'pyme' | 'corporate';
+  projectName: string;
+  projectDescription?: string;
 };
 
 export default function ChatDiagnosis() {
@@ -36,6 +38,8 @@ export default function ChatDiagnosis() {
   const [tempName, setTempName] = useState('');
   const [tempIndustry, setTempIndustry] = useState('');
   const [tempStage, setTempStage] = useState<'idea' | 'startup' | 'pyme' | 'corporate'>('startup');
+  const [tempProjectName, setTempProjectName] = useState('');
+  const [tempProjectDescription, setTempProjectDescription] = useState('');
 
   useEffect(() => {
     if (authLoading) return;
@@ -49,10 +53,10 @@ export default function ChatDiagnosis() {
   }, [messages]);
 
   const startChat = () => {
-    if (!tempName || !tempIndustry) {
+    if (!tempName || !tempIndustry || !tempProjectName) {
       toast({
         title: 'Campos requeridos',
-        description: 'Por favor completa el nombre e industria',
+        description: 'Por favor completa todos los campos obligatorios',
         variant: 'destructive'
       });
       return;
@@ -61,7 +65,9 @@ export default function ChatDiagnosis() {
     const info: CompanyInfo = {
       name: tempName,
       industry: tempIndustry,
-      stage: tempStage
+      stage: tempStage,
+      projectName: tempProjectName,
+      projectDescription: tempProjectDescription
     };
     
     setCompanyInfo(info);
@@ -70,7 +76,7 @@ export default function ChatDiagnosis() {
     // Mensaje inicial del asistente
     setMessages([{
       role: 'assistant',
-      content: `¡Hola! Soy tu consultor virtual para **${info.name}** en el sector de **${info.industry}**. \n\nMe encantaría conocer más sobre tu negocio para poder ayudarte. ¿Podrías contarme cuál es tu visión principal y qué objetivos tienes para tu empresa?`
+      content: `¡Perfecto! Vamos a trabajar en **${info.projectName}** para **${info.name}** en el sector de **${info.industry}**. \n\nPara crear un diagnóstico completo y un plan de acción personalizado, necesito conocer más sobre tu negocio. Voy a hacerte algunas preguntas sobre diferentes áreas clave.\n\nComencemos con la **estrategia**: ¿Cuál es la visión principal de tu empresa y qué objetivos buscan alcanzar?`
     }]);
   };
 
@@ -271,6 +277,28 @@ export default function ChatDiagnosis() {
 
               <div>
                 <label className="block text-sm font-medium text-foreground mb-2">
+                  Nombre del proyecto *
+                </label>
+                <Input
+                  value={tempProjectName}
+                  onChange={(e) => setTempProjectName(e.target.value)}
+                  placeholder="Ej: Transformación Digital 2025"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-2">
+                  Descripción del proyecto (opcional)
+                </label>
+                <Input
+                  value={tempProjectDescription}
+                  onChange={(e) => setTempProjectDescription(e.target.value)}
+                  placeholder="Describe brevemente el objetivo..."
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-2">
                   Etapa de tu negocio
                 </label>
                 <div className="grid grid-cols-2 gap-3">
@@ -320,10 +348,10 @@ export default function ChatDiagnosis() {
             </Button>
             <div>
               <h1 className="text-xl font-bold text-foreground">
-                Diagnóstico: {companyInfo?.name}
+                {companyInfo?.projectName}
               </h1>
               <p className="text-sm text-muted-foreground">
-                {companyInfo?.industry} · {companyInfo?.stage}
+                {companyInfo?.name} · {companyInfo?.industry}
               </p>
             </div>
           </div>

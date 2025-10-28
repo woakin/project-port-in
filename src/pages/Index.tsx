@@ -172,6 +172,33 @@ const Index = () => {
     );
   }
 
+  // Si no hay proyecto, mostrar empty state
+  if (user && !currentProject) {
+    return (
+      <MainLayout>
+        <div className="container mx-auto p-comfortable flex items-center justify-center min-h-[70vh]">
+          <div className="text-center space-y-6 max-w-md">
+            <div className="flex justify-center">
+              <div className="h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center">
+                <FolderOpen className="h-10 w-10 text-primary" />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <h2 className="text-2xl font-bold text-foreground">¡Bienvenido!</h2>
+              <p className="text-muted-foreground">
+                Comienza creando tu primer proyecto y realizando un diagnóstico personalizado con ayuda de IA
+              </p>
+            </div>
+            <Button onClick={() => navigate('/chat-diagnosis')} size="lg" className="gap-2">
+              <FolderOpen className="h-5 w-5" />
+              Crear Primer Proyecto
+            </Button>
+          </div>
+        </div>
+      </MainLayout>
+    );
+  }
+
   const taskStats = getTaskStats();
   const kpiStats = getKPIStats();
   const upcomingTasks = getUpcomingTasks();

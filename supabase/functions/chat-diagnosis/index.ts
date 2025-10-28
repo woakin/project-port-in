@@ -21,7 +21,9 @@ const messageSchema = z.object({
 const companyInfoSchema = z.object({
   name: z.string().min(1).max(200, 'Company name too long'),
   industry: z.string().min(1).max(200, 'Industry name too long'),
-  stage: z.enum(['idea', 'startup', 'pyme', 'corporate'])
+  stage: z.enum(['idea', 'startup', 'pyme', 'corporate']),
+  projectName: z.string().min(1).max(200, 'Project name too long'),
+  projectDescription: z.string().max(500, 'Project description too long').optional()
 });
 
 const requestSchema = z.object({
@@ -74,12 +76,14 @@ serve(async (req) => {
       ).join('\n\n');
 
       // Analizar con IA para generar diagnóstico
-      const analysisPrompt = `Analiza la siguiente conversación sobre una empresa y genera un diagnóstico empresarial completo.
+      const analysisPrompt = `Analiza la siguiente conversación sobre una empresa y genera un diagnóstico empresarial completo y un plan de acción estratégico.
 
 Información de la empresa:
 - Nombre: ${companyInfo.name}
 - Industria: ${companyInfo.industry}
 - Etapa: ${companyInfo.stage}
+- Proyecto: ${companyInfo.projectName}
+${companyInfo.projectDescription ? `- Descripción del proyecto: ${companyInfo.projectDescription}` : ''}
 
 Conversación:
 ${conversationHistory}
@@ -100,6 +104,13 @@ INSTRUCCIONES:
 
 3. Determina el nivel de madurez general: emergente, en desarrollo, maduro, o optimizado
 
+4. GENERA UN PLAN DE ACCIÓN COMPLETO con:
+   - Áreas de acción (basadas en los scores más bajos)
+   - Objetivos específicos por área
+   - Tareas concretas y accionables
+   - Prioridades (high, medium, low)
+   - Estimación de esfuerzo en días
+
 Responde SOLO con un JSON válido en este formato exacto:
 {
   "scores": {
@@ -118,6 +129,30 @@ Responde SOLO con un JSON válido en este formato exacto:
     "marketing": { "strengths": string[], "improvements": string[], "recommendations": string[] },
     "legal": { "strengths": string[], "improvements": string[], "recommendations": string[] },
     "technology": { "strengths": string[], "improvements": string[], "recommendations": string[] }
+  },
+  "action_plan": {
+    "areas": [
+      {
+        "name": string,
+        "description": string,
+        "target_score": number,
+        "objectives": [
+          {
+            "title": string,
+            "description": string,
+            "priority": "high" | "medium" | "low",
+            "tasks": [
+              {
+                "title": string,
+                "description": string,
+                "priority": "high" | "medium" | "low",
+                "estimated_effort": number
+              }
+            ]
+          }
+        ]
+      }
+    ]
   }
 }`;
 
@@ -192,12 +227,28 @@ Responde SOLO con un JSON válido en este formato exacto:
           .eq('id', user.id);
       }
 
+      // Crear proyecto
+      const { data: newProject, error: projectError } = await supabase
+        .from('projects')
+        .insert({
+          name: companyInfo.projectName,
+          description: companyInfo.projectDescription || null,
+          company_id: companyId,
+          status: 'active',
+          is_default: true
+        })
+        .select()
+        .single();
+
+      if (projectError) throw projectError;
+
       // Guardar diagnóstico
       const { data: diagnosisData, error: diagnosisError } = await supabase
         .from('diagnoses')
         .insert({
           company_id: companyId,
           user_id: user.id,
+          project_id: newProject.id,
           maturity_level: diagnosis.maturity_level,
           strategy_score: diagnosis.scores.strategy,
           operations_score: diagnosis.scores.operations,
@@ -218,6 +269,81 @@ Responde SOLO con un JSON válido en este formato exacto:
 
       console.log('Diagnosis saved successfully:', diagnosisData.id);
 
+      // Crear plan de acción si está disponible
+      if (diagnosis.action_plan?.areas) {
+        const { data: planData, error: planError } = await supabase
+          .from('action_plans')
+          .insert({
+            company_id: companyId,
+            project_id: newProject.id,
+            diagnosis_id: diagnosisData.id,
+            title: `Plan de Acción - ${companyInfo.projectName}`,
+            description: `Plan generado automáticamente basado en el diagnóstico conversacional`,
+            status: 'active',
+            time_horizon: 90
+          })
+          .select()
+          .single();
+
+        if (planError) {
+          console.error('Error creating action plan:', planError);
+        } else {
+          // Crear áreas del plan
+          for (const [index, area] of diagnosis.action_plan.areas.entries()) {
+            const { data: areaData, error: areaError } = await supabase
+              .from('plan_areas')
+              .insert({
+                plan_id: planData.id,
+                name: area.name,
+                description: area.description,
+                target_score: area.target_score,
+                order_index: index
+              })
+              .select()
+              .single();
+
+            if (areaError) {
+              console.error('Error creating plan area:', areaError);
+              continue;
+            }
+
+            // Crear objetivos y tareas
+            for (const [objIndex, objective] of area.objectives.entries()) {
+              const { data: objectiveData, error: objError } = await supabase
+                .from('plan_objectives')
+                .insert({
+                  area_id: areaData.id,
+                  title: objective.title,
+                  description: objective.description,
+                  priority: objective.priority,
+                  order_index: objIndex
+                })
+                .select()
+                .single();
+
+              if (objError) {
+                console.error('Error creating objective:', objError);
+                continue;
+              }
+
+              // Crear tareas
+              for (const task of objective.tasks) {
+                await supabase
+                  .from('tasks')
+                  .insert({
+                    objective_id: objectiveData.id,
+                    title: task.title,
+                    description: task.description,
+                    priority: task.priority,
+                    estimated_effort: task.estimated_effort,
+                    status: 'pending'
+                  });
+              }
+            }
+          }
+        }
+      }
+
       return new Response(
         JSON.stringify({ 
           diagnosis_id: diagnosisData.id,
@@ -230,30 +356,39 @@ Responde SOLO con un JSON válido en este formato exacto:
     // Conversación normal con streaming
     
     // Obtener el system prompt desde la configuración
-    let systemPromptTemplate = `Eres un consultor empresarial experto que conduce diagnósticos empresariales.
+    let systemPromptTemplate = `Eres un consultor empresarial experto que guía diagnósticos empresariales conversacionales.
 
-REGLA CRÍTICA: Debes trabajar ÚNICAMENTE con esta empresa específica. NO inventes ni asumas información diferente.
+REGLA CRÍTICA: Trabaja ÚNICAMENTE con la información del proyecto específico. NO inventes ni asumas datos diferentes.
 
-LA EMPRESA ES:
-Nombre: {{COMPANY_NAME}}
-Industria: {{COMPANY_INDUSTRY}}
-Etapa: {{COMPANY_STAGE}}
+INFORMACIÓN DEL PROYECTO:
+- Empresa: {{COMPANY_NAME}}
+- Industria: {{COMPANY_INDUSTRY}}
+- Etapa: {{COMPANY_STAGE}}
+- Proyecto: {{PROJECT_NAME}}
+{{PROJECT_DESCRIPTION}}
 
-TU TRABAJO:
-Hacer preguntas UNA a la vez para recopilar información sobre estas 6 áreas:
-1. Estrategia (visión, misión, objetivos)
-2. Operaciones (procesos, eficiencia, calidad)
-3. Finanzas (rentabilidad, control financiero)
-4. Marketing (marca, adquisición de clientes)
-5. Legal (compliance, contratos, protección)
-6. Tecnología (infraestructura, digitalización)
+TU MISIÓN:
+Hacer preguntas conversacionales UNA a la vez para entender a fondo estas 6 áreas clave:
+1. **Estrategia** - visión, misión, objetivos estratégicos, diferenciación
+2. **Operaciones** - procesos, eficiencia, calidad, cadena de suministro
+3. **Finanzas** - rentabilidad, flujo de caja, control financiero, inversiones
+4. **Marketing** - marca, adquisición de clientes, canales, posicionamiento
+5. **Legal** - compliance, contratos, protección de propiedad intelectual
+6. **Tecnología** - infraestructura, herramientas, digitalización, ciberseguridad
 
-INSTRUCCIONES:
-- Usa SIEMPRE el nombre correcto de la empresa: {{COMPANY_NAME}}
-- Adapta preguntas a la etapa: {{COMPANY_STAGE}}
-- Una pregunta a la vez, conversacional y empático
+ESTILO DE CONVERSACIÓN:
+- Empático, profesional y cercano
+- Una pregunta clara a la vez
+- Adapta preguntas a la etapa {{COMPANY_STAGE}}
+- Usa ejemplos cuando sea útil
+- Profundiza cuando detectes oportunidades
+- Usa SIEMPRE los nombres correctos: {{COMPANY_NAME}} y {{PROJECT_NAME}}
 - NO inventes información que el usuario no te ha dado
-- Cuando tengas suficiente información de todas las áreas, pregunta si desea generar el diagnóstico`;
+
+GUÍA DE PROGRESO:
+- Cubre las 6 áreas de manera equilibrada
+- Después de 8-12 intercambios significativos, pregunta: "¿Te gustaría que genere ahora el diagnóstico completo y un plan de acción personalizado?"
+- Si el usuario acepta, responde con: "¡Perfecto! Haz clic en el botón 'Generar Diagnóstico' para crear tu análisis completo y plan de acción."`;
 
     try {
       const authHeader = req.headers.get('Authorization');
@@ -277,10 +412,16 @@ INSTRUCCIONES:
     }
 
     // Reemplazar variables en el template
+    const projectDescLine = companyInfo?.projectDescription 
+      ? `- Descripción: ${companyInfo.projectDescription}`
+      : '';
+    
     const systemPrompt = systemPromptTemplate
       .replace(/\{\{COMPANY_NAME\}\}/g, companyInfo?.name || 'tu empresa')
       .replace(/\{\{COMPANY_INDUSTRY\}\}/g, companyInfo?.industry || 'No especificado')
-      .replace(/\{\{COMPANY_STAGE\}\}/g, companyInfo?.stage || 'startup');
+      .replace(/\{\{COMPANY_STAGE\}\}/g, companyInfo?.stage || 'startup')
+      .replace(/\{\{PROJECT_NAME\}\}/g, companyInfo?.projectName || 'tu proyecto')
+      .replace(/\{\{PROJECT_DESCRIPTION\}\}/g, projectDescLine);
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
