@@ -221,11 +221,11 @@ export default function ChatDiagnosis() {
       }, 500);
 
     } catch (error) {
-      console.error('Error:', error);
+      console.error('Error generating diagnosis:', error);
       toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Error al generar diagnóstico',
-        variant: 'destructive'
+        title: "Error",
+        description: error instanceof Error ? error.message : "No se pudo generar el diagnóstico. Por favor intenta nuevamente.",
+        variant: "destructive"
       });
     } finally {
       setGeneratingDiagnosis(false);

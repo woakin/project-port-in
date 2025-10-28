@@ -134,7 +134,7 @@ Responde SOLO con un JSON válido en este formato exacto:
     "legal": number,
     "technology": number
   },
-  "maturity_level": "emergente" | "en desarrollo" | "maduro" | "optimizado",
+  "maturity_level": "emergente" | "en_desarrollo" | "maduro" | "optimizado",
   "insights": {
     "strategy": { "strengths": string[], "improvements": string[], "recommendations": string[] },
     "operations": { "strengths": string[], "improvements": string[], "recommendations": string[] },
@@ -201,6 +201,19 @@ Responde SOLO con un JSON válido en este formato exacto:
       }
       
       const diagnosis = JSON.parse(jsonMatch[0]);
+
+      // Validar estructura del diagnosis
+      if (!diagnosis.scores || !diagnosis.maturity_level || !diagnosis.insights || !diagnosis.action_plan) {
+        console.error('Estructura inválida del diagnóstico:', diagnosis);
+        throw new Error('El análisis del LLM no tiene la estructura esperada');
+      }
+
+      // Validar maturity_level
+      const validMaturityLevels = ['emergente', 'en_desarrollo', 'maduro', 'optimizado'];
+      if (!validMaturityLevels.includes(diagnosis.maturity_level)) {
+        console.error('Maturity level inválido:', diagnosis.maturity_level);
+        diagnosis.maturity_level = 'emergente'; // valor por defecto
+      }
 
       // Crear o actualizar empresa
       const { data: existingCompany } = await supabase
@@ -271,7 +284,11 @@ Responde SOLO con un JSON válido en este formato exacto:
 
       if (diagnosisError) {
         console.error('Error saving diagnosis:', diagnosisError);
-        throw diagnosisError;
+        console.error('Diagnosis data:', JSON.stringify({
+          maturity_level: diagnosis.maturity_level,
+          scores: diagnosis.scores
+        }));
+        throw new Error(`Error al guardar diagnóstico: ${diagnosisError.message}`);
       }
 
       console.log('Diagnosis saved successfully:', diagnosisData.id);
