@@ -29,12 +29,6 @@ export function Header() {
           <Link to="/projects" className="text-base text-muted-foreground hover:text-foreground transition-colors">
             Proyectos
           </Link>
-          <Link to="/diagnosticos" className="text-base text-muted-foreground hover:text-foreground transition-colors">
-            Diagnósticos
-          </Link>
-          <Link to="/plans" className="text-base text-muted-foreground hover:text-foreground transition-colors">
-            Planes
-          </Link>
           <span className="text-base text-muted-foreground cursor-not-allowed opacity-60">
             Documentos
           </span>

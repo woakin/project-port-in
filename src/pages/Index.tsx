@@ -185,21 +185,13 @@ const Index = () => {
                       Nivel de madurez: <span className="font-medium text-foreground capitalize">{latestDiagnosis.maturity_level}</span>
                     </p>
                   </div>
-                  <div className="flex gap-3">
-                    <Button 
-                      onClick={() => navigate(`/diagnosis/${latestDiagnosis.id}`)}
-                      variant="default"
-                    >
-                      Ver Diagnóstico Completo
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                    </Button>
-                    <Button 
-                      onClick={() => navigate('/chat-diagnosis')}
-                      variant="outline"
-                    >
-                      Nuevo Diagnóstico
-                    </Button>
-                  </div>
+                  <Button 
+                    onClick={() => navigate(`/diagnosis/${latestDiagnosis.id}`)}
+                    variant="default"
+                  >
+                    Ver Diagnóstico Completo
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
                 </>
               ) : (
                 <>

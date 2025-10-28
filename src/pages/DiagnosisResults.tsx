@@ -42,6 +42,7 @@ export default function DiagnosisResults() {
   const navigate = useNavigate();
   const [diagnosis, setDiagnosis] = useState<DiagnosisData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [existingPlan, setExistingPlan] = useState<any>(null);
   const { generatePlan, loading: generatingPlan } = usePlan();
 
   useEffect(() => {
@@ -67,6 +68,17 @@ export default function DiagnosisResults() {
       if (error) throw error;
 
       setDiagnosis(data as any);
+
+      // Verificar si ya existe un plan para este diagnóstico
+      const { data: planData, error: planError } = await supabase
+        .from('action_plans')
+        .select('id')
+        .eq('diagnosis_id', id)
+        .maybeSingle();
+
+      if (!planError && planData) {
+        setExistingPlan(planData);
+      }
     } catch (error) {
       console.error('Error fetching diagnosis:', error);
       toast({
@@ -297,25 +309,34 @@ export default function DiagnosisResults() {
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-lg font-semibold text-foreground mb-1">
-                ¿Listo para mejorar?
+                {existingPlan ? 'Plan de Acción' : '¿Listo para mejorar?'}
               </h3>
               <p className="text-muted-foreground">
-                Genera un plan de acción personalizado basado en este diagnóstico
+                {existingPlan 
+                  ? 'Revisa tu plan de acción y las tareas pendientes'
+                  : 'Genera un plan de acción personalizado basado en este diagnóstico'}
               </p>
             </div>
-            <Button onClick={handleGeneratePlan} disabled={generatingPlan}>
-              {generatingPlan ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Generando...
-                </>
-              ) : (
-                <>
-                  Crear Plan de Acción
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </>
-              )}
-            </Button>
+            {existingPlan ? (
+              <Button onClick={() => navigate(`/plan/${existingPlan.id}`)}>
+                Ver Plan de Acción
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            ) : (
+              <Button onClick={handleGeneratePlan} disabled={generatingPlan}>
+                {generatingPlan ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Generando...
+                  </>
+                ) : (
+                  <>
+                    Crear Plan de Acción
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </>
+                )}
+              </Button>
+            )}
           </div>
         </Card>
       </div>
