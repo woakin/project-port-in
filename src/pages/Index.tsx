@@ -2,6 +2,7 @@ import { Navigate, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useTasks } from "@/hooks/useTasks";
 import { useKPIs } from "@/hooks/useKPIs";
+import { useProjectContext } from "@/contexts/ProjectContext";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { KPICard } from "@/components/dashboard/KPICard";
 import { TasksList } from "@/components/dashboard/TasksList";
@@ -10,13 +11,14 @@ import { Card } from "@/components/shared/Card";
 import { Badge } from "@/components/shared/Badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, FolderOpen } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
 const Index = () => {
   const { user, loading } = useAuth();
+  const { currentProject, loading: projectLoading } = useProjectContext();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [latestDiagnosis, setLatestDiagnosis] = useState<any>(null);
@@ -45,13 +47,16 @@ const Index = () => {
 
   useEffect(() => {
     const fetchLatestDiagnosis = async () => {
-      if (!user) return;
+      if (!user || !currentProject?.id) {
+        setLoadingDiagnosis(false);
+        return;
+      }
       
       try {
         const { data, error } = await supabase
           .from('diagnoses')
           .select('*')
-          .eq('user_id', user.id)
+          .eq('project_id', currentProject.id)
           .order('created_at', { ascending: false })
           .limit(1)
           .maybeSingle();
@@ -67,7 +72,7 @@ const Index = () => {
     };
 
     fetchLatestDiagnosis();
-  }, [user]);
+  }, [user, currentProject?.id]);
 
   const handleTaskStatusUpdate = async (taskId: string, status: any) => {
     try {
@@ -85,7 +90,7 @@ const Index = () => {
     }
   };
 
-  if (loading || loadingDiagnosis) {
+  if (loading || loadingDiagnosis || projectLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-muted-foreground">Cargando...</div>
@@ -107,10 +112,26 @@ const Index = () => {
     <MainLayout>
       <div className="container mx-auto p-comfortable">
         <div className="mb-comfortable">
-          <h2 className="text-2xl font-semibold text-foreground mb-2">Dashboard</h2>
-          <p className="text-base text-muted-foreground">
-            Resumen de tu progreso y métricas principales
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-2xl font-semibold text-foreground mb-2">Dashboard</h2>
+              <p className="text-base text-muted-foreground">
+                Resumen de tu progreso y métricas principales
+              </p>
+            </div>
+            {currentProject && (
+              <div className="flex items-center gap-2 px-4 py-2 bg-secondary/50 rounded-lg">
+                <FolderOpen className="h-4 w-4 text-primary" />
+                <div className="text-sm">
+                  <span className="text-muted-foreground">Proyecto:</span>
+                  <span className="font-semibold ml-2">{currentProject.name}</span>
+                </div>
+                <Badge variant={currentProject.status === 'active' ? 'success' : 'default'} className="ml-2">
+                  {currentProject.status === 'active' ? 'Activo' : currentProject.status === 'completed' ? 'Completado' : 'Archivado'}
+                </Badge>
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-standard mb-comfortable">
@@ -142,7 +163,7 @@ const Index = () => {
               {latestDiagnosis ? (
                 <>
                   <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-base font-semibold text-foreground">Último Diagnóstico</h3>
+                    <h3 className="text-base font-semibold text-foreground">Diagnóstico del Proyecto</h3>
                     <Badge variant="default">Completado</Badge>
                   </div>
                   <div className="space-y-3 mb-4">

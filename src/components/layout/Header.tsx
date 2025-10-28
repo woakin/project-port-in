@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useAdmin } from "@/hooks/useAdmin";
 import { Link, useNavigate } from "react-router-dom";
+import { ProjectSelector } from "@/components/projects/ProjectSelector";
 
 export function Header() {
   const { user, signOut, loading } = useAuth();
@@ -25,8 +26,11 @@ export function Header() {
           <Link to="/" className="text-base text-foreground hover:text-primary transition-colors">
             Dashboard
           </Link>
-          <Link to="/chat-diagnosis" className="text-base text-muted-foreground hover:text-foreground transition-colors">
-            Diagnóstico
+          <Link to="/projects" className="text-base text-muted-foreground hover:text-foreground transition-colors">
+            Proyectos
+          </Link>
+          <Link to="/diagnosticos" className="text-base text-muted-foreground hover:text-foreground transition-colors">
+            Diagnósticos
           </Link>
           <Link to="/plans" className="text-base text-muted-foreground hover:text-foreground transition-colors">
             Planes
@@ -40,6 +44,7 @@ export function Header() {
       <div className="flex items-center gap-4">
         {!loading && user ? (
           <>
+            <ProjectSelector />
             <Link to="/chat-diagnosis">
               <Button className="gap-2">
                 <MessageCircle className="h-4 w-4" />

@@ -23,6 +23,7 @@ export type Database = {
           diagnosis_id: string | null
           id: string
           metadata: Json | null
+          project_id: string | null
           status: string | null
           time_horizon: number | null
           title: string
@@ -37,6 +38,7 @@ export type Database = {
           diagnosis_id?: string | null
           id?: string
           metadata?: Json | null
+          project_id?: string | null
           status?: string | null
           time_horizon?: number | null
           title: string
@@ -51,6 +53,7 @@ export type Database = {
           diagnosis_id?: string | null
           id?: string
           metadata?: Json | null
+          project_id?: string | null
           status?: string | null
           time_horizon?: number | null
           title?: string
@@ -70,6 +73,13 @@ export type Database = {
             columns: ["diagnosis_id"]
             isOneToOne: false
             referencedRelation: "diagnoses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "action_plans_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
             referencedColumns: ["id"]
           },
         ]
@@ -152,6 +162,7 @@ export type Database = {
           marketing_score: number | null
           maturity_level: string | null
           operations_score: number | null
+          project_id: string | null
           strategy_score: number | null
           technology_score: number | null
           updated_at: string | null
@@ -169,6 +180,7 @@ export type Database = {
           marketing_score?: number | null
           maturity_level?: string | null
           operations_score?: number | null
+          project_id?: string | null
           strategy_score?: number | null
           technology_score?: number | null
           updated_at?: string | null
@@ -186,6 +198,7 @@ export type Database = {
           marketing_score?: number | null
           maturity_level?: string | null
           operations_score?: number | null
+          project_id?: string | null
           strategy_score?: number | null
           technology_score?: number | null
           updated_at?: string | null
@@ -198,6 +211,13 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "diagnoses_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
             referencedColumns: ["id"]
           },
         ]
@@ -384,6 +404,50 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "profiles_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      projects: {
+        Row: {
+          company_id: string
+          created_at: string | null
+          description: string | null
+          id: string
+          is_default: boolean | null
+          metadata: Json | null
+          name: string
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          company_id: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_default?: boolean | null
+          metadata?: Json | null
+          name: string
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          company_id?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_default?: boolean | null
+          metadata?: Json | null
+          name?: string
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "projects_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
