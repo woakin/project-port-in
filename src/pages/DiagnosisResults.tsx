@@ -46,8 +46,23 @@ export default function DiagnosisResults() {
   const { generatePlan, loading: generatingPlan } = usePlan();
 
   useEffect(() => {
-    fetchDiagnosis();
+    checkAuthAndFetch();
   }, [id]);
+
+  const checkAuthAndFetch = async () => {
+    // Verificar autenticación primero
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      toast({
+        title: 'Sesión requerida',
+        description: 'Debes iniciar sesión para ver el diagnóstico',
+        variant: 'destructive'
+      });
+      navigate('/auth');
+      return;
+    }
+    fetchDiagnosis();
+  };
 
   const fetchDiagnosis = async () => {
     if (!id) return;
@@ -65,7 +80,14 @@ export default function DiagnosisResults() {
         .eq('id', id)
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching diagnosis:', error);
+        throw error;
+      }
+
+      if (!data) {
+        throw new Error('Diagnóstico no encontrado');
+      }
 
       setDiagnosis(data as any);
 
