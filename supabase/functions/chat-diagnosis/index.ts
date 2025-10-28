@@ -217,6 +217,16 @@ INSTRUCCIONES:
    - Prioridades (high, medium, low)
    - Estimación de esfuerzo en días
 
+5. GENERA KPIs EMPRESARIALES (5-10 indicadores clave):
+   - Basándote en la conversación y el sector/industria
+   - Si el usuario mencionó números (ej: "vendemos $10k/mes"), úsalos
+   - Si no hay datos, usa benchmarks típicos del sector y etapa
+   - Prioriza KPIs accionables y relevantes (no vanity metrics)
+   - Ejemplos por sector:
+     * SaaS: MRR, Churn Rate, CAC, LTV, Active Users
+     * E-commerce: Conversion Rate, AOV, Cart Abandonment, Customer Retention
+     * Servicios: Utilization Rate, Revenue per Employee, Client Retention
+
 Responde SOLO con un JSON válido en este formato exacto:
 {
   "scores": {
@@ -263,7 +273,18 @@ Responde SOLO con un JSON válido en este formato exacto:
         ]
       }
     ]
-  }
+  },
+  "suggested_kpis": [
+    {
+      "area": "marketing" | "finance" | "operations" | "strategy" | "technology" | "legal",
+      "name": string,
+      "current_value": number,
+      "target_value": number,
+      "unit": string,
+      "period": "daily" | "weekly" | "monthly" | "quarterly" | "yearly",
+      "source": "user_provided" | "estimated" | "benchmark"
+    }
+  ]
 }${previousDiagnosis ? `
 
 IMPORTANTE: Solo incluye tareas marcadas con "is_new": true. NO incluyas tareas existentes.` : ''}`;
@@ -594,6 +615,54 @@ IMPORTANTE: Solo incluye tareas marcadas con "is_new": true. NO incluyas tareas 
                 });
             }
           }
+        }
+      }
+
+      // Insertar KPIs sugeridos por el LLM
+      if (diagnosis.suggested_kpis && Array.isArray(diagnosis.suggested_kpis) && diagnosis.suggested_kpis.length > 0) {
+        console.log(`Inserting ${diagnosis.suggested_kpis.length} suggested KPIs`);
+        
+        // Calcular period_end basado en el period
+        const getPeriodEnd = (period: string, start: Date) => {
+          const periodMap: { [key: string]: number } = {
+            daily: 1,
+            weekly: 7,
+            monthly: 30,
+            quarterly: 90,
+            yearly: 365
+          };
+          const days = periodMap[period] || 30;
+          return new Date(start.getTime() + days * 24 * 60 * 60 * 1000).toISOString();
+        };
+
+        const now = new Date();
+        const kpisToInsert = diagnosis.suggested_kpis.map((kpi: any) => ({
+          company_id: companyId,
+          area: kpi.area,
+          name: kpi.name,
+          value: kpi.current_value,
+          target_value: kpi.target_value,
+          unit: kpi.unit || null,
+          period_start: now.toISOString(),
+          period_end: getPeriodEnd(kpi.period, now),
+          source: kpi.source || 'ai_estimated',
+          metadata: {
+            generated_by: 'chat_diagnosis',
+            diagnosis_id: diagnosisData.id,
+            diagnosis_version: newVersion,
+            period: kpi.period
+          }
+        }));
+
+        const { error: kpisError } = await supabase
+          .from('kpis')
+          .insert(kpisToInsert);
+
+        if (kpisError) {
+          console.error('Error inserting KPIs:', kpisError);
+          // No lanzar error, solo loguearlo
+        } else {
+          console.log(`${kpisToInsert.length} KPIs inserted successfully`);
         }
       }
 
