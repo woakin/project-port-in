@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { useProjectContext } from '@/contexts/ProjectContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/shared/Card';
@@ -24,6 +25,7 @@ type CompanyInfo = {
 
 export default function ChatDiagnosis() {
   const { user, loading: authLoading } = useAuth();
+  const { currentProject, loading: projectLoading } = useProjectContext();
   const navigate = useNavigate();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -42,11 +44,32 @@ export default function ChatDiagnosis() {
   const [tempProjectDescription, setTempProjectDescription] = useState('');
 
   useEffect(() => {
-    if (authLoading) return;
+    if (authLoading || projectLoading) return;
     if (!user) {
       navigate('/auth');
+      return;
     }
-  }, [user, authLoading, navigate]);
+
+    // Si hay proyecto activo, ir directo al chat
+    if (currentProject && step === 'company-info') {
+      const info: CompanyInfo = {
+        name: currentProject.name,
+        industry: 'General',
+        stage: 'startup',
+        projectName: currentProject.name,
+        projectDescription: currentProject.description || undefined
+      };
+      
+      setCompanyInfo(info);
+      setStep('chat');
+      
+      // Mensaje inicial
+      setMessages([{
+        role: 'assistant',
+        content: `¡Hola! Soy tu consultor de IA para **${currentProject.name}**. \n\nEstoy aquí para ayudarte con cualquier pregunta sobre tu proyecto, darte consejos estratégicos, analizar situaciones o ayudarte a tomar decisiones. \n\n¿En qué puedo ayudarte hoy?`
+      }]);
+    }
+  }, [user, authLoading, currentProject, projectLoading, step, navigate]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -231,6 +254,15 @@ export default function ChatDiagnosis() {
       setGeneratingDiagnosis(false);
     }
   };
+
+  // Mostrar loading mientras carga el proyecto
+  if (authLoading || projectLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   if (step === 'company-info') {
     return (
