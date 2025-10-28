@@ -9,6 +9,7 @@ import ForgotPassword from "./pages/ForgotPassword";
 import Onboarding from "./pages/Onboarding";
 import ChatDiagnosis from "./pages/ChatDiagnosis";
 import DiagnosisResults from "./pages/DiagnosisResults";
+import Plans from "./pages/Plans";
 import PlanView from "./pages/PlanView";
 import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
@@ -28,6 +29,7 @@ const App = () => (
           <Route path="/onboarding" element={<Onboarding />} />
           <Route path="/chat-diagnosis" element={<ChatDiagnosis />} />
           <Route path="/diagnosis/:id" element={<DiagnosisResults />} />
+          <Route path="/plans" element={<Plans />} />
           <Route path="/plans/:id" element={<PlanView />} />
           <Route path="/admin" element={<Admin />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

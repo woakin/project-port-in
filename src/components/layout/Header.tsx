@@ -28,9 +28,9 @@ export function Header() {
           <Link to="/chat-diagnosis" className="text-base text-muted-foreground hover:text-foreground transition-colors">
             Diagnóstico
           </Link>
-          <span className="text-base text-muted-foreground cursor-not-allowed opacity-60">
+          <Link to="/plans" className="text-base text-muted-foreground hover:text-foreground transition-colors">
             Planes
-          </span>
+          </Link>
           <span className="text-base text-muted-foreground cursor-not-allowed opacity-60">
             Documentos
           </span>
