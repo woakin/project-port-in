@@ -222,6 +222,59 @@ export type Database = {
           },
         ]
       }
+      documents: {
+        Row: {
+          analysis_result: Json | null
+          analysis_status: string | null
+          category: string | null
+          company_id: string
+          created_at: string | null
+          file_name: string
+          file_size: number | null
+          file_type: string | null
+          file_url: string
+          id: string
+          updated_at: string | null
+          uploaded_by: string
+        }
+        Insert: {
+          analysis_result?: Json | null
+          analysis_status?: string | null
+          category?: string | null
+          company_id: string
+          created_at?: string | null
+          file_name: string
+          file_size?: number | null
+          file_type?: string | null
+          file_url: string
+          id?: string
+          updated_at?: string | null
+          uploaded_by: string
+        }
+        Update: {
+          analysis_result?: Json | null
+          analysis_status?: string | null
+          category?: string | null
+          company_id?: string
+          created_at?: string | null
+          file_name?: string
+          file_size?: number | null
+          file_type?: string | null
+          file_url?: string
+          id?: string
+          updated_at?: string | null
+          uploaded_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "documents_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       kpi_alerts: {
         Row: {
           condition: string

@@ -8,3 +8,9 @@ verify_jwt = true
 
 [functions.generate-action-plan]
 verify_jwt = true
+
+[functions.check-kpi-alerts]
+verify_jwt = false
+
+[functions.analyze-document]
+verify_jwt = true

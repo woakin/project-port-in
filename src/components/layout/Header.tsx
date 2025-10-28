@@ -29,9 +29,9 @@ export function Header() {
           <Link to="/tasks" className="text-base text-muted-foreground hover:text-foreground transition-colors">
             Tareas
           </Link>
-          <span className="text-base text-muted-foreground cursor-not-allowed opacity-60">
+          <Link to="/documents" className="text-base text-muted-foreground hover:text-foreground transition-colors">
             Documentos
-          </span>
+          </Link>
         </nav>
       )}
 
