@@ -30,6 +30,12 @@ export default {
         ]
       },
       colors: {
+        'color-success-default': 'hsl(var(--color-success-default))',
+        'color-success-light': 'hsl(var(--color-success-light))',
+        'color-warning-default': 'hsl(var(--color-warning-default))',
+        'color-warning-light': 'hsl(var(--color-warning-light))',
+        'color-error-default': 'hsl(var(--color-error-default))',
+        'color-error-light': 'hsl(var(--color-error-light))',
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",

@@ -7,11 +7,14 @@ import { MainLayout } from "@/components/layout/MainLayout";
 import { KPICard } from "@/components/dashboard/KPICard";
 import { TasksList } from "@/components/dashboard/TasksList";
 import { KPIOverview } from "@/components/dashboard/KPIOverview";
+import { KPITrendChart } from "@/components/dashboard/KPITrendChart";
+import { KPIAreaChart } from "@/components/dashboard/KPIAreaChart";
+import { KPIAlerts } from "@/components/dashboard/KPIAlerts";
 import { Card } from "@/components/shared/Card";
 import { Badge } from "@/components/shared/Badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowRight, FolderOpen } from "lucide-react";
+import { ArrowRight, FolderOpen, TrendingUp, BarChart3 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -378,11 +381,14 @@ const Index = () => {
           </div>
         </div>
 
-        {/* Sección de KPIs */}
+        {/* Sección de KPIs y Gráficas */}
         {latestKPIs.length > 0 && (
-          <div className="mt-comfortable">
-            <div className="flex items-center justify-between mb-standard">
-              <h3 className="text-xl font-semibold text-foreground">KPIs Principales</h3>
+          <div className="mt-comfortable space-y-comfortable">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <TrendingUp className="h-5 w-5 text-primary" />
+                <h3 className="text-xl font-semibold text-foreground">Análisis de KPIs</h3>
+              </div>
               <Button 
                 variant="ghost"
                 onClick={() => navigate('/plans')}
@@ -391,10 +397,40 @@ const Index = () => {
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </div>
+
             {loadingKPIs ? (
               <div className="text-sm text-muted-foreground">Cargando KPIs...</div>
             ) : (
-              <KPIOverview kpis={latestKPIs.slice(0, 6)} />
+              <>
+                <Tabs defaultValue="overview" className="w-full">
+                  <TabsList className="grid w-full grid-cols-3 mb-standard">
+                    <TabsTrigger value="overview">Vista General</TabsTrigger>
+                    <TabsTrigger value="trends">Tendencias</TabsTrigger>
+                    <TabsTrigger value="alerts">Alertas</TabsTrigger>
+                  </TabsList>
+                  
+                  <TabsContent value="overview" className="space-y-standard">
+                    <KPIOverview kpis={latestKPIs.slice(0, 6)} />
+                  </TabsContent>
+                  
+                  <TabsContent value="trends" className="space-y-standard">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-standard">
+                      <KPITrendChart 
+                        kpis={kpis.slice(0, 20)} 
+                        title="Evolución Temporal de KPIs"
+                      />
+                      <KPIAreaChart 
+                        kpis={latestKPIs} 
+                        title="Comparación por Área"
+                      />
+                    </div>
+                  </TabsContent>
+                  
+                  <TabsContent value="alerts">
+                    <KPIAlerts />
+                  </TabsContent>
+                </Tabs>
+              </>
             )}
           </div>
         )}

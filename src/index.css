@@ -44,6 +44,14 @@
     /* Border Radius */
     --radius: 4px;
     
+    /* Status Colors */
+    --color-success-default: 142 71% 45%;
+    --color-success-light: 142 71% 95%;
+    --color-warning-default: 38 92% 50%;
+    --color-warning-light: 38 92% 95%;
+    --color-error-default: 7 48% 54%;
+    --color-error-light: 7 48% 95%;
+    
     /* Chart Colors */
     --chart-1: 98 20% 41%;
     --chart-2: 102 25% 49%;
