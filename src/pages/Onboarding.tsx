@@ -22,6 +22,8 @@ export default function Onboarding() {
   const [companyName, setCompanyName] = useState('');
   const [industry, setIndustry] = useState('');
   const [companySize, setCompanySize] = useState<MaturityLevel>('startup');
+  const [projectName, setProjectName] = useState('');
+  const [projectDescription, setProjectDescription] = useState('');
   const [responses, setResponses] = useState({
     strategy: '',
     operations: '',
@@ -34,10 +36,10 @@ export default function Onboarding() {
   const totalSteps = 8;
 
   const handleNext = () => {
-    if (step === 1 && (!companyName || !industry)) {
+    if (step === 1 && (!companyName || !industry || !projectName)) {
       toast({
         title: 'Campos requeridos',
-        description: 'Por favor completa todos los campos',
+        description: 'Por favor completa nombre de empresa, industria y nombre del proyecto',
         variant: 'destructive'
       });
       return;
@@ -97,13 +99,29 @@ export default function Onboarding() {
         if (profileError) throw profileError;
       }
 
-      // 2. Llamar a edge function para análisis
+      // 2. Crear el proyecto
+      const { data: newProject, error: projectError } = await supabase
+        .from('projects')
+        .insert({
+          name: projectName,
+          description: projectDescription || null,
+          company_id: companyId,
+          status: 'active',
+          is_default: true
+        })
+        .select()
+        .single();
+
+      if (projectError) throw projectError;
+
+      // 3. Llamar a edge function para análisis
       const { data: analysisData, error: analysisError } = await supabase.functions.invoke('diagnose-company', {
         body: {
           formResponses: responses,
           maturityLevel: companySize,
           companyId,
-          userId: user.id
+          userId: user.id,
+          projectId: newProject.id
         }
       });
 
@@ -173,6 +191,27 @@ export default function Onboarding() {
                     value={industry}
                     onChange={(e) => setIndustry(e.target.value)}
                     placeholder="Ej: Tecnología, Alimentos, Servicios..."
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="projectName">Nombre del Proyecto *</Label>
+                  <Input
+                    id="projectName"
+                    value={projectName}
+                    onChange={(e) => setProjectName(e.target.value)}
+                    placeholder="Ej: Transformación Digital 2025"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="projectDescription">Descripción del proyecto (opcional)</Label>
+                  <Textarea
+                    id="projectDescription"
+                    value={projectDescription}
+                    onChange={(e) => setProjectDescription(e.target.value)}
+                    placeholder="Describe el objetivo de este proyecto..."
+                    rows={2}
                   />
                 </div>
 

@@ -136,7 +136,7 @@ export default function Projects() {
             <p className="text-muted-foreground mb-6">
               Crea tu primer proyecto para comenzar a trabajar
             </p>
-            <Button onClick={() => setIsDialogOpen(true)}>
+            <Button onClick={() => navigate('/onboarding')}>
               <Plus className="h-4 w-4 mr-2" />
               Crear Primer Proyecto
             </Button>

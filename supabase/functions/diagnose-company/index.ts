@@ -19,7 +19,8 @@ const requestSchema = z.object({
   }),
   maturityLevel: z.enum(['idea', 'startup', 'pyme', 'corporate']),
   companyId: z.string().uuid('Invalid company ID format'),
-  userId: z.string().uuid('Invalid user ID format')
+  userId: z.string().uuid('Invalid user ID format'),
+  projectId: z.string().uuid('Invalid project ID format')
 });
 
 serve(async (req) => {
@@ -56,7 +57,7 @@ serve(async (req) => {
       );
     }
 
-    const { formResponses, maturityLevel, companyId, userId } = validationResult.data;
+    const { formResponses, maturityLevel, companyId, userId, projectId } = validationResult.data;
 
     console.log('Analyzing diagnosis for company:', companyId);
 
@@ -161,6 +162,7 @@ Analiza estas respuestas y proporciona el diagnóstico en formato JSON.`;
       .insert({
         company_id: companyId,
         user_id: userId,
+        project_id: projectId,
         version: 1,
         strategy_score: analysis.scores.strategy,
         operations_score: analysis.scores.operations,
