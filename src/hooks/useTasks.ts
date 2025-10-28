@@ -55,11 +55,39 @@ export function useTasks() {
 
   const getUpcomingTasks = () => {
     const today = new Date();
+    
+    // Incluir tareas pendientes/en progreso con fecha futura O sin fecha asignada
     const upcoming = tasks.filter(task => {
-      if (!task.due_date || task.status === 'completed') return false;
-      const dueDate = new Date(task.due_date);
-      return dueDate >= today;
+      if (task.status === 'completed') return false;
+      
+      // Si tiene fecha, debe ser hoy o futura
+      if (task.due_date) {
+        const dueDate = new Date(task.due_date);
+        return dueDate >= today;
+      }
+      
+      // Si no tiene fecha, incluir tareas pendientes/en progreso
+      return task.status === 'pending' || task.status === 'in_progress';
     });
+    
+    // Ordenar por: prioridad (high > medium > low), luego fecha
+    const priorityOrder = { high: 0, medium: 1, low: 2 };
+    upcoming.sort((a, b) => {
+      const priorityDiff = priorityOrder[a.priority || 'low'] - priorityOrder[b.priority || 'low'];
+      if (priorityDiff !== 0) return priorityDiff;
+      
+      // Si ambas tienen fecha, ordenar por fecha
+      if (a.due_date && b.due_date) {
+        return new Date(a.due_date).getTime() - new Date(b.due_date).getTime();
+      }
+      
+      // Las que tienen fecha van primero
+      if (a.due_date) return -1;
+      if (b.due_date) return 1;
+      
+      return 0;
+    });
+    
     return upcoming.slice(0, 5);
   };
 

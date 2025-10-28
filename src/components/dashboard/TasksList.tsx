@@ -79,10 +79,15 @@ export function TasksList({ tasks, onUpdateStatus }: TasksListProps) {
 
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                {task.due_date && (
+                {task.due_date ? (
                   <div className={`flex items-center gap-1 ${isOverdue(task.due_date) && task.status !== 'completed' ? 'text-destructive' : ''}`}>
                     <Calendar className="h-4 w-4" />
                     <span>{format(new Date(task.due_date), "d 'de' MMM", { locale: es })}</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1 text-muted-foreground">
+                    <Calendar className="h-4 w-4" />
+                    <span>Sin fecha</span>
                   </div>
                 )}
                 {task.estimated_effort && (
