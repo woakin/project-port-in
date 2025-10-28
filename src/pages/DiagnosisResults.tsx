@@ -214,10 +214,10 @@ export default function DiagnosisResults() {
         {/* Header */}
         <div>
           <h1 className="text-3xl font-bold text-foreground mb-2">
-            Diagnóstico: {diagnosis.companies.name}
+            Diagnóstico: {diagnosis.companies?.name ?? 'Empresa'}
           </h1>
           <p className="text-muted-foreground">
-            {diagnosis.companies.industry} • {diagnosis.maturity_level}
+            {(diagnosis.companies?.industry ?? 'Industria')} • {diagnosis.maturity_level ?? ''}
           </p>
         </div>
 
@@ -299,7 +299,7 @@ export default function DiagnosisResults() {
             Insights Clave
           </h3>
           <div className="space-y-3">
-            {diagnosis.insights.insights.map((insight, index) => (
+            {(diagnosis.insights?.insights ?? []).map((insight, index) => (
               <div 
                 key={index} 
                 className="flex items-start gap-3 p-4 bg-muted rounded-md"
@@ -318,7 +318,7 @@ export default function DiagnosisResults() {
             Áreas que Requieren Atención
           </h3>
           <div className="flex flex-wrap gap-2">
-            {diagnosis.insights.critical_areas.map((area) => (
+            {(diagnosis.insights?.critical_areas ?? []).map((area) => (
               <Badge key={area} variant="error">
                 {area.charAt(0).toUpperCase() + area.slice(1)}
               </Badge>
@@ -340,7 +340,7 @@ export default function DiagnosisResults() {
               </p>
             </div>
             {existingPlan ? (
-              <Button onClick={() => navigate(`/plan/${existingPlan.id}`)}>
+              <Button onClick={() => navigate(`/plans/${existingPlan.id}`)}>
                 Ver Plan de Acción
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
