@@ -5,6 +5,8 @@ import { Card } from '@/components/shared/Card';
 import { Badge } from '@/components/shared/Badge';
 import { Button } from '@/components/ui/button';
 import { usePlan } from '@/hooks/usePlan';
+import { usePlanProgress } from '@/hooks/usePlanProgress';
+import { PlanProgress } from '@/components/plans/PlanProgress';
 import { 
   Loader2, 
   ArrowLeft, 
@@ -24,6 +26,7 @@ export default function PlanView() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { fetchPlan, loading } = usePlan();
+  const { progress, loading: progressLoading } = usePlanProgress(id);
   const [plan, setPlan] = useState<any>(null);
 
   useEffect(() => {
@@ -133,6 +136,13 @@ export default function PlanView() {
             </div>
           </div>
         </div>
+
+        {/* Progress Section */}
+        {progress && !progressLoading && (
+          <div className="mb-6">
+            <PlanProgress progress={progress} />
+          </div>
+        )}
 
         {/* Áreas del Plan */}
         <Accordion type="single" collapsible className="space-y-4">

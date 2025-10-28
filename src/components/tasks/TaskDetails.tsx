@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -20,10 +20,13 @@ import {
   MessageSquare, 
   Paperclip,
   Send,
-  X
+  X,
+  Upload,
+  Loader2
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
+import { Input } from "@/components/ui/input";
 
 interface TaskDetailsProps {
   task: Task | null;
@@ -36,6 +39,7 @@ export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
   const [attachments, setAttachments] = useState<TaskAttachment[]>([]);
   const [newComment, setNewComment] = useState("");
   const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [startDate, setStartDate] = useState<Date | undefined>(
     task?.start_date ? new Date(task.start_date) : undefined
   );
@@ -43,6 +47,7 @@ export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
     task?.due_date ? new Date(task.due_date) : undefined
   );
   const [updatingDates, setUpdatingDates] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (task && open) {
@@ -114,6 +119,92 @@ export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
       toast.error('Error al agregar comentario');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !task) return;
+
+    // Validate file size (5MB max)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('El archivo es demasiado grande (máximo 5MB)');
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('No user');
+
+      // Upload to storage
+      const fileName = `${task.id}/${user.id}/${Date.now()}_${file.name}`;
+      const { error: uploadError } = await supabase.storage
+        .from('task-attachments')
+        .upload(fileName, file);
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('task-attachments')
+        .getPublicUrl(fileName);
+
+      // Save to database
+      const { error: dbError } = await supabase
+        .from('task_attachments')
+        .insert({
+          task_id: task.id,
+          file_name: file.name,
+          file_url: publicUrl,
+          file_size: file.size,
+          uploaded_by: user.id
+        });
+
+      if (dbError) throw dbError;
+
+      await fetchAttachments();
+      toast.success('Archivo subido correctamente');
+      
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      toast.error('Error al subir el archivo');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleDeleteAttachment = async (attachmentId: string, fileUrl: string) => {
+    if (!confirm('¿Eliminar este archivo?')) return;
+
+    try {
+      // Extract path from URL
+      const path = fileUrl.split('/task-attachments/')[1];
+      
+      // Delete from storage
+      const { error: storageError } = await supabase.storage
+        .from('task-attachments')
+        .remove([path]);
+
+      if (storageError) throw storageError;
+
+      // Delete from database
+      const { error: dbError } = await supabase
+        .from('task_attachments')
+        .delete()
+        .eq('id', attachmentId);
+
+      if (dbError) throw dbError;
+
+      await fetchAttachments();
+      toast.success('Archivo eliminado');
+    } catch (error) {
+      console.error('Error deleting attachment:', error);
+      toast.error('Error al eliminar el archivo');
     }
   };
 
@@ -300,40 +391,76 @@ export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
           <Separator />
 
           {/* Adjuntos */}
-          {attachments.length > 0 && (
-            <>
-              <div>
-                <h4 className="font-medium mb-3 flex items-center gap-2">
-                  <Paperclip className="h-4 w-4" />
-                  Archivos adjuntos ({attachments.length})
-                </h4>
-                <div className="space-y-2">
-                  {attachments.map(attachment => (
-                    <div 
-                      key={attachment.id}
-                      className="flex items-center justify-between p-2 bg-muted rounded-lg text-sm"
-                    >
-                      <div className="flex items-center gap-2">
-                        <Paperclip className="h-4 w-4" />
-                        <span>{attachment.file_name}</span>
-                        {attachment.file_size && (
-                          <span className="text-xs text-muted-foreground">
-                            ({(attachment.file_size / 1024).toFixed(1)} KB)
-                          </span>
-                        )}
-                      </div>
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="font-medium flex items-center gap-2">
+                <Paperclip className="h-4 w-4" />
+                Archivos adjuntos ({attachments.length})
+              </h4>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+              >
+                {uploading ? (
+                  <>
+                    <Loader2 className="h-3 w-3 mr-2 animate-spin" />
+                    Subiendo...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="h-3 w-3 mr-2" />
+                    Subir archivo
+                  </>
+                )}
+              </Button>
+              <Input
+                ref={fileInputRef}
+                type="file"
+                className="hidden"
+                onChange={handleFileUpload}
+                accept=".pdf,.doc,.docx,.txt,.png,.jpg,.jpeg"
+              />
+            </div>
+            
+            {attachments.length > 0 && (
+              <div className="space-y-2">
+                {attachments.map(attachment => (
+                  <div 
+                    key={attachment.id}
+                    className="flex items-center justify-between p-2 bg-muted rounded-lg text-sm"
+                  >
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      <Paperclip className="h-4 w-4 flex-shrink-0" />
+                      <span className="truncate">{attachment.file_name}</span>
+                      {attachment.file_size && (
+                        <span className="text-xs text-muted-foreground flex-shrink-0">
+                          ({(attachment.file_size / 1024).toFixed(1)} KB)
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex gap-1">
                       <Button variant="ghost" size="sm" asChild>
                         <a href={attachment.file_url} target="_blank" rel="noopener noreferrer">
                           Ver
                         </a>
                       </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDeleteAttachment(attachment.id, attachment.file_url)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
                     </div>
-                  ))}
-                </div>
+                  </div>
+                ))}
               </div>
-              <Separator />
-            </>
-          )}
+            )}
+          </div>
+
+          <Separator />
 
           {/* Comentarios */}
           <div>
