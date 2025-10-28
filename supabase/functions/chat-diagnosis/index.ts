@@ -74,10 +74,9 @@ serve(async (req) => {
       const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
       const supabase = createClient(supabaseUrl, supabaseServiceKey);
       
-      // Obtener el usuario del token JWT
+      // Obtener el usuario del token JWT usando el service role key
       const token = authHeader.replace('Bearer ', '');
-      const supabaseClient = createClient(supabaseUrl, Deno.env.get('SUPABASE_ANON_KEY')!);
-      const { data: { user }, error: userError } = await supabaseClient.auth.getUser(token);
+      const { data: { user }, error: userError } = await supabase.auth.getUser(token);
       
       if (userError || !user) {
         console.error('Auth error:', userError);
