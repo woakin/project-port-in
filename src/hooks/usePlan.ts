@@ -18,16 +18,17 @@ export function usePlan() {
         throw error;
       }
 
-      if (!data?.success || !data?.planId) {
-        throw new Error('Error al generar el plan');
-      }
+    if (!data?.success || !data?.planId) {
+      throw new Error('Error al generar el plan');
+    }
 
-      toast({
-        title: 'Plan generado',
-        description: 'Tu plan de acción ha sido creado exitosamente'
-      });
+    toast({
+      title: 'Plan generado',
+      description: 'Tu plan de acción ha sido creado exitosamente'
+    });
 
-      return data.plan;
+    // Devolver el objeto plan con el ID del planId
+    return { ...data.plan, id: data.planId };
     } catch (error) {
       console.error('Error generating plan:', error);
       toast({

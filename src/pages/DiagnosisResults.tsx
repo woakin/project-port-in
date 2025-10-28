@@ -82,14 +82,15 @@ export default function DiagnosisResults() {
   const handleGeneratePlan = async () => {
     if (!id) return;
 
-    const plan = await generatePlan({
+    const result = await generatePlan({
       diagnosisId: id,
       timeHorizon: 6,
       complexityLevel: 'medium'
     });
 
-    if (plan) {
-      navigate(`/plans/${plan.id}`);
+    if (result) {
+      // Navegar al plan usando el ID correcto
+      navigate(`/plans/${result.id}`);
     }
   };
 
