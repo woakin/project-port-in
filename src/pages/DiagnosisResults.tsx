@@ -17,6 +17,12 @@ import {
   ResponsiveContainer 
 } from 'recharts';
 
+interface AreaInsights {
+  strengths: string[];
+  improvements: string[];
+  recommendations: string[];
+}
+
 interface DiagnosisData {
   id: string;
   strategy_score: number;
@@ -26,8 +32,12 @@ interface DiagnosisData {
   legal_score: number;
   technology_score: number;
   insights: {
-    insights: string[];
-    critical_areas: string[];
+    strategy: AreaInsights;
+    operations: AreaInsights;
+    finance: AreaInsights;
+    marketing: AreaInsights;
+    legal: AreaInsights;
+    technology: AreaInsights;
   };
   maturity_level: string;
   created_at: string;
@@ -208,6 +218,52 @@ export default function DiagnosisResults() {
     return <Badge variant="error">Necesita mejora</Badge>;
   };
 
+  // Extraer insights clave (mejores fortalezas y recomendaciones principales)
+  const getKeyInsights = () => {
+    const insights: string[] = [];
+    const areas = ['strategy', 'operations', 'finance', 'marketing', 'legal', 'technology'] as const;
+    
+    areas.forEach(area => {
+      const areaInsights = diagnosis.insights?.[area];
+      if (areaInsights) {
+        // Agregar la primera fortaleza si existe
+        if (areaInsights.strengths?.[0]) {
+          insights.push(`✓ ${area.charAt(0).toUpperCase() + area.slice(1)}: ${areaInsights.strengths[0]}`);
+        }
+        // Agregar la primera recomendación si existe
+        if (areaInsights.recommendations?.[0] && insights.length < 6) {
+          insights.push(`→ ${area.charAt(0).toUpperCase() + area.slice(1)}: ${areaInsights.recommendations[0]}`);
+        }
+      }
+    });
+    
+    return insights.slice(0, 5); // Limitar a 5 insights principales
+  };
+
+  // Identificar áreas críticas (score < 40)
+  const getCriticalAreas = () => {
+    const critical: Array<{ name: string; score: number }> = [];
+    const areaMap = {
+      strategy: { name: 'Estrategia', score: diagnosis.strategy_score },
+      operations: { name: 'Operaciones', score: diagnosis.operations_score },
+      finance: { name: 'Finanzas', score: diagnosis.finance_score },
+      marketing: { name: 'Marketing', score: diagnosis.marketing_score },
+      legal: { name: 'Legal', score: diagnosis.legal_score },
+      technology: { name: 'Tecnología', score: diagnosis.technology_score }
+    };
+
+    Object.entries(areaMap).forEach(([key, value]) => {
+      if (value.score < 40) {
+        critical.push(value);
+      }
+    });
+
+    return critical.sort((a, b) => a.score - b.score);
+  };
+
+  const keyInsights = getKeyInsights();
+  const criticalAreas = getCriticalAreas();
+
   return (
     <MainLayout>
       <div className="container mx-auto p-comfortable space-y-comfortable">
@@ -294,37 +350,45 @@ export default function DiagnosisResults() {
         </div>
 
         {/* Insights */}
-        <Card variant="content">
-          <h3 className="text-lg font-semibold text-foreground mb-4">
-            Insights Clave
-          </h3>
-          <div className="space-y-3">
-            {(diagnosis.insights?.insights ?? []).map((insight, index) => (
-              <div 
-                key={index} 
-                className="flex items-start gap-3 p-4 bg-muted rounded-md"
-              >
-                {index === 0 && <TrendingUp className="h-5 w-5 text-color-success-default flex-shrink-0 mt-0.5" />}
-                {index > 0 && <TrendingDown className="h-5 w-5 text-color-warning-default flex-shrink-0 mt-0.5" />}
-                <p className="text-foreground">{insight}</p>
-              </div>
-            ))}
-          </div>
-        </Card>
+        {keyInsights.length > 0 && (
+          <Card variant="content">
+            <h3 className="text-lg font-semibold text-foreground mb-4">
+              Insights Clave
+            </h3>
+            <div className="space-y-3">
+              {keyInsights.map((insight, index) => (
+                <div 
+                  key={index} 
+                  className="flex items-start gap-3 p-4 bg-muted rounded-md"
+                >
+                  {insight.startsWith('✓') ? (
+                    <TrendingUp className="h-5 w-5 text-color-success-default flex-shrink-0 mt-0.5" />
+                  ) : (
+                    <TrendingDown className="h-5 w-5 text-color-warning-default flex-shrink-0 mt-0.5" />
+                  )}
+                  <p className="text-foreground">{insight}</p>
+                </div>
+              ))}
+            </div>
+          </Card>
+        )}
 
         {/* Áreas críticas */}
-        <Card variant="content">
-          <h3 className="text-lg font-semibold text-foreground mb-4">
-            Áreas que Requieren Atención
-          </h3>
-          <div className="flex flex-wrap gap-2">
-            {(diagnosis.insights?.critical_areas ?? []).map((area) => (
-              <Badge key={area} variant="error">
-                {area.charAt(0).toUpperCase() + area.slice(1)}
-              </Badge>
-            ))}
-          </div>
-        </Card>
+        {criticalAreas.length > 0 && (
+          <Card variant="content">
+            <h3 className="text-lg font-semibold text-foreground mb-4">
+              Áreas que Requieren Atención
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {criticalAreas.map((area) => (
+                <div key={area.name} className="flex items-center justify-between p-3 bg-muted rounded-md">
+                  <span className="font-medium text-foreground">{area.name}</span>
+                  <Badge variant="error">{area.score}/100</Badge>
+                </div>
+              ))}
+            </div>
+          </Card>
+        )}
 
         {/* CTA */}
         <Card variant="content">
