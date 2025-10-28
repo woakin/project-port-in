@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
+import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -7,13 +8,38 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
+// Validation schema
+const requestSchema = z.object({
+  diagnosisId: z.string().uuid('Invalid diagnosis ID format'),
+  timeHorizon: z.number().int().min(1).max(24, 'Time horizon must be between 1 and 24 months'),
+  complexityLevel: z.enum(['basic', 'medium', 'advanced'])
+});
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { diagnosisId, timeHorizon, complexityLevel } = await req.json();
+    // Validate request body
+    const body = await req.json();
+    const validationResult = requestSchema.safeParse(body);
+    
+    if (!validationResult.success) {
+      console.error('Validation error:', validationResult.error);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Invalid request data',
+          details: validationResult.error.issues.map(i => i.message)
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" }
+        }
+      );
+    }
+
+    const { diagnosisId, timeHorizon, complexityLevel } = validationResult.data;
 
     console.log("Generating plan for diagnosis:", diagnosisId);
 
@@ -270,7 +296,8 @@ REGLAS:
     console.error("Error in generate-action-plan:", error);
     return new Response(
       JSON.stringify({
-        error: error instanceof Error ? error.message : "Error desconocido",
+        error: 'An error occurred generating your action plan',
+        code: 'PLAN_GENERATION_ERROR'
       }),
       {
         status: 500,

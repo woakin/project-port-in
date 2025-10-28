@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -11,13 +12,49 @@ interface Message {
   content: string;
 }
 
+// Validation schemas
+const messageSchema = z.object({
+  role: z.enum(['user', 'assistant', 'system']),
+  content: z.string().max(10000, 'Message content too long')
+});
+
+const companyInfoSchema = z.object({
+  name: z.string().min(1).max(200, 'Company name too long'),
+  industry: z.string().min(1).max(200, 'Industry name too long'),
+  stage: z.enum(['idea', 'startup', 'pyme', 'corporate'])
+});
+
+const requestSchema = z.object({
+  messages: z.array(messageSchema).max(100, 'Too many messages'),
+  companyInfo: companyInfoSchema,
+  isComplete: z.boolean()
+});
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { messages, companyInfo, isComplete } = await req.json();
+    // Validate request body
+    const body = await req.json();
+    const validationResult = requestSchema.safeParse(body);
+    
+    if (!validationResult.success) {
+      console.error('Validation error:', validationResult.error);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Invalid request data',
+          details: validationResult.error.issues.map(i => i.message)
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    }
+
+    const { messages, companyInfo, isComplete } = validationResult.data;
     
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
@@ -276,7 +313,10 @@ INSTRUCCIONES:
   } catch (error) {
     console.error('Error in chat-diagnosis:', error);
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Error desconocido' }),
+      JSON.stringify({ 
+        error: 'An error occurred processing your request',
+        code: 'CHAT_ERROR'
+      }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

@@ -1,10 +1,26 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
+import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+// Validation schema
+const requestSchema = z.object({
+  formResponses: z.object({
+    strategy: z.string().max(5000, 'Strategy response too long'),
+    operations: z.string().max(5000, 'Operations response too long'),
+    finance: z.string().max(5000, 'Finance response too long'),
+    marketing: z.string().max(5000, 'Marketing response too long'),
+    legal: z.string().max(5000, 'Legal response too long'),
+    technology: z.string().max(5000, 'Technology response too long')
+  }),
+  maturityLevel: z.enum(['idea', 'startup', 'pyme', 'corporate']),
+  companyId: z.string().uuid('Invalid company ID format'),
+  userId: z.string().uuid('Invalid user ID format')
+});
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -22,7 +38,25 @@ serve(async (req) => {
 
     const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
 
-    const { formResponses, maturityLevel, companyId, userId } = await req.json();
+    // Validate request body
+    const body = await req.json();
+    const validationResult = requestSchema.safeParse(body);
+    
+    if (!validationResult.success) {
+      console.error('Validation error:', validationResult.error);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Invalid request data',
+          details: validationResult.error.issues.map(i => i.message)
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    }
+
+    const { formResponses, maturityLevel, companyId, userId } = validationResult.data;
 
     console.log('Analyzing diagnosis for company:', companyId);
 
@@ -167,8 +201,8 @@ Analiza estas respuestas y proporciona el diagnóstico en formato JSON.`;
     console.error('Error in diagnose-company:', error);
     return new Response(
       JSON.stringify({ 
-        error: error instanceof Error ? error.message : 'Unknown error',
-        details: error instanceof Error ? error.stack : undefined
+        error: 'An error occurred processing your diagnosis',
+        code: 'DIAGNOSIS_ERROR'
       }),
       {
         status: 500,
