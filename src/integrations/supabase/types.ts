@@ -202,6 +202,87 @@ export type Database = {
           },
         ]
       }
+      kpi_alerts: {
+        Row: {
+          condition: string
+          created_at: string
+          id: string
+          is_active: boolean
+          kpi_id: string
+          last_triggered_at: string | null
+          notification_channel: string
+          threshold: number
+          user_id: string
+        }
+        Insert: {
+          condition: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          kpi_id: string
+          last_triggered_at?: string | null
+          notification_channel: string
+          threshold: number
+          user_id: string
+        }
+        Update: {
+          condition?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          kpi_id?: string
+          last_triggered_at?: string | null
+          notification_channel?: string
+          threshold?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
+      kpis: {
+        Row: {
+          area: string
+          company_id: string
+          created_at: string
+          id: string
+          metadata: Json | null
+          name: string
+          period_end: string
+          period_start: string
+          source: string
+          target_value: number | null
+          unit: string | null
+          value: number
+        }
+        Insert: {
+          area: string
+          company_id: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          name: string
+          period_end: string
+          period_start: string
+          source: string
+          target_value?: number | null
+          unit?: string | null
+          value: number
+        }
+        Update: {
+          area?: string
+          company_id?: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          name?: string
+          period_end?: string
+          period_start?: string
+          source?: string
+          target_value?: number | null
+          unit?: string | null
+          value?: number
+        }
+        Relationships: []
+      }
       plan_areas: {
         Row: {
           description: string | null
