@@ -40,9 +40,83 @@ const Index = () => {
     getKPIStats 
   } = useKPIs();
 
-  // Redirect to auth if not logged in
+  // Show landing page for logged out users
   if (!loading && !user) {
-    return <Navigate to="/auth" replace />;
+    return (
+      <div className="min-h-screen bg-background">
+        <header className="border-b border-border">
+          <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+            <h1 className="text-2xl font-bold text-primary">Consultor IA</h1>
+            <div className="flex gap-3">
+              <Button variant="ghost" onClick={() => navigate('/auth')}>
+                Iniciar Sesión
+              </Button>
+              <Button onClick={() => navigate('/auth')}>
+                Comenzar Gratis
+              </Button>
+            </div>
+          </div>
+        </header>
+        
+        <main className="container mx-auto px-4 py-16">
+          <div className="max-w-4xl mx-auto text-center space-y-8">
+            <div className="space-y-4">
+              <h2 className="text-4xl md:text-5xl font-bold text-foreground">
+                Transforma tu Negocio con IA
+              </h2>
+              <p className="text-xl text-muted-foreground">
+                Diagnósticos empresariales inteligentes y planes de acción personalizados para impulsar tu crecimiento
+              </p>
+            </div>
+            
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Button size="lg" onClick={() => navigate('/auth')} className="text-lg px-8">
+                Iniciar Diagnóstico Gratis
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </Button>
+            </div>
+
+            <div className="grid md:grid-cols-3 gap-6 mt-16">
+              <Card variant="content" className="text-left">
+                <div className="space-y-3">
+                  <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <FolderOpen className="h-6 w-6 text-primary" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-foreground">Diagnóstico Inteligente</h3>
+                  <p className="text-muted-foreground">
+                    Análisis profundo de tu negocio en estrategia, operaciones, finanzas y más
+                  </p>
+                </div>
+              </Card>
+
+              <Card variant="content" className="text-left">
+                <div className="space-y-3">
+                  <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <ArrowRight className="h-6 w-6 text-primary" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-foreground">Planes de Acción</h3>
+                  <p className="text-muted-foreground">
+                    Recibe un plan personalizado con tareas concretas y alcanzables
+                  </p>
+                </div>
+              </Card>
+
+              <Card variant="content" className="text-left">
+                <div className="space-y-3">
+                  <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <FolderOpen className="h-6 w-6 text-primary" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-foreground">Seguimiento Continuo</h3>
+                  <p className="text-muted-foreground">
+                    Monitorea tu progreso con KPIs y ajusta tu estrategia en tiempo real
+                  </p>
+                </div>
+              </Card>
+            </div>
+          </div>
+        </main>
+      </div>
+    );
   }
 
   useEffect(() => {
