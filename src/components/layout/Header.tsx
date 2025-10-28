@@ -26,6 +26,12 @@ export function Header() {
           <Link to="/" className="text-base text-foreground hover:text-primary transition-colors">
             Dashboard
           </Link>
+          <Link to="/plans" className="text-base text-muted-foreground hover:text-foreground transition-colors">
+            Planes
+          </Link>
+          <Link to="/tasks" className="text-base text-muted-foreground hover:text-foreground transition-colors">
+            Tareas
+          </Link>
           <Link to="/projects" className="text-base text-muted-foreground hover:text-foreground transition-colors">
             Proyectos
           </Link>

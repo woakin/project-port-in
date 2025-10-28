@@ -12,6 +12,7 @@ import ChatDiagnosis from "./pages/ChatDiagnosis";
 import DiagnosisResults from "./pages/DiagnosisResults";
 import Plans from "./pages/Plans";
 import PlanView from "./pages/PlanView";
+import Tasks from "./pages/Tasks";
 import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 import Projects from "./pages/Projects";
@@ -35,6 +36,7 @@ const App = () => (
             <Route path="/diagnosis/:id" element={<DiagnosisResults />} />
             <Route path="/plans" element={<Plans />} />
             <Route path="/plans/:id" element={<PlanView />} />
+            <Route path="/tasks" element={<Tasks />} />
             <Route path="/projects" element={<Projects />} />
             <Route path="/diagnosticos" element={<Diagnosticos />} />
             <Route path="/admin" element={<Admin />} />
