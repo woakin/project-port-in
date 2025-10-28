@@ -4,6 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Label } from "@/components/ui/label";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Task } from "@/types/task.types";
 import { TaskComment, TaskAttachment } from "@/types/comment.types";
 import { supabase } from "@/integrations/supabase/client";
@@ -20,6 +23,7 @@ import {
   X
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { cn } from "@/lib/utils";
 
 interface TaskDetailsProps {
   task: Task | null;
@@ -32,11 +36,21 @@ export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
   const [attachments, setAttachments] = useState<TaskAttachment[]>([]);
   const [newComment, setNewComment] = useState("");
   const [loading, setLoading] = useState(false);
+  const [startDate, setStartDate] = useState<Date | undefined>(
+    task?.start_date ? new Date(task.start_date) : undefined
+  );
+  const [dueDate, setDueDate] = useState<Date | undefined>(
+    task?.due_date ? new Date(task.due_date) : undefined
+  );
+  const [updatingDates, setUpdatingDates] = useState(false);
 
   useEffect(() => {
     if (task && open) {
       fetchComments();
       fetchAttachments();
+      // Update dates when task changes
+      setStartDate(task.start_date ? new Date(task.start_date) : undefined);
+      setDueDate(task.due_date ? new Date(task.due_date) : undefined);
     }
   }, [task, open]);
 
@@ -103,6 +117,35 @@ export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
     }
   };
 
+  const handleUpdateDates = async () => {
+    if (!task) return;
+
+    setUpdatingDates(true);
+    try {
+      const { error } = await supabase
+        .from('tasks')
+        .update({
+          start_date: startDate ? format(startDate, 'yyyy-MM-dd') : null,
+          due_date: dueDate ? format(dueDate, 'yyyy-MM-dd') : null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', task.id);
+
+      if (error) throw error;
+
+      toast.success('Fechas actualizadas correctamente');
+      onOpenChange(false);
+      
+      // Reload to update views
+      setTimeout(() => window.location.reload(), 500);
+    } catch (error) {
+      console.error('Error updating dates:', error);
+      toast.error('Error al actualizar las fechas');
+    } finally {
+      setUpdatingDates(false);
+    }
+  };
+
   if (!task) return null;
 
   const getPriorityColor = (priority: string | null) => {
@@ -161,36 +204,98 @@ export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
             </div>
           )}
 
-          {/* Detalles */}
-          <div className="grid grid-cols-2 gap-4">
-            {task.start_date && (
-              <div className="flex items-center gap-2 text-sm">
-                <Calendar className="h-4 w-4 text-muted-foreground" />
-                <span className="text-muted-foreground">Inicio:</span>
-                <span>{format(new Date(task.start_date), "d 'de' MMMM", { locale: es })}</span>
+          {/* Fechas editables */}
+          <div className="space-y-3 bg-muted/50 p-4 rounded-lg">
+            <h4 className="font-medium text-sm">Fechas de la tarea</h4>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="start-date" className="text-xs">Fecha de inicio</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      id="start-date"
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal text-xs h-9",
+                        !startDate && "text-muted-foreground"
+                      )}
+                    >
+                      <Calendar className="mr-2 h-3 w-3" />
+                      {startDate ? format(startDate, "d MMM yyyy", { locale: es }) : "Seleccionar"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <CalendarComponent
+                      mode="single"
+                      selected={startDate}
+                      onSelect={setStartDate}
+                      initialFocus
+                      className={cn("p-3 pointer-events-auto")}
+                      locale={es}
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
-            )}
-            {task.due_date && (
-              <div className="flex items-center gap-2 text-sm">
-                <Calendar className="h-4 w-4 text-muted-foreground" />
-                <span className="text-muted-foreground">Entrega:</span>
-                <span>{format(new Date(task.due_date), "d 'de' MMMM", { locale: es })}</span>
+
+              <div className="space-y-2">
+                <Label htmlFor="due-date" className="text-xs">Fecha de entrega</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      id="due-date"
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal text-xs h-9",
+                        !dueDate && "text-muted-foreground"
+                      )}
+                    >
+                      <Calendar className="mr-2 h-3 w-3" />
+                      {dueDate ? format(dueDate, "d MMM yyyy", { locale: es }) : "Seleccionar"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <CalendarComponent
+                      mode="single"
+                      selected={dueDate}
+                      onSelect={setDueDate}
+                      initialFocus
+                      disabled={(date) => startDate ? date < startDate : false}
+                      className={cn("p-3 pointer-events-auto")}
+                      locale={es}
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
-            )}
-            {task.estimated_effort && (
-              <div className="flex items-center gap-2 text-sm">
-                <Clock className="h-4 w-4 text-muted-foreground" />
-                <span className="text-muted-foreground">Esfuerzo:</span>
-                <span>{task.estimated_effort} días</span>
-              </div>
-            )}
-            {task.depends_on && (
-              <div className="flex items-center gap-2 text-sm">
-                <AlertCircle className="h-4 w-4 text-warning" />
-                <span className="text-muted-foreground">Tiene dependencias</span>
-              </div>
-            )}
+            </div>
+            
+            <Button 
+              onClick={handleUpdateDates} 
+              disabled={updatingDates || (!startDate && !dueDate)}
+              size="sm"
+              className="w-full"
+            >
+              {updatingDates ? 'Guardando...' : 'Guardar Fechas'}
+            </Button>
           </div>
+
+          {/* Otros detalles */}
+          {(task.estimated_effort || task.depends_on) && (
+            <div className="grid grid-cols-2 gap-4">
+              {task.estimated_effort && (
+                <div className="flex items-center gap-2 text-sm">
+                  <Clock className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-muted-foreground">Esfuerzo:</span>
+                  <span>{task.estimated_effort} días</span>
+                </div>
+              )}
+              {task.depends_on && (
+                <div className="flex items-center gap-2 text-sm">
+                  <AlertCircle className="h-4 w-4 text-warning" />
+                  <span className="text-muted-foreground">Tiene dependencias</span>
+                </div>
+              )}
+            </div>
+          )}
 
           <Separator />
 
