@@ -18,9 +18,9 @@ import { useToast } from "@/hooks/use-toast";
 
 const Index = () => {
   const { user, loading } = useAuth();
-  const { currentProject, loading: projectLoading } = useProjectContext();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { currentProject, loading: projectLoading } = useProjectContext();
   const [latestDiagnosis, setLatestDiagnosis] = useState<any>(null);
   const [loadingDiagnosis, setLoadingDiagnosis] = useState(true);
   
@@ -39,6 +39,51 @@ const Index = () => {
     getLatestKPIs,
     getKPIStats 
   } = useKPIs();
+
+  useEffect(() => {
+    const fetchLatestDiagnosis = async () => {
+      if (!user || !currentProject?.id) {
+        setLoadingDiagnosis(false);
+        return;
+      }
+      
+      try {
+        const { data, error } = await supabase
+          .from('diagnoses')
+          .select('*')
+          .eq('project_id', currentProject.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (!error && data) {
+          setLatestDiagnosis(data);
+        }
+      } catch (error) {
+        console.error('Error fetching diagnosis:', error);
+      } finally {
+        setLoadingDiagnosis(false);
+      }
+    };
+
+    fetchLatestDiagnosis();
+  }, [user, currentProject?.id]);
+
+  const handleTaskStatusUpdate = async (taskId: string, status: any) => {
+    try {
+      await updateTaskStatus(taskId, status);
+      toast({
+        title: "Tarea actualizada",
+        description: "El estado de la tarea se ha actualizado correctamente",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "No se pudo actualizar la tarea",
+        variant: "destructive",
+      });
+    }
+  };
 
   // Show landing page for logged out users
   if (!loading && !user) {
@@ -119,52 +164,7 @@ const Index = () => {
     );
   }
 
-  useEffect(() => {
-    const fetchLatestDiagnosis = async () => {
-      if (!user || !currentProject?.id) {
-        setLoadingDiagnosis(false);
-        return;
-      }
-      
-      try {
-        const { data, error } = await supabase
-          .from('diagnoses')
-          .select('*')
-          .eq('project_id', currentProject.id)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-        if (!error && data) {
-          setLatestDiagnosis(data);
-        }
-      } catch (error) {
-        console.error('Error fetching diagnosis:', error);
-      } finally {
-        setLoadingDiagnosis(false);
-      }
-    };
-
-    fetchLatestDiagnosis();
-  }, [user, currentProject?.id]);
-
-  const handleTaskStatusUpdate = async (taskId: string, status: any) => {
-    try {
-      await updateTaskStatus(taskId, status);
-      toast({
-        title: "Tarea actualizada",
-        description: "El estado de la tarea se ha actualizado correctamente",
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "No se pudo actualizar la tarea",
-        variant: "destructive",
-      });
-    }
-  };
-
-  if (loading || loadingDiagnosis || projectLoading) {
+  if (loading || (user && (loadingDiagnosis || projectLoading))) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-muted-foreground">Cargando...</div>
