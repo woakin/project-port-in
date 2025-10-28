@@ -141,6 +141,28 @@ serve(async (req) => {
         const completedTasks = allTasks.filter((t: any) => t.status === 'completed');
         const inProgressTasks = allTasks.filter((t: any) => t.status === 'in_progress');
         
+        // Calcular estadísticas por área
+        const areaStats = new Map();
+        if (activePlan.plan_areas) {
+          activePlan.plan_areas.forEach((area: any) => {
+            const areaTasks = area.plan_objectives?.flatMap((o: any) => o.tasks || []) || [];
+            const areaCompleted = areaTasks.filter((t: any) => t.status === 'completed');
+            const areaInProgress = areaTasks.filter((t: any) => t.status === 'in_progress');
+            
+            areaStats.set(area.name, {
+              total: areaTasks.length,
+              completed: areaCompleted.length,
+              inProgress: areaInProgress.length,
+              progress: areaTasks.length > 0 ? Math.round((areaCompleted.length / areaTasks.length) * 100) : 0,
+              completedTasks: areaCompleted.map((t: any) => ({
+                title: t.title,
+                completed_at: t.completed_at
+              })),
+              objectives: area.plan_objectives?.map((o: any) => o.title) || []
+            });
+          });
+        }
+        
         historicalContext = `
 CONTEXTO DEL PROYECTO EXISTENTE:
 - Nombre: ${companyInfo.projectName}
@@ -159,17 +181,30 @@ DIAGNÓSTICO ANTERIOR (Versión ${previousDiagnosis.version}):
 
 PLAN ACTUAL EN EJECUCIÓN (v${activePlan.version}):
 - Total de tareas: ${allTasks.length}
-- Tareas completadas: ${completedTasks.length}
+- Tareas completadas: ${completedTasks.length} (${allTasks.length > 0 ? Math.round((completedTasks.length / allTasks.length) * 100) : 0}%)
 - Tareas en progreso: ${inProgressTasks.length}
-- Progreso general: ${allTasks.length > 0 ? Math.round((completedTasks.length / allTasks.length) * 100) : 0}%
 
-INSTRUCCIONES PARA ACTUALIZACIÓN:
-1. **Analiza la EVOLUCIÓN**: compara scores anteriores con la situación actual
-2. **Mantén continuidad**: identifica áreas/objetivos que deben continuar (usa "action": "keep")
-3. **NO recrees tareas existentes**: solo agrega tareas NUEVAS marcadas con "is_new": true
-4. **Ajusta prioridades**: basándote en progreso real
-5. **Genera insights de CAMBIO**: enfócate en evolución, no repitas análisis
-6. **Incluye changes_summary**: breve resumen de qué cambió
+PROGRESO DETALLADO POR ÁREA:
+${Array.from(areaStats.entries()).map(([areaName, stats]: [string, any]) => `
+${areaName} - ${stats.progress}% completado:
+  • Tareas: ${stats.completed}/${stats.total} completadas, ${stats.inProgress} en progreso
+  • Objetivos del área:
+${stats.objectives.map((obj: string) => `    - ${obj}`).join('\n')}
+  • Logros completados:
+${stats.completedTasks.length > 0 
+  ? stats.completedTasks.map((t: any) => `    ✓ ${t.title}${t.completed_at ? ` (${new Date(t.completed_at).toLocaleDateString()})` : ''}`).join('\n')
+  : '    (Sin tareas completadas aún)'}
+`).join('\n')}
+
+INSTRUCCIONES CRÍTICAS PARA ACTUALIZACIÓN:
+1. **Reconoce el trabajo realizado**: Las tareas completadas arriba representan AVANCES REALES del usuario
+2. **Ajusta scores según progreso**: Si completaron tareas de un área, el score de esa área debe MEJORAR
+3. **Analiza la EVOLUCIÓN**: Compara scores anteriores con la situación actual considerando las tareas completadas
+4. **Mantén continuidad**: Identifica áreas/objetivos que deben continuar (usa "action": "keep")
+5. **NO recrees tareas existentes**: Solo agrega tareas NUEVAS marcadas con "is_new": true
+6. **Prioriza según progreso**: Si un área tiene poco progreso, puede necesitar tareas más claras o diferentes
+7. **Genera insights de CAMBIO**: Enfócate en evolución, no repitas análisis del diagnóstico anterior
+8. **Incluye changes_summary**: Resumen de cómo evolucionó el proyecto desde el último diagnóstico
 
 `;
       }
