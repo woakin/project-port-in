@@ -29,7 +29,8 @@ const companyInfoSchema = z.object({
 const requestSchema = z.object({
   messages: z.array(messageSchema).max(100, 'Too many messages'),
   companyInfo: companyInfoSchema,
-  isComplete: z.boolean()
+  isComplete: z.boolean(),
+  mode: z.enum(['diagnosis', 'strategic', 'follow_up', 'document']).optional()
 });
 
 serve(async (req) => {
@@ -56,7 +57,7 @@ serve(async (req) => {
       );
     }
 
-    const { messages, companyInfo, isComplete } = validationResult.data;
+    const { messages, companyInfo, isComplete, mode = 'diagnosis' } = validationResult.data;
     
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
@@ -712,8 +713,97 @@ IMPORTANTE: Solo incluye tareas marcadas con "is_new": true. NO incluyas tareas 
 
     // Conversación normal con streaming
     
-    // Obtener el system prompt desde la configuración
-    let systemPromptTemplate = `Eres un consultor empresarial experto que guía diagnósticos empresariales conversacionales.
+    // Obtener contexto adicional según el modo
+    let additionalContext = '';
+    
+    if (mode === 'follow_up' || mode === 'document') {
+      const authHeader = req.headers.get('Authorization');
+      if (authHeader) {
+        const token = authHeader.replace('Bearer ', '');
+        const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+        const supabaseClient = createClient(supabaseUrl, token);
+        
+        // Obtener info del proyecto actual
+        const { data: projects } = await supabaseClient
+          .from('projects')
+          .select(`
+            *,
+            action_plans!inner(
+              *,
+              plan_areas(
+                *,
+                plan_objectives(
+                  *,
+                  tasks(*)
+                )
+              )
+            ),
+            kpis(*)
+          `)
+          .eq('name', companyInfo.projectName)
+          .eq('action_plans.status', 'active')
+          .limit(1);
+        
+        if (projects && projects.length > 0) {
+          const project = projects[0];
+          const plan = project.action_plans[0];
+          
+          if (mode === 'follow_up' && plan) {
+            const allTasks = plan.plan_areas?.flatMap((a: any) => 
+              a.plan_objectives?.flatMap((o: any) => o.tasks || []) || []
+            ) || [];
+            const pending = allTasks.filter((t: any) => t.status === 'pending');
+            const inProgress = allTasks.filter((t: any) => t.status === 'in_progress');
+            const completed = allTasks.filter((t: any) => t.status === 'completed');
+            
+            additionalContext = `
+CONTEXTO DEL PLAN ACTIVO (v${plan.version}):
+- Total tareas: ${allTasks.length}
+- Completadas: ${completed.length} (${allTasks.length > 0 ? Math.round((completed.length / allTasks.length) * 100) : 0}%)
+- En progreso: ${inProgress.length}
+- Pendientes: ${pending.length}
+
+ÁREAS DEL PLAN:
+${plan.plan_areas?.map((area: any) => {
+  const areaTasks = area.plan_objectives?.flatMap((o: any) => o.tasks || []) || [];
+  const areaCompleted = areaTasks.filter((t: any) => t.status === 'completed').length;
+  return `- ${area.name}: ${areaCompleted}/${areaTasks.length} tareas completadas`;
+}).join('\n')}
+
+TAREAS RECIENTES:
+${completed.slice(0, 5).map((t: any) => `✓ ${t.title}`).join('\n')}
+
+KPIS ACTUALES:
+${project.kpis?.slice(0, 5).map((k: any) => `- ${k.name}: ${k.value}${k.unit || ''} (meta: ${k.target_value}${k.unit || ''})`).join('\n') || 'Sin KPIs registrados'}`;
+          }
+          
+          if (mode === 'document') {
+            const { data: docs } = await supabaseClient
+              .from('documents')
+              .select('*')
+              .eq('analysis_status', 'completed')
+              .order('created_at', { ascending: false })
+              .limit(5);
+            
+            if (docs && docs.length > 0) {
+              additionalContext = `
+DOCUMENTOS RECIENTES ANALIZADOS:
+${docs.map(d => `
+- ${d.file_name} (${d.category || 'General'})
+  Resumen: ${d.analysis_summary?.substring(0, 150) || 'Sin resumen'}...
+  Insights: ${d.analysis_insights?.slice(0, 2).join(', ') || 'Sin insights'}
+`).join('\n')}`;
+            }
+          }
+        }
+      }
+    }
+    
+    // Obtener el system prompt según el modo
+    let systemPromptTemplate = '';
+    
+    if (mode === 'diagnosis') {
+      systemPromptTemplate = `Eres un consultor empresarial experto que guía diagnósticos empresariales conversacionales.
 
 REGLA CRÍTICA: Trabaja ÚNICAMENTE con la información del proyecto específico. NO inventes ni asumas datos diferentes.
 
@@ -746,6 +836,86 @@ GUÍA DE PROGRESO:
 - Cubre las 6 áreas de manera equilibrada
 - Después de 8-12 intercambios significativos, pregunta: "¿Te gustaría que genere ahora el diagnóstico completo y un plan de acción personalizado?"
 - Si el usuario acepta, responde con: "¡Perfecto! Haz clic en el botón 'Generar Diagnóstico' para crear tu análisis completo y plan de acción."`;
+    } else if (mode === 'strategic') {
+      systemPromptTemplate = `Eres un consultor estratégico senior experto en negocios.
+
+INFORMACIÓN DEL PROYECTO:
+- Empresa: {{COMPANY_NAME}}
+- Industria: {{COMPANY_INDUSTRY}}
+- Etapa: {{COMPANY_STAGE}}
+- Proyecto: {{PROJECT_NAME}}
+{{PROJECT_DESCRIPTION}}
+
+TU ROL:
+Ayudar al usuario con consultas estratégicas puntuales sin generar diagnósticos formales. 
+
+ÁREAS DE ESPECIALIZACIÓN:
+- Estrategia y crecimiento empresarial
+- Toma de decisiones complejas
+- Análisis de mercado y competencia
+- Modelos de negocio y monetización
+- Expansión y escalabilidad
+- Gestión del cambio
+
+ESTILO:
+- Directo y accionable
+- Fundamentado en frameworks reconocidos (SWOT, Porter, Blue Ocean, etc.)
+- Ejemplos concretos y casos de éxito
+- Considera siempre el contexto: {{COMPANY_STAGE}} en {{COMPANY_INDUSTRY}}`;
+    } else if (mode === 'follow_up') {
+      systemPromptTemplate = `Eres un consultor de seguimiento que ayuda a ejecutar planes de acción.
+
+INFORMACIÓN DEL PROYECTO:
+- Empresa: {{COMPANY_NAME}}
+- Industria: {{COMPANY_INDUSTRY}}
+- Proyecto: {{PROJECT_NAME}}
+{{PROJECT_DESCRIPTION}}
+
+${additionalContext}
+
+TU ROL:
+Ayudar al usuario a ejecutar su plan, resolver bloqueos, ajustar prioridades y celebrar avances.
+
+ENFOQUE:
+- Analiza el progreso actual del plan
+- Identifica bloqueos y propón soluciones
+- Sugiere ajustes tácticos según resultados
+- Prioriza lo urgente e importante
+- Mantén motivación reconociendo logros
+- Conecta tareas con objetivos estratégicos
+
+ESTILO:
+- Práctico y orientado a acción
+- Celebra los avances reales
+- Identifica patrones (áreas con poco progreso)
+- Sugiere recursos o tácticas específicas`;
+    } else if (mode === 'document') {
+      systemPromptTemplate = `Eres un analista de documentos empresariales especializado.
+
+INFORMACIÓN DEL PROYECTO:
+- Empresa: {{COMPANY_NAME}}
+- Industria: {{COMPANY_INDUSTRY}}
+- Proyecto: {{PROJECT_NAME}}
+{{PROJECT_DESCRIPTION}}
+
+${additionalContext}
+
+TU ROL:
+Ayudar al usuario a extraer insights de documentos empresariales y conectarlos con su estrategia.
+
+CAPACIDADES:
+- Analizar documentos subidos (financieros, operativos, legales, etc.)
+- Identificar tendencias y patrones
+- Conectar hallazgos de documentos con objetivos estratégicos
+- Sugerir acciones basadas en los datos
+- Detectar riesgos o oportunidades ocultas
+
+ESTILO:
+- Analítico pero accesible
+- Enfocado en insights accionables
+- Conecta datos con estrategia
+- Usa visualizaciones mentales cuando sea útil`;
+    }
 
     try {
       const authHeader = req.headers.get('Authorization');
@@ -760,7 +930,7 @@ GUÍA DE PROGRESO:
           .eq('key', 'chat_diagnosis_system_prompt')
           .maybeSingle();
 
-        if (!configError && configData) {
+        if (!configError && configData && mode === 'diagnosis') {
           systemPromptTemplate = (configData.value as any).prompt || systemPromptTemplate;
         }
       }

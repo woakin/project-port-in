@@ -6,9 +6,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/shared/Card';
 import { toast } from '@/hooks/use-toast';
-import { Send, Loader2, CheckCircle, Home } from 'lucide-react';
+import { Send, Loader2, CheckCircle, Home, Info } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import ReactMarkdown from 'react-markdown';
+import ModeSelector from '@/components/chat/ModeSelector';
+import QuickActions from '@/components/chat/QuickActions';
+
+type ChatMode = 'diagnosis' | 'strategic' | 'follow_up' | 'document';
 
 type Message = {
   role: 'user' | 'assistant';
@@ -44,6 +48,8 @@ export default function ChatDiagnosis() {
   const [tempProjectDescription, setTempProjectDescription] = useState('');
   const [diagnosisVersion, setDiagnosisVersion] = useState<number>(0);
   const [hasPreviousDiagnosis, setHasPreviousDiagnosis] = useState(false);
+  const [chatMode, setChatMode] = useState<ChatMode>('diagnosis');
+  const [showModeInfo, setShowModeInfo] = useState(false);
 
   useEffect(() => {
     if (authLoading || projectLoading) return;
@@ -83,10 +89,11 @@ export default function ChatDiagnosis() {
       fetchPreviousDiagnosis();
       setStep('chat');
       
-      // Mensaje inicial
+      // Mensaje inicial basado en modo
+      const initialMessage = getInitialMessage(currentProject.name, 'diagnosis');
       setMessages([{
         role: 'assistant',
-        content: `¡Hola! Soy tu consultor de IA para **${currentProject.name}**. \n\nEstoy aquí para ayudarte con cualquier pregunta sobre tu proyecto, darte consejos estratégicos, analizar situaciones o ayudarte a tomar decisiones. \n\n¿En qué puedo ayudarte hoy?`
+        content: initialMessage
       }]);
     }
   }, [user, authLoading, currentProject, projectLoading, step, navigate]);
@@ -94,6 +101,45 @@ export default function ChatDiagnosis() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  const getInitialMessage = (projectName: string, mode: ChatMode) => {
+    const messages = {
+      diagnosis: `¡Hola! Soy tu consultor de IA para **${projectName}**. \n\nEstoy aquí para ayudarte a crear un diagnóstico completo y un plan de acción. Te haré algunas preguntas sobre diferentes áreas de tu negocio.\n\n¿Comenzamos?`,
+      strategic: `¡Hola! Estoy aquí como tu consultor estratégico para **${projectName}**. \n\nPuedes hacerme preguntas sobre estrategia, toma de decisiones, análisis de mercado, o cualquier desafío empresarial.\n\n¿En qué puedo ayudarte?`,
+      follow_up: `¡Hola! Voy a ayudarte a revisar el progreso de **${projectName}**. \n\nPuedo analizar tus tareas, identificar bloqueos, ajustar prioridades y sugerir próximos pasos.\n\n¿Qué te gustaría revisar?`,
+      document: `¡Hola! Estoy listo para analizar documentos de **${projectName}**. \n\nPuedo ayudarte a extraer insights, identificar patrones y conectar los hallazgos con tu estrategia.\n\n¿Qué documento quieres que analice?`
+    };
+    return messages[mode];
+  };
+
+  const handleModeChange = (newMode: ChatMode) => {
+    if (sending || generatingDiagnosis) return;
+    
+    setChatMode(newMode);
+    
+    // Agregar mensaje del sistema informando del cambio
+    const modeChangeMessage = {
+      role: 'assistant' as const,
+      content: `**Modo cambiado a: ${getModeLabel(newMode)}**\n\n${getInitialMessage(companyInfo?.projectName || 'tu proyecto', newMode)}`
+    };
+    
+    setMessages(prev => [...prev, modeChangeMessage]);
+  };
+
+  const getModeLabel = (mode: ChatMode) => {
+    const labels = {
+      diagnosis: 'Diagnóstico',
+      strategic: 'Consulta Estratégica',
+      follow_up: 'Seguimiento',
+      document: 'Análisis de Documentos'
+    };
+    return labels[mode];
+  };
+
+  const handleQuickAction = (prompt: string) => {
+    setInput(prompt);
+    inputRef.current?.focus();
+  };
 
   const startChat = () => {
     if (!tempName || !tempIndustry || !tempProjectName) {
@@ -153,7 +199,8 @@ export default function ChatDiagnosis() {
           body: JSON.stringify({
             messages: newMessages,
             companyInfo,
-            isComplete: false
+            isComplete: false,
+            mode: chatMode
           }),
         }
       );
@@ -388,25 +435,62 @@ export default function ChatDiagnosis() {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <header className="border-b border-border p-4 bg-card">
-        <div className="max-w-4xl mx-auto flex items-center gap-3">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => navigate('/')}
-            className="shrink-0"
-          >
-            <Home className="h-5 w-5" />
-          </Button>
-          <div>
-            <h1 className="text-xl font-bold text-foreground">
-              {companyInfo?.projectName}
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              {companyInfo?.name} · {companyInfo?.industry}
-            </p>
+        <div className="max-w-4xl mx-auto flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate('/')}
+              className="shrink-0"
+            >
+              <Home className="h-5 w-5" />
+            </Button>
+            <div>
+              <h1 className="text-xl font-bold text-foreground">
+                {companyInfo?.projectName}
+              </h1>
+              <p className="text-sm text-muted-foreground">
+                {companyInfo?.name} · {companyInfo?.industry}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground">Modo: {getModeLabel(chatMode)}</span>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setShowModeInfo(!showModeInfo)}
+            >
+              <Info className="h-4 w-4" />
+            </Button>
           </div>
         </div>
       </header>
+
+      {showModeInfo && (
+        <div className="bg-muted/50 p-4 border-b border-border">
+          <div className="max-w-4xl mx-auto">
+            <p className="text-sm text-muted-foreground">
+              <strong>Modo {getModeLabel(chatMode)}:</strong>{' '}
+              {chatMode === 'diagnosis' && 'Generación de diagnóstico completo y plan de acción personalizado.'}
+              {chatMode === 'strategic' && 'Consultas estratégicas puntuales sin generar diagnóstico formal.'}
+              {chatMode === 'follow_up' && 'Seguimiento del plan activo, revisión de progreso y ajustes.'}
+              {chatMode === 'document' && 'Análisis contextualizado de documentos subidos.'}
+            </p>
+          </div>
+        </div>
+      )}
+
+      <ModeSelector 
+        currentMode={chatMode} 
+        onModeChange={handleModeChange}
+        disabled={sending || generatingDiagnosis}
+      />
+
+      <QuickActions 
+        projectId={currentProject?.id}
+        onActionClick={handleQuickAction}
+      />
 
       <div className="flex-1 overflow-y-auto p-4">
         <div className="max-w-4xl mx-auto space-y-4">
@@ -445,7 +529,7 @@ export default function ChatDiagnosis() {
 
       <div className="border-t border-border bg-card">
         <div className="max-w-4xl mx-auto p-4 space-y-3">
-          {messages.length > 6 && (
+          {messages.length > 6 && chatMode === 'diagnosis' && (
             <div className="flex justify-center">
               <Button
                 onClick={generateDiagnosis}
