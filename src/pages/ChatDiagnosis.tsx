@@ -456,12 +456,12 @@ export default function ChatDiagnosis() {
                 {generatingDiagnosis ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    Generando diagnóstico...
+                    {hasPreviousDiagnosis ? 'Actualizando diagnóstico...' : 'Generando diagnóstico...'}
                   </>
                 ) : (
                   <>
                     <CheckCircle className="h-4 w-4" />
-                    Generar Diagnóstico y Plan
+                    {hasPreviousDiagnosis ? `Actualizar Diagnóstico (v${diagnosisVersion + 1})` : 'Generar Diagnóstico y Plan'}
                   </>
                 )}
               </Button>
