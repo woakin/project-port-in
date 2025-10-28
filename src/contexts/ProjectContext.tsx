@@ -20,7 +20,7 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
   const projectHook = useProject();
   const [providerLoading, setProviderLoading] = useState(true);
 
-useEffect(() => {
+  useEffect(() => {
     let cancelled = false;
     const init = async () => {
       // When user changes, resolve company_id and load projects
@@ -35,9 +35,8 @@ useEffect(() => {
           .eq('id', user.id)
           .single();
 
-        const companyId = (user as any)?.user_metadata?.company_id || profile?.company_id;
-        if (companyId) {
-          await projectHook.fetchProjects(companyId);
+        if (profile?.company_id) {
+          await projectHook.fetchProjects(profile.company_id);
         }
       } catch (e) {
         console.error('Error initializing projects:', e);
@@ -59,9 +58,8 @@ useEffect(() => {
         .eq('id', user.id)
         .single();
 
-      const companyId = (user as any)?.user_metadata?.company_id || profile?.company_id;
-      if (companyId) {
-        await projectHook.fetchProjects(companyId);
+      if (profile?.company_id) {
+        await projectHook.fetchProjects(profile.company_id);
       }
     } catch (e) {
       console.error('Error refreshing projects:', e);
