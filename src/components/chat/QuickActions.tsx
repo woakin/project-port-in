@@ -1,53 +1,46 @@
-import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { BarChart3, ListTodo, FileText, History } from 'lucide-react';
+
+export type SheetType = 'kpis' | 'tasks' | 'documents' | 'diagnoses' | null;
 
 interface QuickActionsProps {
   projectId?: string;
   onActionClick?: (action: string) => void;
+  onOpenSheet?: (sheet: SheetType) => void;
 }
 
-export default function QuickActions({ projectId, onActionClick }: QuickActionsProps) {
-  const navigate = useNavigate();
-
+export default function QuickActions({ projectId, onActionClick, onOpenSheet }: QuickActionsProps) {
   const actions = [
     {
-      id: 'kpis',
+      id: 'kpis' as const,
       icon: BarChart3,
       label: 'Ver KPIs',
-      onClick: () => {
-        onActionClick?.('Ver mis KPIs actuales');
-        navigate('/');
-      }
+      prompt: 'Ver mis KPIs actuales'
     },
     {
-      id: 'tasks',
+      id: 'tasks' as const,
       icon: ListTodo,
       label: 'Ver Tareas',
-      onClick: () => {
-        onActionClick?.('Muéstrame mis tareas pendientes');
-        navigate('/tasks');
-      }
+      prompt: 'Muéstrame mis tareas pendientes'
     },
     {
-      id: 'documents',
+      id: 'documents' as const,
       icon: FileText,
       label: 'Documentos',
-      onClick: () => {
-        onActionClick?.('Analiza mis documentos recientes');
-        navigate('/documents');
-      }
+      prompt: 'Analiza mis documentos recientes'
     },
     {
-      id: 'diagnoses',
+      id: 'diagnoses' as const,
       icon: History,
       label: 'Historial',
-      onClick: () => {
-        onActionClick?.('Muéstrame el historial de diagnósticos');
-        navigate('/diagnosticos');
-      }
+      prompt: 'Muéstrame el historial de diagnósticos'
     }
   ];
+
+  const handleActionClick = (action: typeof actions[0]) => {
+    onActionClick?.(action.prompt);
+    onOpenSheet?.(action.id);
+  };
 
   return (
     <div className="flex gap-2 p-3 bg-muted/50 border-y border-border overflow-x-auto">
@@ -58,7 +51,7 @@ export default function QuickActions({ projectId, onActionClick }: QuickActionsP
             key={action.id}
             variant="outline"
             size="sm"
-            onClick={action.onClick}
+            onClick={() => handleActionClick(action)}
             className="flex items-center gap-2 whitespace-nowrap"
           >
             <Icon className="h-4 w-4" />

@@ -10,7 +10,12 @@ import { Send, Loader2, CheckCircle, Home, Info } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import ReactMarkdown from 'react-markdown';
 import ModeSelector from '@/components/chat/ModeSelector';
-import QuickActions from '@/components/chat/QuickActions';
+import QuickActions, { SheetType } from '@/components/chat/QuickActions';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import KPIsSheet from '@/components/chat/sheets/KPIsSheet';
+import TasksSheet from '@/components/chat/sheets/TasksSheet';
+import DocumentsSheet from '@/components/chat/sheets/DocumentsSheet';
+import DiagnosesSheet from '@/components/chat/sheets/DiagnosesSheet';
 
 type ChatMode = 'diagnosis' | 'strategic' | 'follow_up' | 'document';
 
@@ -50,6 +55,7 @@ export default function ChatDiagnosis() {
   const [hasPreviousDiagnosis, setHasPreviousDiagnosis] = useState(false);
   const [chatMode, setChatMode] = useState<ChatMode>('diagnosis');
   const [showModeInfo, setShowModeInfo] = useState(false);
+  const [openSheet, setOpenSheet] = useState<SheetType>(null);
 
   useEffect(() => {
     if (authLoading || projectLoading) return;
@@ -490,7 +496,57 @@ export default function ChatDiagnosis() {
       <QuickActions 
         projectId={currentProject?.id}
         onActionClick={handleQuickAction}
+        onOpenSheet={setOpenSheet}
       />
+
+      {/* Side Sheets */}
+      <Sheet open={openSheet === 'kpis'} onOpenChange={(open) => !open && setOpenSheet(null)}>
+        <SheetContent side="right" className="w-[400px] sm:w-[540px] overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle>KPIs Actuales</SheetTitle>
+            <SheetDescription>
+              Indicadores de rendimiento del proyecto
+            </SheetDescription>
+          </SheetHeader>
+          <KPIsSheet />
+        </SheetContent>
+      </Sheet>
+
+      <Sheet open={openSheet === 'tasks'} onOpenChange={(open) => !open && setOpenSheet(null)}>
+        <SheetContent side="right" className="w-[400px] sm:w-[540px] overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle>Tareas</SheetTitle>
+            <SheetDescription>
+              Gestiona y visualiza tus tareas
+            </SheetDescription>
+          </SheetHeader>
+          <TasksSheet />
+        </SheetContent>
+      </Sheet>
+
+      <Sheet open={openSheet === 'documents'} onOpenChange={(open) => !open && setOpenSheet(null)}>
+        <SheetContent side="right" className="w-[400px] sm:w-[540px] overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle>Documentos</SheetTitle>
+            <SheetDescription>
+              Documentos subidos y analizados
+            </SheetDescription>
+          </SheetHeader>
+          <DocumentsSheet />
+        </SheetContent>
+      </Sheet>
+
+      <Sheet open={openSheet === 'diagnoses'} onOpenChange={(open) => !open && setOpenSheet(null)}>
+        <SheetContent side="right" className="w-[400px] sm:w-[540px] overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle>Historial de Diagnósticos</SheetTitle>
+            <SheetDescription>
+              Diagnósticos generados anteriormente
+            </SheetDescription>
+          </SheetHeader>
+          <DiagnosesSheet />
+        </SheetContent>
+      </Sheet>
 
       <div className="flex-1 overflow-y-auto p-4">
         <div className="max-w-4xl mx-auto space-y-4">
