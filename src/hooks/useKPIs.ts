@@ -62,7 +62,7 @@ export function useKPIs() {
 
   const getKPIStats = () => {
     const latest = getLatestKPIs();
-    const total = latest.length; // Contar todos los KPIs, no solo los que tienen target
+    const total = latest.length;
     const onTarget = latest.filter(kpi => {
       if (!kpi.target_value) return false;
       return kpi.value >= kpi.target_value;
@@ -73,6 +73,58 @@ export function useKPIs() {
     }).length;
 
     return { total, onTarget, belowTarget };
+  };
+
+  const getKPIHistory = (name: string) => {
+    return kpis
+      .filter(kpi => kpi.name === name)
+      .sort((a, b) => new Date(a.period_start).getTime() - new Date(b.period_start).getTime());
+  };
+
+  const getUniqueKPINames = () => {
+    const names = new Set(kpis.map(kpi => kpi.name));
+    return Array.from(names).sort();
+  };
+
+  const getKPITrend = (name: string) => {
+    const history = getKPIHistory(name);
+    if (history.length < 2) return 'stable';
+    
+    const latest = history[history.length - 1];
+    const previous = history[history.length - 2];
+    
+    if (latest.value > previous.value) return 'up';
+    if (latest.value < previous.value) return 'down';
+    return 'stable';
+  };
+
+  const markAsMainKPI = async (id: string) => {
+    try {
+      // First, unmark all KPIs
+      const { error: unmarkError } = await supabase
+        .from('kpis')
+        .update({ is_main_kpi: false })
+        .neq('id', id);
+
+      if (unmarkError) throw unmarkError;
+
+      // Then mark the selected one
+      const { error: markError } = await supabase
+        .from('kpis')
+        .update({ is_main_kpi: true })
+        .eq('id', id);
+
+      if (markError) throw markError;
+      
+      await fetchKPIs();
+    } catch (error) {
+      console.error('Error marking main KPI:', error);
+      throw error;
+    }
+  };
+
+  const getMainKPI = () => {
+    return kpis.find(kpi => kpi.is_main_kpi);
   };
 
   const addKPI = async (kpi: Omit<KPI, 'id' | 'created_at'>) => {
@@ -95,6 +147,11 @@ export function useKPIs() {
     getKPIsByArea,
     getLatestKPIs,
     getKPIStats,
+    getKPIHistory,
+    getUniqueKPINames,
+    getKPITrend,
+    markAsMainKPI,
+    getMainKPI,
     addKPI,
     refetch: fetchKPIs
   };

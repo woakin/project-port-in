@@ -317,6 +317,7 @@ export type Database = {
           company_id: string
           created_at: string
           id: string
+          is_main_kpi: boolean | null
           metadata: Json | null
           name: string
           period_end: string
@@ -331,6 +332,7 @@ export type Database = {
           company_id: string
           created_at?: string
           id?: string
+          is_main_kpi?: boolean | null
           metadata?: Json | null
           name: string
           period_end: string
@@ -345,6 +347,7 @@ export type Database = {
           company_id?: string
           created_at?: string
           id?: string
+          is_main_kpi?: boolean | null
           metadata?: Json | null
           name?: string
           period_end?: string

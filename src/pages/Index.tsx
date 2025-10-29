@@ -6,14 +6,10 @@ import { useProjectContext } from "@/contexts/ProjectContext";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { KPICard } from "@/components/dashboard/KPICard";
 import { TasksList } from "@/components/dashboard/TasksList";
-import { KPIOverview } from "@/components/dashboard/KPIOverview";
-import { KPITrendChart } from "@/components/dashboard/KPITrendChart";
-import { KPIAreaChart } from "@/components/dashboard/KPIAreaChart";
-import { KPIAlerts } from "@/components/dashboard/KPIAlerts";
+import { MainKPIChart } from "@/components/kpi/MainKPIChart";
 import { Card } from "@/components/shared/Card";
 import { Badge } from "@/components/shared/Badge";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   ArrowRight, 
   FolderOpen,
@@ -66,7 +62,10 @@ const Index = () => {
     kpis,
     loading: loadingKPIs,
     getLatestKPIs,
-    getKPIStats 
+    getKPIStats,
+    getMainKPI,
+    getKPIHistory,
+    getKPITrend
   } = useKPIs();
 
   useEffect(() => {
@@ -783,59 +782,41 @@ const Index = () => {
           </div>
         </div>
 
-        {/* Sección de KPIs y Gráficas */}
-        {latestKPIs.length > 0 && (
-          <div className="mt-comfortable space-y-comfortable">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <TrendingUp className="h-5 w-5 text-primary" />
-                <h3 className="text-xl font-semibold text-foreground">Análisis de KPIs</h3>
+        {/* KPI Principal */}
+        {(() => {
+          const mainKPI = getMainKPI();
+          if (mainKPI) {
+            const history = getKPIHistory(mainKPI.name);
+            const trend = getKPITrend(mainKPI.name);
+            return (
+              <div className="mt-comfortable">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <TrendingUp className="h-5 w-5 text-primary" />
+                    <h3 className="text-xl font-semibold text-foreground">KPI Principal</h3>
+                  </div>
+                  <Button 
+                    variant="ghost"
+                    onClick={() => navigate('/kpis')}
+                  >
+                    Ver todos los KPIs
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </div>
+                {loadingKPIs ? (
+                  <div className="text-sm text-muted-foreground">Cargando KPI...</div>
+                ) : (
+                  <MainKPIChart 
+                    kpi={mainKPI} 
+                    history={history}
+                    trend={trend}
+                  />
+                )}
               </div>
-              <Button 
-                variant="ghost"
-                onClick={() => navigate('/kpis')}
-              >
-                Ver todos
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </div>
-
-            {loadingKPIs ? (
-              <div className="text-sm text-muted-foreground">Cargando KPIs...</div>
-            ) : (
-              <>
-                <Tabs defaultValue="overview" className="w-full">
-                  <TabsList className="grid w-full grid-cols-3 mb-standard">
-                    <TabsTrigger value="overview">Vista General</TabsTrigger>
-                    <TabsTrigger value="trends">Tendencias</TabsTrigger>
-                    <TabsTrigger value="alerts">Alertas</TabsTrigger>
-                  </TabsList>
-                  
-                  <TabsContent value="overview" className="space-y-standard">
-                    <KPIOverview kpis={latestKPIs.slice(0, 6)} />
-                  </TabsContent>
-                  
-                  <TabsContent value="trends" className="space-y-standard">
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-standard">
-                      <KPITrendChart 
-                        kpis={kpis.slice(0, 20)} 
-                        title="Evolución Temporal de KPIs"
-                      />
-                      <KPIAreaChart 
-                        kpis={latestKPIs} 
-                        title="Comparación por Área"
-                      />
-                    </div>
-                  </TabsContent>
-                  
-                  <TabsContent value="alerts">
-                    <KPIAlerts />
-                  </TabsContent>
-                </Tabs>
-              </>
-            )}
-          </div>
-        )}
+            );
+          }
+          return null;
+        })()}
       </div>
     </MainLayout>
   );

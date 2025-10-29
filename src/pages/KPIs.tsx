@@ -7,6 +7,7 @@ import { Card } from "@/components/shared/Card";
 import { Badge } from "@/components/shared/Badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
   SelectContent,
@@ -30,18 +31,24 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { TrendingUp, TrendingDown, Edit2, Search, Target, Trash2, Plus } from "lucide-react";
+import { TrendingUp, TrendingDown, Edit2, Search, Target, Trash2, Plus, Star, BarChart3 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { KPI } from "@/types/kpi.types";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import { KPISelector } from "@/components/kpi/KPISelector";
+import { IndividualKPIChart } from "@/components/kpi/IndividualKPIChart";
+import { KPIGridView } from "@/components/kpi/KPIGridView";
+import { KPIAreaChart } from "@/components/dashboard/KPIAreaChart";
+import { KPIAlerts } from "@/components/dashboard/KPIAlerts";
 
 export default function KPIs() {
-  const { kpis, loading, refetch } = useKPIs();
+  const { kpis, loading, refetch, getKPIHistory, getUniqueKPINames, getKPITrend, markAsMainKPI, getLatestKPIs } = useKPIs();
   const { user } = useAuth();
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
+  const [areaFilter, setAreaFilter] = useState<string>("all");
   const [editingKPI, setEditingKPI] = useState<KPI | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -49,6 +56,8 @@ export default function KPIs() {
   const [deletingKPI, setDeletingKPI] = useState<KPI | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [selectedKPIName, setSelectedKPIName] = useState<string>("");
+  const [activeTab, setActiveTab] = useState("overview");
 
   // Form state for editing
   const [editForm, setEditForm] = useState({
@@ -72,10 +81,15 @@ export default function KPIs() {
     period_end: "",
   });
 
-  const filteredKPIs = kpis.filter((kpi) =>
-    kpi.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    kpi.area.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const uniqueKPINames = getUniqueKPINames();
+  const latestKPIs = getLatestKPIs();
+
+  const filteredKPIs = latestKPIs.filter((kpi) => {
+    const matchesSearch = kpi.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      kpi.area.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesArea = areaFilter === "all" || kpi.area === areaFilter;
+    return matchesSearch && matchesArea;
+  });
 
   const handleEditClick = (kpi: KPI) => {
     setEditingKPI(kpi);
@@ -150,7 +164,6 @@ export default function KPIs() {
   const handleCreateKPI = async () => {
     if (!user) return;
 
-    // Validación
     if (!createForm.name || !createForm.value) {
       toast({
         title: "Error de validación",
@@ -162,7 +175,6 @@ export default function KPIs() {
 
     setIsSaving(true);
     try {
-      // Obtener el company_id del usuario
       const { data: profile } = await supabase
         .from('profiles')
         .select('company_id')
@@ -245,6 +257,22 @@ export default function KPIs() {
     }
   };
 
+  const handleMarkAsMain = async (kpi: KPI) => {
+    try {
+      await markAsMainKPI(kpi.id);
+      toast({
+        title: "KPI destacado",
+        description: `${kpi.name} se ha marcado como KPI principal`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "No se pudo marcar el KPI como principal",
+        variant: "destructive",
+      });
+    }
+  };
+
   const getProgress = (kpi: KPI): number => {
     if (!kpi.target_value) return 0;
     return Math.min(Math.round((kpi.value / kpi.target_value) * 100), 100);
@@ -267,7 +295,7 @@ export default function KPIs() {
   return (
     <MainLayout>
       <div className="container mx-auto p-comfortable">
-          <div className="mb-comfortable">
+        <div className="mb-comfortable">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h1 className="text-3xl font-bold text-foreground mb-2">KPIs</h1>
@@ -281,24 +309,12 @@ export default function KPIs() {
             </Button>
           </div>
 
-          <div className="flex items-center gap-4 mb-6">
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar por nombre o área..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Card variant="content" className="p-4">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">Total KPIs</p>
-                  <p className="text-2xl font-bold text-foreground">{kpis.length}</p>
+                  <p className="text-2xl font-bold text-foreground">{latestKPIs.length}</p>
                 </div>
                 <Target className="h-8 w-8 text-primary" />
               </div>
@@ -308,7 +324,7 @@ export default function KPIs() {
                 <div>
                   <p className="text-sm text-muted-foreground">En Meta</p>
                   <p className="text-2xl font-bold text-color-success-default">
-                    {kpis.filter((k) => isOnTarget(k) === true).length}
+                    {latestKPIs.filter((k) => isOnTarget(k) === true).length}
                   </p>
                 </div>
                 <TrendingUp className="h-8 w-8 text-color-success-default" />
@@ -319,7 +335,7 @@ export default function KPIs() {
                 <div>
                   <p className="text-sm text-muted-foreground">Bajo Meta</p>
                   <p className="text-2xl font-bold text-color-error-default">
-                    {kpis.filter((k) => isOnTarget(k) === false).length}
+                    {latestKPIs.filter((k) => isOnTarget(k) === false).length}
                   </p>
                 </div>
                 <TrendingDown className="h-8 w-8 text-color-error-default" />
@@ -328,139 +344,243 @@ export default function KPIs() {
           </div>
         </div>
 
-        <Card variant="service">
-          {loading ? (
-            <div className="text-center py-8 text-muted-foreground">
-              Cargando KPIs...
-            </div>
-          ) : filteredKPIs.length === 0 ? (
-            <div className="text-center py-12">
-              <Target className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <p className="text-muted-foreground">
-                {searchTerm ? "No se encontraron KPIs" : "No hay KPIs registrados"}
-              </p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Nombre</TableHead>
-                    <TableHead>Área</TableHead>
-                    <TableHead>Valor Actual</TableHead>
-                    <TableHead>Meta</TableHead>
-                    <TableHead>Progreso</TableHead>
-                    <TableHead>Periodo</TableHead>
-                    <TableHead>Fuente</TableHead>
-                    <TableHead className="text-right">Acciones</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredKPIs.map((kpi) => {
-                    const progress = getProgress(kpi);
-                    const onTarget = isOnTarget(kpi);
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="overview">Vista General</TabsTrigger>
+            <TabsTrigger value="trends">Tendencias</TabsTrigger>
+            <TabsTrigger value="alerts">Alertas</TabsTrigger>
+          </TabsList>
 
-                    return (
-                      <TableRow key={kpi.id}>
-                        <TableCell className="font-medium">{kpi.name}</TableCell>
-                        <TableCell>
-                          <Badge
-                            variant="default"
-                            className={areaColors[kpi.area] || ""}
-                          >
-                            {kpi.area}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <span className="font-semibold">
-                            {kpi.value.toLocaleString()}
-                          </span>
-                          {kpi.unit && (
-                            <span className="text-muted-foreground ml-1">
-                              {kpi.unit}
-                            </span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {kpi.target_value ? (
-                            <>
+          <TabsContent value="overview" className="space-y-4">
+            <div className="flex items-center gap-4 mb-6">
+              <div className="relative flex-1 max-w-md">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar por nombre o área..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <Select value={areaFilter} onValueChange={setAreaFilter}>
+                <SelectTrigger className="w-48">
+                  <SelectValue placeholder="Filtrar por área" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas las áreas</SelectItem>
+                  <SelectItem value="strategy">Estrategia</SelectItem>
+                  <SelectItem value="finance">Finanzas</SelectItem>
+                  <SelectItem value="marketing">Marketing</SelectItem>
+                  <SelectItem value="operations">Operaciones</SelectItem>
+                  <SelectItem value="technology">Tecnología</SelectItem>
+                  <SelectItem value="legal">Legal</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <Card variant="service">
+              {loading ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  Cargando KPIs...
+                </div>
+              ) : filteredKPIs.length === 0 ? (
+                <div className="text-center py-12">
+                  <Target className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-muted-foreground">
+                    {searchTerm || areaFilter !== "all" ? "No se encontraron KPIs" : "No hay KPIs registrados"}
+                  </p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Nombre</TableHead>
+                        <TableHead>Área</TableHead>
+                        <TableHead>Valor Actual</TableHead>
+                        <TableHead>Meta</TableHead>
+                        <TableHead>Progreso</TableHead>
+                        <TableHead>Periodo</TableHead>
+                        <TableHead>Fuente</TableHead>
+                        <TableHead className="text-right">Acciones</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredKPIs.map((kpi) => {
+                        const progress = getProgress(kpi);
+                        const onTarget = isOnTarget(kpi);
+
+                        return (
+                          <TableRow key={kpi.id}>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                {kpi.is_main_kpi && (
+                                  <Star className="h-4 w-4 text-secondary fill-secondary" />
+                                )}
+                                <span className="font-medium">{kpi.name}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge
+                                variant="default"
+                                className={areaColors[kpi.area] || ""}
+                              >
+                                {kpi.area}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
                               <span className="font-semibold">
-                                {kpi.target_value.toLocaleString()}
+                                {kpi.value.toLocaleString()}
                               </span>
                               {kpi.unit && (
                                 <span className="text-muted-foreground ml-1">
                                   {kpi.unit}
                                 </span>
                               )}
-                            </>
-                          ) : (
-                            <span className="text-muted-foreground">-</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {kpi.target_value ? (
-                            <div className="flex items-center gap-2">
-                              <div className="flex-1 bg-muted rounded-full h-2 overflow-hidden">
-                                <div
-                                  className={`h-full transition-all ${
-                                    onTarget
-                                      ? "bg-color-success-default"
-                                      : "bg-color-warning-default"
-                                  }`}
-                                  style={{ width: `${progress}%` }}
-                                />
+                            </TableCell>
+                            <TableCell>
+                              {kpi.target_value ? (
+                                <>
+                                  <span className="font-semibold">
+                                    {kpi.target_value.toLocaleString()}
+                                  </span>
+                                  {kpi.unit && (
+                                    <span className="text-muted-foreground ml-1">
+                                      {kpi.unit}
+                                    </span>
+                                  )}
+                                </>
+                              ) : (
+                                <span className="text-muted-foreground">-</span>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              {kpi.target_value ? (
+                                <div className="flex items-center gap-2">
+                                  <div className="flex-1 bg-muted rounded-full h-2 overflow-hidden">
+                                    <div
+                                      className={`h-full transition-all ${
+                                        onTarget
+                                          ? "bg-color-success-default"
+                                          : "bg-color-warning-default"
+                                      }`}
+                                      style={{ width: `${progress}%` }}
+                                    />
+                                  </div>
+                                  <span className="text-sm font-medium w-12 text-right">
+                                    {progress}%
+                                  </span>
+                                </div>
+                              ) : (
+                                <span className="text-muted-foreground">-</span>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-sm">
+                              <div className="text-muted-foreground">
+                                {format(new Date(kpi.period_start), "dd MMM", {
+                                  locale: es,
+                                })}{" "}
+                                -{" "}
+                                {format(new Date(kpi.period_end), "dd MMM yyyy", {
+                                  locale: es,
+                                })}
                               </div>
-                              <span className="text-sm font-medium w-12 text-right">
-                                {progress}%
-                              </span>
-                            </div>
-                          ) : (
-                            <span className="text-muted-foreground">-</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-sm">
-                          <div className="text-muted-foreground">
-                            {format(new Date(kpi.period_start), "dd MMM", {
-                              locale: es,
-                            })}{" "}
-                            -{" "}
-                            {format(new Date(kpi.period_end), "dd MMM yyyy", {
-                              locale: es,
-                            })}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="default">{kpi.source}</Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleEditClick(kpi)}
-                              title="Editar KPI"
-                            >
-                              <Edit2 className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleDeleteClick(kpi)}
-                              title="Eliminar KPI"
-                              className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </Card>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="default">{kpi.source}</Badge>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex items-center justify-end gap-2">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleMarkAsMain(kpi)}
+                                  title={kpi.is_main_kpi ? "KPI principal" : "Marcar como principal"}
+                                  className={kpi.is_main_kpi ? "text-secondary" : ""}
+                                >
+                                  <Star className={`h-4 w-4 ${kpi.is_main_kpi ? "fill-secondary" : ""}`} />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleEditClick(kpi)}
+                                  title="Editar KPI"
+                                >
+                                  <Edit2 className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleDeleteClick(kpi)}
+                                  title="Eliminar KPI"
+                                  className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="trends" className="space-y-6">
+            {uniqueKPINames.length === 0 ? (
+              <Card variant="content" className="p-12">
+                <div className="text-center">
+                  <BarChart3 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-muted-foreground">
+                    No hay datos suficientes para mostrar tendencias
+                  </p>
+                </div>
+              </Card>
+            ) : (
+              <>
+                <div className="space-y-4">
+                  <h2 className="text-xl font-semibold text-foreground">Evolución Individual</h2>
+                  <KPISelector
+                    kpiNames={uniqueKPINames}
+                    selectedKPI={selectedKPIName}
+                    onSelectKPI={setSelectedKPIName}
+                  />
+                  {selectedKPIName && (
+                    <IndividualKPIChart
+                      kpis={getKPIHistory(selectedKPIName)}
+                      kpiName={selectedKPIName}
+                    />
+                  )}
+                </div>
+
+                <div className="space-y-4">
+                  <h2 className="text-xl font-semibold text-foreground">Comparación por Área</h2>
+                  <KPIAreaChart kpis={latestKPIs} title="" />
+                </div>
+
+                <div className="space-y-4">
+                  <h2 className="text-xl font-semibold text-foreground">Todos los KPIs</h2>
+                  <KPIGridView
+                    kpiNames={uniqueKPINames}
+                    getKPIHistory={getKPIHistory}
+                    getKPITrend={getKPITrend}
+                    onKPIClick={(name) => {
+                      setSelectedKPIName(name);
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
+                  />
+                </div>
+              </>
+            )}
+          </TabsContent>
+
+          <TabsContent value="alerts">
+            <KPIAlerts />
+          </TabsContent>
+        </Tabs>
       </div>
 
       {/* Edit Dialog */}
@@ -585,7 +705,6 @@ export default function KPIs() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -625,7 +744,6 @@ export default function KPIs() {
         </DialogContent>
       </Dialog>
 
-      {/* Create KPI Dialog */}
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>

@@ -11,6 +11,7 @@ export interface KPI {
   source: string;
   metadata: Record<string, any> | null;
   created_at: string;
+  is_main_kpi?: boolean;
 }
 
 export interface KPIAlert {
