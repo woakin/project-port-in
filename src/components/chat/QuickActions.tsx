@@ -38,8 +38,13 @@ export default function QuickActions({ projectId, onActionClick, onOpenSheet }: 
   ];
 
   const handleActionClick = (action: typeof actions[0]) => {
-    onActionClick?.(action.prompt);
-    onOpenSheet?.(action.id);
+    // Para "Ver KPIs" solo abrimos el panel, no enviamos mensaje al chat
+    if (action.id === 'kpis') {
+      onOpenSheet?.('kpis');
+    } else {
+      onActionClick?.(action.prompt);
+      onOpenSheet?.(action.id);
+    }
   };
 
   return (

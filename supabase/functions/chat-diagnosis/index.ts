@@ -721,7 +721,11 @@ IMPORTANTE: Solo incluye tareas marcadas con "is_new": true. NO incluyas tareas 
       if (authHeader) {
         const token = authHeader.replace('Bearer ', '');
         const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-        const supabaseClient = createClient(supabaseUrl, token);
+        const supabaseClient = createClient(
+          supabaseUrl,
+          Deno.env.get('SUPABASE_ANON_KEY')!,
+          { global: { headers: { Authorization: `Bearer ${token}` } } }
+        );
         
         // Obtener info del proyecto actual
         const { data: projects } = await supabaseClient
@@ -963,7 +967,11 @@ ESTILO:
       if (authHeader) {
         const token = authHeader.replace('Bearer ', '');
         const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-        const supabaseClient = createClient(supabaseUrl, token);
+        const supabaseClient = createClient(
+          supabaseUrl,
+          Deno.env.get('SUPABASE_ANON_KEY')!,
+          { global: { headers: { Authorization: `Bearer ${token}` } } }
+        );
         
         const promptKey = `chat_${mode}_system_prompt`;
         const { data: configData, error: configError } = await supabaseClient
@@ -994,7 +1002,11 @@ ESTILO:
         if (authHeader) {
           const token = authHeader.replace('Bearer ', '');
           const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-          const supabaseClient = createClient(supabaseUrl, token);
+          const supabaseClient = createClient(
+            supabaseUrl,
+            Deno.env.get('SUPABASE_ANON_KEY')!,
+            { global: { headers: { Authorization: `Bearer ${token}` } } }
+          );
           
           // Obtener el usuario autenticado
           const { data: { user }, error: userError } = await supabaseClient.auth.getUser(token);
@@ -1075,8 +1087,8 @@ ESTILO:
                     name: kpiName,
                     value: kpiValue,
                     unit: kpiUnit || null,
-                    period_start: periodStart.toISOString().split('T')[0],
-                    period_end: periodEnd.toISOString().split('T')[0],
+                    period_start: periodStart.toISOString(),
+                    period_end: periodEnd.toISOString(),
                     source: 'manual'
                   })
                   .select()
