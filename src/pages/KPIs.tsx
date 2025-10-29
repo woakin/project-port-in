@@ -22,7 +22,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { TrendingUp, TrendingDown, Edit2, Search, Target } from "lucide-react";
+import { TrendingUp, TrendingDown, Edit2, Search, Target, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { KPI } from "@/types/kpi.types";
@@ -36,6 +36,9 @@ export default function KPIs() {
   const [editingKPI, setEditingKPI] = useState<KPI | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [deletingKPI, setDeletingKPI] = useState<KPI | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Form state for editing
   const [editForm, setEditForm] = useState({
@@ -95,6 +98,43 @@ export default function KPIs() {
       });
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleDeleteClick = (kpi: KPI) => {
+    setDeletingKPI(kpi);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deletingKPI) return;
+
+    setIsDeleting(true);
+    try {
+      const { error } = await supabase
+        .from("kpis")
+        .delete()
+        .eq("id", deletingKPI.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "KPI eliminado",
+        description: "El KPI se ha eliminado correctamente",
+      });
+
+      setIsDeleteDialogOpen(false);
+      setDeletingKPI(null);
+      refetch();
+    } catch (error) {
+      console.error("Error deleting KPI:", error);
+      toast({
+        title: "Error",
+        description: "No se pudo eliminar el KPI",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -282,13 +322,25 @@ export default function KPIs() {
                           <Badge variant="default">{kpi.source}</Badge>
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleEditClick(kpi)}
-                          >
-                            <Edit2 className="h-4 w-4" />
-                          </Button>
+                          <div className="flex items-center justify-end gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleEditClick(kpi)}
+                              title="Editar KPI"
+                            >
+                              <Edit2 className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDeleteClick(kpi)}
+                              title="Eliminar KPI"
+                              className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     );
@@ -369,6 +421,46 @@ export default function KPIs() {
             </Button>
             <Button onClick={handleSaveEdit} disabled={isSaving}>
               {isSaving ? "Guardando..." : "Guardar cambios"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Eliminar KPI</DialogTitle>
+            <DialogDescription>
+              ¿Estás seguro de que deseas eliminar este KPI? Esta acción no se puede deshacer.
+            </DialogDescription>
+          </DialogHeader>
+
+          {deletingKPI && (
+            <div className="py-4">
+              <div className="bg-muted p-4 rounded-lg">
+                <p className="font-semibold text-foreground">{deletingKPI.name}</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Área: {deletingKPI.area} | Valor: {deletingKPI.value.toLocaleString()} {deletingKPI.unit}
+                </p>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsDeleteDialogOpen(false)}
+              disabled={isDeleting}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleConfirmDelete}
+              disabled={isDeleting}
+            >
+              {isDeleting ? "Eliminando..." : "Eliminar"}
             </Button>
           </DialogFooter>
         </DialogContent>
