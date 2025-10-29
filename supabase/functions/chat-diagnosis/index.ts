@@ -799,11 +799,9 @@ ${docs.map(d => `
       }
     }
     
-    // Obtener el system prompt según el modo
-    let systemPromptTemplate = '';
-    
-    if (mode === 'diagnosis') {
-      systemPromptTemplate = `Eres un consultor empresarial experto que guía diagnósticos empresariales conversacionales.
+    // Default prompts (fallback)
+    const DEFAULT_PROMPTS: Record<string, string> = {
+      diagnosis: `Eres un consultor empresarial experto que guía diagnósticos empresariales conversacionales.
 
 REGLA CRÍTICA: Trabaja ÚNICAMENTE con la información del proyecto específico. NO inventes ni asumas datos diferentes.
 
@@ -835,9 +833,8 @@ ESTILO DE CONVERSACIÓN:
 GUÍA DE PROGRESO:
 - Cubre las 6 áreas de manera equilibrada
 - Después de 8-12 intercambios significativos, pregunta: "¿Te gustaría que genere ahora el diagnóstico completo y un plan de acción personalizado?"
-- Si el usuario acepta, responde con: "¡Perfecto! Haz clic en el botón 'Generar Diagnóstico' para crear tu análisis completo y plan de acción."`;
-    } else if (mode === 'strategic') {
-      systemPromptTemplate = `Eres un consultor estratégico senior experto en negocios.
+- Si el usuario acepta, responde con: "¡Perfecto! Haz clic en el botón 'Generar Diagnóstico' para crear tu análisis completo y plan de acción."`,
+      strategic: `Eres un consultor estratégico senior experto en negocios.
 
 INFORMACIÓN DEL PROYECTO:
 - Empresa: {{COMPANY_NAME}}
@@ -861,9 +858,8 @@ ESTILO:
 - Directo y accionable
 - Fundamentado en frameworks reconocidos (SWOT, Porter, Blue Ocean, etc.)
 - Ejemplos concretos y casos de éxito
-- Considera siempre el contexto: {{COMPANY_STAGE}} en {{COMPANY_INDUSTRY}}`;
-    } else if (mode === 'follow_up') {
-      systemPromptTemplate = `Eres un consultor de seguimiento que ayuda a ejecutar planes de acción.
+- Considera siempre el contexto: {{COMPANY_STAGE}} en {{COMPANY_INDUSTRY}}`,
+      follow_up: `Eres un consultor de seguimiento que ayuda a ejecutar planes de acción.
 
 INFORMACIÓN DEL PROYECTO:
 - Empresa: {{COMPANY_NAME}}
@@ -888,9 +884,8 @@ ESTILO:
 - Práctico y orientado a acción
 - Celebra los avances reales
 - Identifica patrones (áreas con poco progreso)
-- Sugiere recursos o tácticas específicas`;
-    } else if (mode === 'document') {
-      systemPromptTemplate = `Eres un analista de documentos empresariales especializado.
+- Sugiere recursos o tácticas específicas`,
+      document: `Eres un analista de documentos empresariales especializado.
 
 INFORMACIÓN DEL PROYECTO:
 - Empresa: {{COMPANY_NAME}}
@@ -914,7 +909,23 @@ ESTILO:
 - Analítico pero accesible
 - Enfocado en insights accionables
 - Conecta datos con estrategia
-- Usa visualizaciones mentales cuando sea útil`;
+- Usa visualizaciones mentales cuando sea útil`
+    };
+
+    // Intentar cargar prompt desde system_config
+    let systemPromptTemplate = '';
+    const promptKey = `chat_${mode}_system_prompt`;
+    const { data: promptConfig } = await supabase
+      .from('system_config')
+      .select('value')
+      .eq('key', promptKey)
+      .maybeSingle();
+
+    // Usar personalizado si existe, sino usar default
+    if (promptConfig?.value?.prompt && promptConfig.value.prompt.trim() !== '') {
+      systemPromptTemplate = promptConfig.value.prompt;
+    } else {
+      systemPromptTemplate = DEFAULT_PROMPTS[mode] || DEFAULT_PROMPTS['diagnosis'];
     }
 
     try {

@@ -5,12 +5,16 @@ import { useAdmin } from '@/hooks/useAdmin';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Card } from '@/components/shared/Card';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Users, FileText, TrendingUp, Save, Loader2, Building2, Activity } from 'lucide-react';
+import { Users, FileText, TrendingUp, Loader2, Building2, Activity } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { PromptModeSelector } from '@/components/admin/PromptModeSelector';
+import { PromptEditor } from '@/components/admin/PromptEditor';
+import { PromptDefaultModal } from '@/components/admin/PromptDefaultModal';
+
+type PromptMode = 'diagnosis' | 'strategic' | 'follow_up' | 'document';
 
 type Stats = {
   totalUsers: number;
@@ -42,6 +46,123 @@ type UserWithDetails = {
   }[];
 };
 
+type PromptData = {
+  current: string;
+  original: string;
+  lastUpdated: string | null;
+};
+
+const DEFAULT_PROMPTS: Record<PromptMode, string> = {
+  diagnosis: `Eres un consultor empresarial experto que guía diagnósticos empresariales conversacionales.
+
+REGLA CRÍTICA: Trabaja ÚNICAMENTE con la información del proyecto específico. NO inventes ni asumas datos diferentes.
+
+INFORMACIÓN DEL PROYECTO:
+- Empresa: {{COMPANY_NAME}}
+- Industria: {{COMPANY_INDUSTRY}}
+- Etapa: {{COMPANY_STAGE}}
+- Proyecto: {{PROJECT_NAME}}
+{{PROJECT_DESCRIPTION}}
+
+TU MISIÓN:
+Hacer preguntas conversacionales UNA a la vez para entender a fondo estas 6 áreas clave:
+1. **Estrategia** - visión, misión, objetivos estratégicos, diferenciación
+2. **Operaciones** - procesos, eficiencia, calidad, cadena de suministro
+3. **Finanzas** - rentabilidad, flujo de caja, control financiero, inversiones
+4. **Marketing** - marca, adquisición de clientes, canales, posicionamiento
+5. **Legal** - compliance, contratos, protección de propiedad intelectual
+6. **Tecnología** - infraestructura, herramientas, digitalización, ciberseguridad
+
+ESTILO DE CONVERSACIÓN:
+- Empático, profesional y cercano
+- Una pregunta clara a la vez
+- Adapta preguntas a la etapa {{COMPANY_STAGE}}
+- Usa ejemplos cuando sea útil
+- Profundiza cuando detectes oportunidades
+- Usa SIEMPRE los nombres correctos: {{COMPANY_NAME}} y {{PROJECT_NAME}}
+- NO inventes información que el usuario no te ha dado
+
+GUÍA DE PROGRESO:
+- Cubre las 6 áreas de manera equilibrada
+- Después de 8-12 intercambios significativos, pregunta: "¿Te gustaría que genere ahora el diagnóstico completo y un plan de acción personalizado?"
+- Si el usuario acepta, responde con: "¡Perfecto! Haz clic en el botón 'Generar Diagnóstico' para crear tu análisis completo y plan de acción."`,
+  
+  strategic: `Eres un consultor estratégico senior experto en negocios.
+
+INFORMACIÓN DEL PROYECTO:
+- Empresa: {{COMPANY_NAME}}
+- Industria: {{COMPANY_INDUSTRY}}
+- Etapa: {{COMPANY_STAGE}}
+- Proyecto: {{PROJECT_NAME}}
+{{PROJECT_DESCRIPTION}}
+
+TU ROL:
+Ayudar al usuario con consultas estratégicas puntuales sin generar diagnósticos formales. 
+
+ÁREAS DE ESPECIALIZACIÓN:
+- Estrategia y crecimiento empresarial
+- Toma de decisiones complejas
+- Análisis de mercado y competencia
+- Modelos de negocio y monetización
+- Expansión y escalabilidad
+- Gestión del cambio
+
+ESTILO:
+- Directo y accionable
+- Fundamentado en frameworks reconocidos (SWOT, Porter, Blue Ocean, etc.)
+- Ejemplos concretos y casos de éxito
+- Considera siempre el contexto: {{COMPANY_STAGE}} en {{COMPANY_INDUSTRY}}`,
+  
+  follow_up: `Eres un consultor de seguimiento que ayuda a ejecutar planes de acción.
+
+INFORMACIÓN DEL PROYECTO:
+- Empresa: {{COMPANY_NAME}}
+- Industria: {{COMPANY_INDUSTRY}}
+- Proyecto: {{PROJECT_NAME}}
+{{PROJECT_DESCRIPTION}}
+
+TU ROL:
+Ayudar al usuario a ejecutar su plan, resolver bloqueos, ajustar prioridades y celebrar avances.
+
+ENFOQUE:
+- Analiza el progreso actual del plan
+- Identifica bloqueos y propón soluciones
+- Sugiere ajustes tácticos según resultados
+- Prioriza lo urgente e importante
+- Mantén motivación reconociendo logros
+- Conecta tareas con objetivos estratégicos
+
+ESTILO:
+- Práctico y orientado a acción
+- Celebra los avances reales
+- Identifica patrones (áreas con poco progreso)
+- Sugiere recursos o tácticas específicas`,
+  
+  document: `Eres un analista de documentos empresariales especializado.
+
+INFORMACIÓN DEL PROYECTO:
+- Empresa: {{COMPANY_NAME}}
+- Industria: {{COMPANY_INDUSTRY}}
+- Proyecto: {{PROJECT_NAME}}
+{{PROJECT_DESCRIPTION}}
+
+TU ROL:
+Ayudar al usuario a extraer insights de documentos empresariales y conectarlos con su estrategia.
+
+CAPACIDADES:
+- Analizar documentos subidos (financieros, operativos, legales, etc.)
+- Identificar tendencias y patrones
+- Conectar hallazos de documentos con objetivos estratégicos
+- Sugerir acciones basadas en los datos
+- Detectar riesgos o oportunidades ocultas
+
+ESTILO:
+- Analítico pero accesible
+- Enfocado en insights accionables
+- Conecta datos con estrategia
+- Usa visualizaciones mentales cuando sea útil`
+};
+
 export default function Admin() {
   const { user, loading: authLoading } = useAuth();
   const { isAdmin, loading: adminLoading } = useAdmin();
@@ -52,14 +173,23 @@ export default function Admin() {
     totalDiagnoses: 0,
     totalCompanies: 0
   });
-  const [systemPrompt, setSystemPrompt] = useState('');
-  const [originalPrompt, setOriginalPrompt] = useState('');
+  
+  // Estado para los prompts de cada modo
+  const [prompts, setPrompts] = useState<Record<PromptMode, PromptData>>({
+    diagnosis: { current: '', original: '', lastUpdated: null },
+    strategic: { current: '', original: '', lastUpdated: null },
+    follow_up: { current: '', original: '', lastUpdated: null },
+    document: { current: '', original: '', lastUpdated: null }
+  });
+  
+  const [activePromptMode, setActivePromptMode] = useState<PromptMode>('diagnosis');
   const [loadingStats, setLoadingStats] = useState(true);
-  const [loadingPrompt, setLoadingPrompt] = useState(true);
+  const [loadingPrompts, setLoadingPrompts] = useState(true);
   const [saving, setSaving] = useState(false);
   const [users, setUsers] = useState<UserWithDetails[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
+  const [showDefaultModal, setShowDefaultModal] = useState(false);
 
   useEffect(() => {
     if (authLoading || adminLoading) return;
@@ -69,9 +199,8 @@ export default function Admin() {
       return;
     }
 
-    // Solo cargar datos si el usuario es admin
     loadStats();
-    loadSystemPrompt();
+    loadAllPrompts();
     loadUsers();
   }, [user, isAdmin, authLoading, adminLoading, navigate]);
 
@@ -79,21 +208,18 @@ export default function Admin() {
     try {
       setLoadingStats(true);
 
-      // Obtener total de usuarios
       const { count: usersCount, error: usersError } = await supabase
         .from('profiles')
         .select('*', { count: 'exact', head: true });
 
       if (usersError) throw usersError;
 
-      // Obtener total de diagnósticos
       const { count: diagnosesCount, error: diagnosesError } = await supabase
         .from('diagnoses')
         .select('*', { count: 'exact', head: true });
 
       if (diagnosesError) throw diagnosesError;
 
-      // Obtener total de empresas
       const { count: companiesCount, error: companiesError } = await supabase
         .from('companies')
         .select('*', { count: 'exact', head: true });
@@ -117,37 +243,57 @@ export default function Admin() {
     }
   };
 
-  const loadSystemPrompt = async () => {
+  const loadAllPrompts = async () => {
     try {
-      setLoadingPrompt(true);
-      const { data, error } = await supabase
-        .from('system_config')
-        .select('value')
-        .eq('key', 'chat_diagnosis_system_prompt')
-        .single();
+      setLoadingPrompts(true);
+      
+      const modes: PromptMode[] = ['diagnosis', 'strategic', 'follow_up', 'document'];
+      const updatedPrompts = { ...prompts };
 
-      if (error) throw error;
+      for (const mode of modes) {
+        const key = `chat_${mode}_system_prompt`;
+        const { data, error } = await supabase
+          .from('system_config')
+          .select('value, updated_at')
+          .eq('key', key)
+          .maybeSingle();
 
-      const prompt = (data.value as any).prompt || '';
-      setSystemPrompt(prompt);
-      setOriginalPrompt(prompt);
+        if (!error && data) {
+          const promptText = (data.value as any).prompt || '';
+          updatedPrompts[mode] = {
+            current: promptText,
+            original: promptText,
+            lastUpdated: data.updated_at
+          };
+        } else {
+          updatedPrompts[mode] = {
+            current: '',
+            original: '',
+            lastUpdated: null
+          };
+        }
+      }
+
+      setPrompts(updatedPrompts);
     } catch (error) {
-      console.error('Error loading system prompt:', error);
+      console.error('Error loading prompts:', error);
       toast({
         title: 'Error',
-        description: 'No se pudo cargar el system prompt',
+        description: 'No se pudieron cargar los prompts',
         variant: 'destructive'
       });
     } finally {
-      setLoadingPrompt(false);
+      setLoadingPrompts(false);
     }
   };
 
-  const saveSystemPrompt = async () => {
-    if (!systemPrompt.trim()) {
+  const savePrompt = async () => {
+    const currentPrompt = prompts[activePromptMode].current;
+    
+    if (!currentPrompt.trim()) {
       toast({
         title: 'Error',
-        description: 'El system prompt no puede estar vacío',
+        description: 'El prompt no puede estar vacío',
         variant: 'destructive'
       });
       return;
@@ -155,32 +301,132 @@ export default function Admin() {
 
     try {
       setSaving(true);
+      const key = `chat_${activePromptMode}_system_prompt`;
+      
       const { error } = await supabase
         .from('system_config')
-        .update({
-          value: { prompt: systemPrompt },
+        .upsert({
+          key,
+          value: { prompt: currentPrompt },
           updated_at: new Date().toISOString(),
           updated_by: user?.id
-        })
-        .eq('key', 'chat_diagnosis_system_prompt');
+        }, { onConflict: 'key' });
 
       if (error) throw error;
 
-      setOriginalPrompt(systemPrompt);
+      setPrompts(prev => ({
+        ...prev,
+        [activePromptMode]: {
+          ...prev[activePromptMode],
+          original: currentPrompt,
+          lastUpdated: new Date().toISOString()
+        }
+      }));
+
       toast({
         title: 'Guardado',
-        description: 'El system prompt se actualizó correctamente'
+        description: 'El prompt se actualizó correctamente'
       });
     } catch (error) {
-      console.error('Error saving system prompt:', error);
+      console.error('Error saving prompt:', error);
       toast({
         title: 'Error',
-        description: 'No se pudo guardar el system prompt',
+        description: 'No se pudo guardar el prompt',
         variant: 'destructive'
       });
     } finally {
       setSaving(false);
     }
+  };
+
+  const restoreToDefault = async () => {
+    try {
+      setSaving(true);
+      const key = `chat_${activePromptMode}_system_prompt`;
+      
+      const { error } = await supabase
+        .from('system_config')
+        .upsert({
+          key,
+          value: { prompt: '' },
+          updated_at: new Date().toISOString(),
+          updated_by: user?.id
+        }, { onConflict: 'key' });
+
+      if (error) throw error;
+
+      setPrompts(prev => ({
+        ...prev,
+        [activePromptMode]: {
+          current: '',
+          original: '',
+          lastUpdated: new Date().toISOString()
+        }
+      }));
+
+      toast({
+        title: 'Restaurado',
+        description: 'Se restauró el prompt por defecto'
+      });
+    } catch (error) {
+      console.error('Error restoring prompt:', error);
+      toast({
+        title: 'Error',
+        description: 'No se pudo restaurar el prompt',
+        variant: 'destructive'
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleModeChange = (mode: PromptMode) => {
+    const currentHasChanges = prompts[activePromptMode].current !== prompts[activePromptMode].original;
+    
+    if (currentHasChanges) {
+      const confirm = window.confirm('Tienes cambios sin guardar. ¿Deseas descartarlos y cambiar de modo?');
+      if (!confirm) return;
+      
+      setPrompts(prev => ({
+        ...prev,
+        [activePromptMode]: {
+          ...prev[activePromptMode],
+          current: prev[activePromptMode].original
+        }
+      }));
+    }
+    
+    setActivePromptMode(mode);
+  };
+
+  const handlePromptChange = (value: string) => {
+    setPrompts(prev => ({
+      ...prev,
+      [activePromptMode]: {
+        ...prev[activePromptMode],
+        current: value
+      }
+    }));
+  };
+
+  const handleCancel = () => {
+    setPrompts(prev => ({
+      ...prev,
+      [activePromptMode]: {
+        ...prev[activePromptMode],
+        current: prev[activePromptMode].original
+      }
+    }));
+  };
+
+  const handleUseDefaultAsBase = () => {
+    setPrompts(prev => ({
+      ...prev,
+      [activePromptMode]: {
+        ...prev[activePromptMode],
+        current: DEFAULT_PROMPTS[activePromptMode]
+      }
+    }));
   };
 
   if (authLoading || adminLoading) {
@@ -199,7 +445,6 @@ export default function Admin() {
     try {
       setLoadingUsers(true);
 
-      // Obtener usuarios con sus perfiles
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
         .select('*')
@@ -207,10 +452,8 @@ export default function Admin() {
 
       if (profilesError) throw profilesError;
 
-      // Para cada usuario, obtener sus empresas y diagnósticos
       const usersWithDetails = await Promise.all(
         (profiles || []).map(async (profile) => {
-          // Obtener empresa si existe
           let company = null;
           if (profile.company_id) {
             const { data: companyData } = await supabase
@@ -221,7 +464,6 @@ export default function Admin() {
             company = companyData;
           }
 
-          // Obtener diagnósticos del usuario
           const { data: diagnosesData } = await supabase
             .from('diagnoses')
             .select('id, maturity_level, strategy_score, operations_score, finance_score, marketing_score, legal_score, technology_score, created_at')
@@ -303,7 +545,14 @@ export default function Admin() {
     return Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
   };
 
-  const hasChanges = systemPrompt !== originalPrompt;
+  const currentPromptData = prompts[activePromptMode];
+  const hasChanges = currentPromptData.current !== currentPromptData.original;
+  const unsavedChanges: Record<PromptMode, boolean> = {
+    diagnosis: prompts.diagnosis.current !== prompts.diagnosis.original,
+    strategic: prompts.strategic.current !== prompts.strategic.original,
+    follow_up: prompts.follow_up.current !== prompts.follow_up.original,
+    document: prompts.document.current !== prompts.document.original
+  };
 
   return (
     <MainLayout>
@@ -323,7 +572,6 @@ export default function Admin() {
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
-            {/* Estadísticas */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <Card variant="service">
                 <div className="flex items-center gap-4">
@@ -379,7 +627,6 @@ export default function Admin() {
                 {users.map((user) => (
                   <Card key={user.id} variant="content">
                     <div className="space-y-4">
-                      {/* Información del usuario */}
                       <div className="flex items-start justify-between">
                         <div className="space-y-1">
                           <h3 className="text-lg font-semibold text-foreground">
@@ -395,7 +642,6 @@ export default function Admin() {
                         </Badge>
                       </div>
 
-                      {/* Empresa asociada */}
                       {user.company && (
                         <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg">
                           <Building2 className="h-4 w-4 text-muted-foreground" />
@@ -408,7 +654,6 @@ export default function Admin() {
                         </div>
                       )}
 
-                      {/* Diagnósticos */}
                       {user.diagnoses.length > 0 && (
                         <div className="space-y-3">
                           <div className="flex items-center gap-2 text-sm font-medium text-foreground">
@@ -509,69 +754,57 @@ export default function Admin() {
           </TabsContent>
 
           <TabsContent value="config" className="space-y-4">
-            {/* System Prompt Editor */}
             <Card variant="content">
               <div className="space-y-6">
                 <div>
-                  <h2 className="text-xl font-semibold text-foreground">System Prompt del Diagnóstico</h2>
+                  <h2 className="text-xl font-semibold text-foreground">
+                    Configuración de Prompts del Agente
+                  </h2>
                   <p className="text-sm text-muted-foreground mt-2">
-                    Edita las instrucciones que guían al asistente durante el chat de diagnóstico
+                    Edita los prompts que guían al agente de IA en cada modo de interacción
                   </p>
                 </div>
 
-                {loadingPrompt ? (
+                {loadingPrompts ? (
                   <div className="flex items-center justify-center py-8">
                     <Loader2 className="h-6 w-6 animate-spin text-primary" />
                   </div>
                 ) : (
-                  <>
-                    <Textarea
-                      value={systemPrompt}
-                      onChange={(e) => setSystemPrompt(e.target.value)}
-                      placeholder="Escribe el system prompt aquí..."
-                      className="min-h-[400px] font-mono text-sm"
+                  <div className="space-y-6">
+                    <PromptModeSelector
+                      activeMode={activePromptMode}
+                      onChange={handleModeChange}
+                      unsavedChanges={unsavedChanges}
                     />
-
-                    <div className="flex items-center justify-between pt-2">
-                      <p className="text-sm text-muted-foreground">
-                        {hasChanges && '● Hay cambios sin guardar'}
-                      </p>
-                      <div className="flex gap-2">
-                        {hasChanges && (
-                          <Button
-                            variant="outline"
-                            onClick={() => setSystemPrompt(originalPrompt)}
-                            disabled={saving}
-                          >
-                            Descartar
-                          </Button>
-                        )}
-                        <Button
-                          onClick={saveSystemPrompt}
-                          disabled={saving || !hasChanges}
-                          className="gap-2"
-                        >
-                          {saving ? (
-                            <>
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                              Guardando...
-                            </>
-                          ) : (
-                            <>
-                              <Save className="h-4 w-4" />
-                              Guardar Cambios
-                            </>
-                          )}
-                        </Button>
-                      </div>
-                    </div>
-                  </>
+                    
+                    <PromptEditor
+                      mode={activePromptMode}
+                      value={currentPromptData.current}
+                      defaultValue={DEFAULT_PROMPTS[activePromptMode]}
+                      lastUpdated={currentPromptData.lastUpdated}
+                      onChange={handlePromptChange}
+                      onSave={savePrompt}
+                      onRestore={restoreToDefault}
+                      onCancel={handleCancel}
+                      onViewDefault={() => setShowDefaultModal(true)}
+                      hasChanges={hasChanges}
+                      isSaving={saving}
+                    />
+                  </div>
                 )}
               </div>
             </Card>
           </TabsContent>
         </Tabs>
       </div>
+
+      <PromptDefaultModal
+        open={showDefaultModal}
+        onOpenChange={setShowDefaultModal}
+        mode={activePromptMode}
+        defaultPrompt={DEFAULT_PROMPTS[activePromptMode]}
+        onUseAsBase={handleUseDefaultAsBase}
+      />
     </MainLayout>
   );
 }
