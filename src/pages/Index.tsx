@@ -14,7 +14,31 @@ import { Card } from "@/components/shared/Card";
 import { Badge } from "@/components/shared/Badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowRight, FolderOpen, TrendingUp, BarChart3, Target, Globe, Building2, Zap } from "lucide-react";
+import { 
+  ArrowRight, 
+  FolderOpen,
+  Activity, 
+  Compass, 
+  Rocket,
+  Target,
+  TrendingUp,
+  DollarSign,
+  Settings,
+  Code,
+  X,
+  CheckCircle,
+  Quote,
+  FileQuestion,
+  FileCheck,
+  BarChart,
+  Sparkles,
+  Lightbulb,
+  Cog,
+  Brain,
+  Globe,
+  Building2,
+  Zap
+} from "lucide-react";
 import { IconCircle } from "@/components/shared/IconCircle";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -116,16 +140,15 @@ const Index = () => {
         </header>
 
         <main>
-          {/* Hero Section */}
+          {/* 1. Hero Section */}
           <section className="relative py-24 px-4 sm:px-6 lg:px-8 bg-[linear-gradient(135deg,hsl(210_60%_25%)_0%,hsl(170_45%_45%)_100%)] text-white overflow-hidden">
             <div className="max-w-7xl mx-auto relative z-10">
-              <div className="text-center max-w-3xl mx-auto">
+              <div className="text-center max-w-4xl mx-auto">
                 <h1 className="text-5xl sm:text-6xl font-bold mb-6 leading-tight">
-                  Inteligencia Empresarial
-                  <span className="block mt-2">Impulsada por IA</span>
+                  Construye. Ejecuta. Mide. Crece.
                 </h1>
-                <p className="text-xl text-white/90 mb-8 leading-relaxed">
-                  Convertimos datos en resultados. Ayudamos a empresas a crecer sin límites con diagnósticos estratégicos y planes de acción personalizados.
+                <p className="text-xl text-white/90 mb-10 leading-relaxed">
+                  Tu plataforma de crecimiento todo-en-uno para startups y PYMEs que quieren dominar su mercado, no solo sobrevivir.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
                   <Button 
@@ -134,8 +157,7 @@ const Index = () => {
                     onClick={() => navigate('/auth')} 
                     className="text-lg px-8"
                   >
-                    Agenda una sesión gratuita
-                    <ArrowRight className="ml-2 h-5 w-5" />
+                    👉 Empieza gratis
                   </Button>
                   <Button 
                     size="lg" 
@@ -143,143 +165,402 @@ const Index = () => {
                     onClick={() => navigate('/auth')} 
                     className="border-2 border-white bg-transparent text-white hover:bg-white/10 text-lg px-8"
                   >
-                    Conoce nuestros servicios
+                    Descubre cómo funciona →
                   </Button>
                 </div>
               </div>
             </div>
           </section>
 
-          {/* Value Proposition Section */}
+          {/* 2. La claridad que tu negocio necesita */}
           <section className="py-20 px-4 sm:px-6 lg:px-8 bg-background">
             <div className="max-w-7xl mx-auto">
               <div className="text-center mb-16">
                 <h2 className="text-4xl font-bold text-foreground mb-4">
-                  No Somos Consultores, Somos Operadores
+                  La claridad que tu negocio necesita
                 </h2>
-                <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-                  No te dejamos con un PDF. Nos ensuciamos las manos contigo para hacer que las cosas pasen.
+                <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+                  La mayoría de los negocios crecen a prueba y error. Alasha AI te da estructura, foco y dirección para avanzar con confianza.
                 </p>
               </div>
 
-              <div className="grid md:grid-cols-3 gap-8 mb-16">
+              <div className="grid md:grid-cols-3 gap-8 mb-12">
                 <div className="text-center">
-                  <div className="flex justify-center mb-4">
-                    <IconCircle icon={TrendingUp} size="md" />
+                  <div className="flex justify-center mb-6">
+                    <IconCircle icon={Activity} size="lg" />
                   </div>
-                  <h3 className="text-xl font-semibold text-foreground mb-2">
-                    Ejecución Directa
+                  <h3 className="text-xl font-semibold text-foreground mb-3">
+                    📊 Diagnóstico inteligente
                   </h3>
                   <p className="text-muted-foreground">
-                    Trabajamos codo a codo con tu equipo, no solo damos recomendaciones
+                    Entiende en qué etapa estás y qué necesitas para avanzar.
                   </p>
                 </div>
 
                 <div className="text-center">
-                  <div className="flex justify-center mb-4">
-                    <IconCircle icon={BarChart3} size="md" />
+                  <div className="flex justify-center mb-6">
+                    <IconCircle icon={Compass} size="lg" />
                   </div>
-                  <h3 className="text-xl font-semibold text-foreground mb-2">
-                    +15 Años de Experiencia
+                  <h3 className="text-xl font-semibold text-foreground mb-3">
+                    🧭 Plan personalizado
                   </h3>
                   <p className="text-muted-foreground">
-                    Operando empresas reales en México y América Latina
+                    Acciones concretas diseñadas para tu realidad específica.
                   </p>
                 </div>
 
                 <div className="text-center">
-                  <div className="flex justify-center mb-4">
-                    <IconCircle icon={Target} size="md" />
+                  <div className="flex justify-center mb-6">
+                    <IconCircle icon={Rocket} size="lg" />
                   </div>
-                  <h3 className="text-xl font-semibold text-foreground mb-2">
-                    Resultados Medibles
+                  <h3 className="text-xl font-semibold text-foreground mb-3">
+                    🚀 Seguimiento real
                   </h3>
                   <p className="text-muted-foreground">
-                    KPIs claros desde el día uno. Crecimiento que puedes ver y medir
+                    Mide progreso y ajusta en tiempo real con datos precisos.
                   </p>
                 </div>
               </div>
+
+              <p className="text-center text-lg text-muted-foreground font-medium">
+                No es consultoría tradicional. Es crecimiento con precisión.
+              </p>
             </div>
           </section>
 
-          {/* Who We Help Section */}
+          {/* 3. Todo tu negocio en un solo lugar */}
           <section className="py-20 px-4 sm:px-6 lg:px-8 bg-muted/30">
             <div className="max-w-7xl mx-auto">
               <div className="text-center mb-16">
                 <h2 className="text-4xl font-bold text-foreground mb-4">
-                  ¿A Quién Ayudamos?
+                  Todo tu negocio en un solo lugar
                 </h2>
-                <p className="text-xl text-muted-foreground">
-                  Trabajamos con tres tipos de empresas, cada una con necesidades y retos específicos
+                <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+                  Diseñado para founders, equipos pequeños y empresas familiares que buscan profesionalizarse sin perder velocidad.
                 </p>
               </div>
 
-              <div className="grid md:grid-cols-3 gap-8">
-                <div className="bg-card p-8 rounded-xl text-center hover:shadow-lg transition-shadow border border-border">
-                  <div className="flex justify-center mb-6">
-                    <IconCircle icon={Globe} size="md" />
+              <div className="grid gap-6 mb-8">
+                <div className="bg-card p-6 rounded-xl border border-border hover:shadow-lg transition-shadow flex gap-6 items-start">
+                  <IconCircle icon={Target} size="md" />
+                  <div className="flex-1">
+                    <h3 className="text-xl font-semibold text-foreground mb-2">Estrategia</h3>
+                    <p className="text-muted-foreground">Define tus objetivos y prioriza lo que realmente mueve el negocio.</p>
                   </div>
-                  <h3 className="text-2xl font-bold text-foreground mb-3">
-                    Empresas Extranjeras
-                  </h3>
-                  <p className="text-muted-foreground mb-6">
-                    Quieren entrar o crecer en México pero no conocen el mercado local
-                  </p>
-                  <Button variant="outline-secondary">
-                    Conoce más →
-                  </Button>
                 </div>
 
-                <div className="bg-card p-8 rounded-xl text-center hover:shadow-lg transition-shadow border border-border">
-                  <div className="flex justify-center mb-6">
-                    <IconCircle icon={Building2} size="md" />
+                <div className="bg-card p-6 rounded-xl border border-border hover:shadow-lg transition-shadow flex gap-6 items-start">
+                  <IconCircle icon={TrendingUp} size="md" />
+                  <div className="flex-1">
+                    <h3 className="text-xl font-semibold text-foreground mb-2">Marketing y ventas</h3>
+                    <p className="text-muted-foreground">Identifica canales rentables y optimiza tu embudo.</p>
                   </div>
-                  <h3 className="text-2xl font-bold text-foreground mb-3">
-                    Empresas Familiares y PYMES
-                  </h3>
-                  <p className="text-muted-foreground mb-6">
-                    Necesitan profesionalizar, escalar o prepararse para una transición generacional
-                  </p>
-                  <Button variant="outline-secondary">
-                    Conoce más →
-                  </Button>
                 </div>
 
-                <div className="bg-card p-8 rounded-xl text-center hover:shadow-lg transition-shadow border border-border">
-                  <div className="flex justify-center mb-6">
-                    <IconCircle icon={Zap} size="md" />
+                <div className="bg-card p-6 rounded-xl border border-border hover:shadow-lg transition-shadow flex gap-6 items-start">
+                  <IconCircle icon={DollarSign} size="md" />
+                  <div className="flex-1">
+                    <h3 className="text-xl font-semibold text-foreground mb-2">Finanzas</h3>
+                    <p className="text-muted-foreground">Visualiza tus números y toma decisiones con datos.</p>
                   </div>
-                  <h3 className="text-2xl font-bold text-foreground mb-3">
-                    Startups y Scaleups
-                  </h3>
-                  <p className="text-muted-foreground mb-6">
-                    Buscan validar su modelo, acelerar crecimiento y prepararse para fundraising
+                </div>
+
+                <div className="bg-card p-6 rounded-xl border border-border hover:shadow-lg transition-shadow flex gap-6 items-start">
+                  <IconCircle icon={Settings} size="md" />
+                  <div className="flex-1">
+                    <h3 className="text-xl font-semibold text-foreground mb-2">Operaciones</h3>
+                    <p className="text-muted-foreground">Estructura procesos, equipos y tareas clave.</p>
+                  </div>
+                </div>
+
+                <div className="bg-card p-6 rounded-xl border border-border hover:shadow-lg transition-shadow flex gap-6 items-start">
+                  <IconCircle icon={Code} size="md" />
+                  <div className="flex-1">
+                    <h3 className="text-xl font-semibold text-foreground mb-2">Tecnología</h3>
+                    <p className="text-muted-foreground">Integra herramientas sin complicarte.</p>
+                  </div>
+                </div>
+              </div>
+
+              <p className="text-center text-lg text-muted-foreground font-medium italic">
+                Pasa de "necesitamos ordenarnos" a "sabemos exactamente qué hacer".
+              </p>
+            </div>
+          </section>
+
+          {/* 4. Crece como los grandes */}
+          <section className="py-20 px-4 sm:px-6 lg:px-8 bg-background">
+            <div className="max-w-7xl mx-auto">
+              <div className="text-center mb-16">
+                <h2 className="text-4xl font-bold text-foreground mb-4">
+                  Crece como los grandes (sin serlo todavía)
+                </h2>
+                <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+                  Alasha AI aprende de tu negocio, analiza tus resultados y te guía para dar el siguiente paso.
+                </p>
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-8 mb-12">
+                <div className="bg-card/50 p-8 rounded-xl border-2 border-border">
+                  <div className="flex items-center gap-3 mb-4">
+                    <X className="h-8 w-8 text-destructive" />
+                    <h3 className="text-2xl font-bold text-foreground">Antes</h3>
+                  </div>
+                  <ul className="space-y-3 text-muted-foreground">
+                    <li className="flex items-start gap-2">
+                      <span className="text-destructive mt-1">✗</span>
+                      <span>Decisiones por intuición</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-destructive mt-1">✗</span>
+                      <span>Tareas dispersas</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-destructive mt-1">✗</span>
+                      <span>Sin visibilidad real</span>
+                    </li>
+                  </ul>
+                </div>
+
+                <div className="bg-secondary/10 p-8 rounded-xl border-2 border-secondary">
+                  <div className="flex items-center gap-3 mb-4">
+                    <CheckCircle className="h-8 w-8 text-secondary" />
+                    <h3 className="text-2xl font-bold text-foreground">Después</h3>
+                  </div>
+                  <ul className="space-y-3 text-muted-foreground">
+                    <li className="flex items-start gap-2">
+                      <CheckCircle className="h-5 w-5 text-secondary mt-0.5 flex-shrink-0" />
+                      <span>Claridad total</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <CheckCircle className="h-5 w-5 text-secondary mt-0.5 flex-shrink-0" />
+                      <span>Plan medible</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <CheckCircle className="h-5 w-5 text-secondary mt-0.5 flex-shrink-0" />
+                      <span>Equipo alineado</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+
+              <div className="max-w-3xl mx-auto">
+                <div className="bg-muted/50 border-l-4 border-secondary p-8 rounded-r-xl">
+                  <Quote className="h-8 w-8 text-secondary mb-4" />
+                  <p className="text-2xl font-semibold text-foreground italic">
+                    "No necesitas más tiempo. Necesitas mejor dirección."
                   </p>
-                  <Button variant="outline-secondary">
-                    Conoce más →
-                  </Button>
                 </div>
               </div>
             </div>
           </section>
 
-          {/* CTA Section */}
-          <section className="py-20 px-4 sm:px-6 lg:px-8 bg-[linear-gradient(135deg,hsl(210_60%_25%)_0%,hsl(170_45%_45%)_100%)] text-white">
-            <div className="max-w-4xl mx-auto text-center">
-              <h2 className="text-4xl font-bold mb-6">
-                ¿Listo para Crecer Sin Límites?
-              </h2>
-              <p className="text-xl text-white/90 mb-8">
-                Hablemos de cómo podemos ayudarte a alcanzar tus objetivos de crecimiento
+          {/* 5. Cómo funciona */}
+          <section className="py-20 px-4 sm:px-6 lg:px-8 bg-muted/30">
+            <div className="max-w-7xl mx-auto">
+              <div className="text-center mb-16">
+                <h2 className="text-4xl font-bold text-foreground mb-4">
+                  Cómo funciona
+                </h2>
+              </div>
+
+              <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
+                <div className="bg-card p-8 rounded-xl border border-border hover:shadow-lg transition-shadow text-center">
+                  <div className="flex justify-center mb-6">
+                    <div className="relative">
+                      <IconCircle icon={FileQuestion} size="lg" />
+                      <div className="absolute -top-2 -right-2 bg-secondary text-white w-8 h-8 rounded-full flex items-center justify-center font-bold text-lg">
+                        1
+                      </div>
+                    </div>
+                  </div>
+                  <h3 className="text-lg font-semibold text-foreground mb-3">
+                    Diagnostica tu negocio
+                  </h3>
+                  <p className="text-muted-foreground text-sm">
+                    Con un cuestionario interactivo personalizado.
+                  </p>
+                </div>
+
+                <div className="bg-card p-8 rounded-xl border border-border hover:shadow-lg transition-shadow text-center">
+                  <div className="flex justify-center mb-6">
+                    <div className="relative">
+                      <IconCircle icon={FileCheck} size="lg" />
+                      <div className="absolute -top-2 -right-2 bg-secondary text-white w-8 h-8 rounded-full flex items-center justify-center font-bold text-lg">
+                        2
+                      </div>
+                    </div>
+                  </div>
+                  <h3 className="text-lg font-semibold text-foreground mb-3">
+                    Recibe tu plan
+                  </h3>
+                  <p className="text-muted-foreground text-sm">
+                    Un plan de acción personalizado para tu realidad.
+                  </p>
+                </div>
+
+                <div className="bg-card p-8 rounded-xl border border-border hover:shadow-lg transition-shadow text-center">
+                  <div className="flex justify-center mb-6">
+                    <div className="relative">
+                      <IconCircle icon={BarChart} size="lg" />
+                      <div className="absolute -top-2 -right-2 bg-secondary text-white w-8 h-8 rounded-full flex items-center justify-center font-bold text-lg">
+                        3
+                      </div>
+                    </div>
+                  </div>
+                  <h3 className="text-lg font-semibold text-foreground mb-3">
+                    Ejecuta y mide
+                  </h3>
+                  <p className="text-muted-foreground text-sm">
+                    Cada avance en tu dashboard en tiempo real.
+                  </p>
+                </div>
+
+                <div className="bg-card p-8 rounded-xl border border-border hover:shadow-lg transition-shadow text-center">
+                  <div className="flex justify-center mb-6">
+                    <div className="relative">
+                      <IconCircle icon={Sparkles} size="lg" />
+                      <div className="absolute -top-2 -right-2 bg-secondary text-white w-8 h-8 rounded-full flex items-center justify-center font-bold text-lg">
+                        4
+                      </div>
+                    </div>
+                  </div>
+                  <h3 className="text-lg font-semibold text-foreground mb-3">
+                    Optimiza con IA
+                  </h3>
+                  <p className="text-muted-foreground text-sm">
+                    Inteligencia que aprende de tus resultados.
+                  </p>
+                </div>
+              </div>
+
+              <div className="text-center">
+                <Button 
+                  size="lg"
+                  variant="gradient"
+                  onClick={() => navigate('/auth')}
+                  className="text-lg px-8"
+                >
+                  Crea tu plan en menos de 5 minutos
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </Button>
+              </div>
+            </div>
+          </section>
+
+          {/* 6. Diseñado para escalar contigo */}
+          <section className="py-20 px-4 sm:px-6 lg:px-8 bg-background">
+            <div className="max-w-7xl mx-auto">
+              <div className="text-center mb-16">
+                <h2 className="text-4xl font-bold text-foreground mb-4">
+                  Diseñado para escalar contigo
+                </h2>
+                <p className="text-xl text-muted-foreground">
+                  Desde una idea en servilleta hasta una PyME que factura millones.
+                </p>
+              </div>
+
+              <div className="grid md:grid-cols-3 gap-8 mb-8">
+                <div className="bg-card p-8 rounded-xl border border-border hover:shadow-lg transition-shadow text-center">
+                  <div className="flex justify-center mb-6">
+                    <IconCircle icon={Lightbulb} size="lg" />
+                  </div>
+                  <h3 className="text-2xl font-bold text-foreground mb-3">
+                    💡 Founder
+                  </h3>
+                  <p className="text-muted-foreground mb-6">
+                    Estructura tu visión y lanza con foco desde el día uno.
+                  </p>
+                  <Button variant="outline-secondary" onClick={() => navigate('/auth')}>
+                    Empezar ahora
+                  </Button>
+                </div>
+
+                <div className="bg-card p-8 rounded-xl border border-border hover:shadow-lg transition-shadow text-center">
+                  <div className="flex justify-center mb-6">
+                    <IconCircle icon={Cog} size="lg" />
+                  </div>
+                  <h3 className="text-2xl font-bold text-foreground mb-3">
+                    ⚙️ Startup
+                  </h3>
+                  <p className="text-muted-foreground mb-6">
+                    Mejora tu tracción y encuentra product-market fit rápido.
+                  </p>
+                  <Button variant="outline-secondary" onClick={() => navigate('/auth')}>
+                    Empezar ahora
+                  </Button>
+                </div>
+
+                <div className="bg-card p-8 rounded-xl border border-border hover:shadow-lg transition-shadow text-center">
+                  <div className="flex justify-center mb-6">
+                    <IconCircle icon={TrendingUp} size="lg" />
+                  </div>
+                  <h3 className="text-2xl font-bold text-foreground mb-3">
+                    📈 PyME
+                  </h3>
+                  <p className="text-muted-foreground mb-6">
+                    Escala con eficiencia y control sin perder calidad.
+                  </p>
+                  <Button variant="outline-secondary" onClick={() => navigate('/auth')}>
+                    Empezar ahora
+                  </Button>
+                </div>
+              </div>
+
+              <p className="text-center text-lg text-muted-foreground font-medium">
+                Sin importar el tamaño de tu negocio, Alasha AI se adapta a tu velocidad.
               </p>
-              <Button 
-                size="lg"
-                variant="white"
-                onClick={() => navigate('/auth')} 
-                className="text-lg px-12"
-              >
-                Agenda una llamada →
-              </Button>
+            </div>
+          </section>
+
+          {/* 7. Un copiloto de verdad */}
+          <section className="py-20 px-4 sm:px-6 lg:px-8 bg-secondary/5">
+            <div className="max-w-5xl mx-auto text-center">
+              <div className="flex justify-center mb-8">
+                <IconCircle icon={Brain} size="lg" />
+              </div>
+              
+              <h2 className="text-4xl font-bold text-foreground mb-6">
+                Un copiloto de verdad
+              </h2>
+              
+              <p className="text-xl text-muted-foreground mb-8 leading-relaxed max-w-3xl mx-auto">
+                Cada plan, tarea y métrica se ajusta a tus resultados. Alasha AI no te da respuestas genéricas; aprende de tus documentos, números y decisiones para darte una ruta real de crecimiento.
+              </p>
+
+              <p className="text-2xl font-semibold text-foreground">
+                No es IA por moda. Es IA con propósito.
+              </p>
+            </div>
+          </section>
+
+          {/* 8. Cierre y CTA Final */}
+          <section className="py-24 px-4 sm:px-6 lg:px-8 bg-[linear-gradient(135deg,hsl(210_60%_25%)_0%,hsl(170_45%_45%)_100%)] text-white">
+            <div className="max-w-4xl mx-auto text-center">
+              <h2 className="text-5xl font-bold mb-6">
+                El futuro de tu negocio empieza con claridad
+              </h2>
+              <p className="text-2xl text-white/90 mb-10">
+                Crea tu plan de crecimiento personalizado hoy.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <Button 
+                  size="lg"
+                  variant="white"
+                  onClick={() => navigate('/auth')} 
+                  className="text-lg px-12"
+                >
+                  Empieza gratis →
+                </Button>
+                <Button 
+                  size="lg" 
+                  variant="outline" 
+                  onClick={() => navigate('/auth')} 
+                  className="border-2 border-white bg-transparent text-white hover:bg-white/10 text-lg px-12"
+                >
+                  Ver ejemplos de planes
+                </Button>
+              </div>
             </div>
           </section>
         </main>
