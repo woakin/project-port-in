@@ -30,6 +30,9 @@ export function Header() {
             <Link to="/" className="text-sm font-medium text-foreground hover:text-primary transition-colors">
               Dashboard
             </Link>
+            <Link to="/kpis" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+              KPIs
+            </Link>
             <Link to="/tasks" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
               Tareas
             </Link>

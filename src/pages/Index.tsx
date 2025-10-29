@@ -793,7 +793,7 @@ const Index = () => {
               </div>
               <Button 
                 variant="ghost"
-                onClick={() => navigate('/plans')}
+                onClick={() => navigate('/kpis')}
               >
                 Ver todos
                 <ArrowRight className="ml-2 h-4 w-4" />
