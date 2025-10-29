@@ -15,7 +15,7 @@ export function Header() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         {/* Logo and Brand */}
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary to-primary-darker flex items-center justify-center shadow-md">
+          <div className="w-10 h-10 rounded-lg bg-[linear-gradient(135deg,hsl(210_60%_25%),hsl(170_45%_45%))] flex items-center justify-center shadow-md">
             <span className="text-primary-foreground font-bold text-xl">A</span>
           </div>
           <div className="flex flex-col">

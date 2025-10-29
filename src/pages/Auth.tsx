@@ -65,7 +65,7 @@ export default function Auth() {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="w-16 h-16 mx-auto mb-4 rounded-xl bg-gradient-to-br from-primary to-primary-darker flex items-center justify-center shadow-lg">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-xl bg-[linear-gradient(135deg,hsl(210_60%_25%),hsl(170_45%_45%))] flex items-center justify-center shadow-lg">
             <span className="text-primary-foreground font-bold text-3xl">A</span>
           </div>
           <h1 className="text-4xl font-bold text-foreground mb-2">Bienvenido a Alasha AI</h1>

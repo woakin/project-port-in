@@ -95,7 +95,7 @@ const Index = () => {
         <header className="border-b border-border bg-card/95 backdrop-blur-md sticky top-0 z-50 shadow-sm">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary to-primary-darker flex items-center justify-center shadow-md">
+              <div className="w-10 h-10 rounded-lg bg-[linear-gradient(135deg,hsl(210_60%_25%),hsl(170_45%_45%))] flex items-center justify-center shadow-md">
                 <span className="text-primary-foreground font-bold text-xl">A</span>
               </div>
               <div className="flex flex-col">
@@ -121,7 +121,7 @@ const Index = () => {
               <div className="text-center max-w-3xl mx-auto animate-fade-in-up">
                 <h1 className="text-5xl sm:text-6xl font-bold text-foreground mb-6 leading-tight">
                   Inteligencia Empresarial
-                  <span className="block mt-2 bg-gradient-to-r from-primary to-primary-darker bg-clip-text text-transparent">
+                  <span className="block mt-2 bg-[linear-gradient(135deg,hsl(210_60%_25%),hsl(170_45%_45%))] bg-clip-text text-transparent">
                     Impulsada por IA
                   </span>
                 </h1>
@@ -155,8 +155,8 @@ const Index = () => {
 
               <div className="grid md:grid-cols-3 gap-8">
                 <Card className="p-6 hover:scale-105 transition-transform duration-200 animate-fade-in-up">
-                  <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
-                    <TrendingUp className="h-6 w-6 text-primary" />
+                  <div className="h-12 w-12 rounded-lg bg-secondary/10 flex items-center justify-center mb-4">
+                    <TrendingUp className="h-6 w-6 text-secondary" />
                   </div>
                   <h3 className="text-xl font-semibold text-foreground mb-2">
                     Diagnósticos Estratégicos
@@ -167,8 +167,8 @@ const Index = () => {
                 </Card>
 
                 <Card className="p-6 hover:scale-105 transition-transform duration-200 animate-fade-in-up [animation-delay:100ms]">
-                  <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
-                    <ArrowRight className="h-6 w-6 text-primary" />
+                  <div className="h-12 w-12 rounded-lg bg-secondary/10 flex items-center justify-center mb-4">
+                    <ArrowRight className="h-6 w-6 text-secondary" />
                   </div>
                   <h3 className="text-xl font-semibold text-foreground mb-2">
                     Planes de Acción
@@ -179,8 +179,8 @@ const Index = () => {
                 </Card>
 
                 <Card className="p-6 hover:scale-105 transition-transform duration-200 animate-fade-in-up [animation-delay:200ms]">
-                  <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
-                    <BarChart3 className="h-6 w-6 text-primary" />
+                  <div className="h-12 w-12 rounded-lg bg-secondary/10 flex items-center justify-center mb-4">
+                    <BarChart3 className="h-6 w-6 text-secondary" />
                   </div>
                   <h3 className="text-xl font-semibold text-foreground mb-2">
                     KPIs en Tiempo Real
@@ -191,8 +191,8 @@ const Index = () => {
                 </Card>
 
                 <Card className="p-6 hover:scale-105 transition-transform duration-200 animate-fade-in-up [animation-delay:300ms]">
-                  <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
-                    <FolderOpen className="h-6 w-6 text-primary" />
+                  <div className="h-12 w-12 rounded-lg bg-secondary/10 flex items-center justify-center mb-4">
+                    <FolderOpen className="h-6 w-6 text-secondary" />
                   </div>
                   <h3 className="text-xl font-semibold text-foreground mb-2">
                     Gestión Documental
@@ -203,8 +203,8 @@ const Index = () => {
                 </Card>
 
                 <Card className="p-6 hover:scale-105 transition-transform duration-200 animate-fade-in-up [animation-delay:400ms]">
-                  <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
-                    <TrendingUp className="h-6 w-6 text-primary" />
+                  <div className="h-12 w-12 rounded-lg bg-secondary/10 flex items-center justify-center mb-4">
+                    <TrendingUp className="h-6 w-6 text-secondary" />
                   </div>
                   <h3 className="text-xl font-semibold text-foreground mb-2">
                     Seguimiento de Tareas
@@ -215,8 +215,8 @@ const Index = () => {
                 </Card>
 
                 <Card className="p-6 hover:scale-105 transition-transform duration-200 animate-fade-in-up [animation-delay:500ms]">
-                  <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
-                    <BarChart3 className="h-6 w-6 text-primary" />
+                  <div className="h-12 w-12 rounded-lg bg-secondary/10 flex items-center justify-center mb-4">
+                    <BarChart3 className="h-6 w-6 text-secondary" />
                   </div>
                   <h3 className="text-xl font-semibold text-foreground mb-2">
                     Consultoría IA 24/7
