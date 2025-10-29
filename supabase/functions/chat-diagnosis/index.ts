@@ -912,22 +912,10 @@ ESTILO:
 - Usa visualizaciones mentales cuando sea útil`
     };
 
-    // Intentar cargar prompt desde system_config
-    let systemPromptTemplate = '';
-    const promptKey = `chat_${mode}_system_prompt`;
-    const { data: promptConfig } = await supabase
-      .from('system_config')
-      .select('value')
-      .eq('key', promptKey)
-      .maybeSingle();
+    // Inicializar con prompt por defecto según el modo
+    let systemPromptTemplate = DEFAULT_PROMPTS[mode] || DEFAULT_PROMPTS['diagnosis'];
 
-    // Usar personalizado si existe, sino usar default
-    if (promptConfig?.value?.prompt && promptConfig.value.prompt.trim() !== '') {
-      systemPromptTemplate = promptConfig.value.prompt;
-    } else {
-      systemPromptTemplate = DEFAULT_PROMPTS[mode] || DEFAULT_PROMPTS['diagnosis'];
-    }
-
+    // Intentar cargar prompt personalizado desde system_config
     try {
       const authHeader = req.headers.get('Authorization');
       if (authHeader) {
@@ -935,18 +923,21 @@ ESTILO:
         const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
         const supabaseClient = createClient(supabaseUrl, token);
         
+        const promptKey = `chat_${mode}_system_prompt`;
         const { data: configData, error: configError } = await supabaseClient
           .from('system_config')
           .select('value')
-          .eq('key', 'chat_diagnosis_system_prompt')
+          .eq('key', promptKey)
           .maybeSingle();
 
-        if (!configError && configData && mode === 'diagnosis') {
-          systemPromptTemplate = (configData.value as any).prompt || systemPromptTemplate;
+        // Si existe un prompt personalizado y no está vacío, usarlo
+        if (!configError && configData?.value?.prompt && configData.value.prompt.trim() !== '') {
+          systemPromptTemplate = configData.value.prompt;
+          console.log(`Using custom prompt for mode: ${mode}`);
         }
       }
     } catch (e) {
-      console.log('Using default system prompt:', e);
+      console.log(`Using default prompt for mode ${mode}:`, e);
     }
 
     // Reemplazar variables en el template
