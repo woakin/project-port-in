@@ -158,20 +158,20 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
     
     setChatMode(newMode);
     
-    // Agregar mensaje del sistema informando del cambio con un estilo más claro
-    const modeLabels = {
-      diagnosis: '🎯 Diagnóstico',
-      strategic: '🧭 Mentor Estratégico',
-      follow_up: '📊 Coach Operativo',
-      document: '📈 Analista de Datos'
-    };
-    
-    const modeChangeMessage = {
+    // Reemplazar el primer mensaje (bienvenida del modo anterior) con el nuevo mensaje de bienvenida
+    const newWelcomeMessage = {
       role: 'assistant' as const,
-      content: `---\n**✨ Modo cambiado a: ${modeLabels[newMode]}**\n\n${getInitialMessage(companyInfo?.projectName || 'tu proyecto', newMode)}\n---`
+      content: getInitialMessage(companyInfo?.projectName || 'tu proyecto', newMode)
     };
     
-    setMessages(prev => [...prev, modeChangeMessage]);
+    setMessages(prev => {
+      // Si hay mensajes, reemplazar el primero (que es siempre la bienvenida)
+      // y mantener el resto de la conversación
+      if (prev.length > 0) {
+        return [newWelcomeMessage, ...prev.slice(1)];
+      }
+      return [newWelcomeMessage];
+    });
   };
 
   const getModeLabel = (mode: ChatMode) => {
