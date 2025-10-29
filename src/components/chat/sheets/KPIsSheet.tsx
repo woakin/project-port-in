@@ -17,7 +17,8 @@ export default function KPIsSheet({ isOpen }: KPIsSheetProps) {
     if (isOpen) {
       refetch();
     }
-  }, [isOpen, refetch]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
 
   if (loading) {
     return (

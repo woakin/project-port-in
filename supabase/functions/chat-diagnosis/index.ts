@@ -1055,11 +1055,13 @@ ESTILO:
               // - "Actualizar KPI [nombre] a [valor]"
               // - "Crear KPI [nombre] con valor de [valor]"
               // - "Crea el KPI '[nombre]' con el valor de [valor]"
-              const kpiMatch = userText.match(/(crear?|actualizar)\s+(?:el\s+)?kpi\s+['""]?(.+?)['""]?\s+(?:a|con\s+(?:el\s+)?valor\s+(?:de\s+)?)\s*(\d+(?:\.\d+)?)\s*([a-z%$]*)?/i);
+              const kpiMatch = userText.match(/(crea|crear|actualizar|actualiza)\s+(?:el\s+)?kpi\s+['""]?(.+?)['""]?\s+(?:a|con\s+(?:el\s+)?valor\s+(?:de\s+)?)\s*(\d+(?:\.\d+)?)\s*([a-z%$]*)?/i);
               if (kpiMatch) {
                 const kpiName = kpiMatch[2].trim().replace(/^['"]|['"]$/g, ''); // Remover comillas
                 const kpiValue = parseFloat(kpiMatch[3]);
                 const kpiUnit = kpiMatch[4] || '';
+                
+                console.log('KPI Match found:', { kpiName, kpiValue, kpiUnit });
                 
                 const today = new Date();
                 const periodStart = new Date(today.getFullYear(), today.getMonth(), 1);
@@ -1072,7 +1074,7 @@ ESTILO:
                     area: 'operations',
                     name: kpiName,
                     value: kpiValue,
-                    unit: kpiUnit,
+                    unit: kpiUnit || null,
                     period_start: periodStart.toISOString().split('T')[0],
                     period_end: periodEnd.toISOString().split('T')[0],
                     source: 'manual'
@@ -1081,6 +1083,7 @@ ESTILO:
                   .single();
                 
                 if (!kpiError && newKpi) {
+                  console.log('KPI created successfully:', newKpi);
                   actionResults.push({
                     type: 'kpi_updated',
                     success: true,

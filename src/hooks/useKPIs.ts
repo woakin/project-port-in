@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { KPI } from '@/types/kpi.types';
 import { useAuth } from './useAuth';
@@ -8,12 +8,7 @@ export function useKPIs() {
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
 
-  useEffect(() => {
-    if (!user) return;
-    fetchKPIs();
-  }, [user]);
-
-  const fetchKPIs = async () => {
+  const fetchKPIs = useCallback(async () => {
     try {
       setLoading(true);
       
@@ -40,7 +35,12 @@ export function useKPIs() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+    fetchKPIs();
+  }, [user, fetchKPIs]);
 
   const getKPIsByArea = (area: string) => {
     return kpis.filter(kpi => kpi.area === area);
@@ -62,12 +62,15 @@ export function useKPIs() {
 
   const getKPIStats = () => {
     const latest = getLatestKPIs();
-    const total = latest.length;
+    const total = latest.length; // Contar todos los KPIs, no solo los que tienen target
     const onTarget = latest.filter(kpi => {
       if (!kpi.target_value) return false;
       return kpi.value >= kpi.target_value;
     }).length;
-    const belowTarget = total - onTarget;
+    const belowTarget = latest.filter(kpi => {
+      if (!kpi.target_value) return false;
+      return kpi.value < kpi.target_value;
+    }).length;
 
     return { total, onTarget, belowTarget };
   };
