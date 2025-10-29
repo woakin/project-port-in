@@ -9,14 +9,14 @@ interface CardProps {
 
 export function Card({ children, variant = 'content', className }: CardProps) {
   const variantStyles = {
-    content: 'bg-card p-8 gap-6',
-    service: 'bg-card p-6 gap-4',
-    testimonial: 'bg-secondary p-8 gap-6',
+    content: 'bg-card p-8 gap-6 border border-border',
+    service: 'bg-card p-6 gap-4 border border-border',
+    testimonial: 'bg-secondary p-8 gap-6 border border-border',
   };
 
   return (
     <div className={cn(
-      "rounded-md flex flex-col",
+      "rounded-xl flex flex-col shadow-sm",
       variantStyles[variant],
       className
     )}>

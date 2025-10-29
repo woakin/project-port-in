@@ -14,7 +14,7 @@ import { Card } from "@/components/shared/Card";
 import { Badge } from "@/components/shared/Badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowRight, FolderOpen, TrendingUp, BarChart3 } from "lucide-react";
+import { ArrowRight, FolderOpen, TrendingUp, BarChart3, Target } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -91,8 +91,8 @@ const Index = () => {
   // Show landing page for logged out users
   if (!loading && !user) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-background to-accent/20">
-        <header className="border-b border-border bg-card/95 backdrop-blur-md sticky top-0 z-50 shadow-sm">
+      <div className="min-h-screen bg-background">
+        <header className="border-b border-border bg-card sticky top-0 z-50 shadow-sm">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-[linear-gradient(135deg,hsl(210_60%_25%),hsl(170_45%_45%))] flex items-center justify-center shadow-md">
@@ -107,7 +107,7 @@ const Index = () => {
               <Button variant="ghost" onClick={() => navigate('/auth')}>
                 Iniciar Sesión
               </Button>
-              <Button variant="gradient" onClick={() => navigate('/auth')}>
+              <Button variant="default" onClick={() => navigate('/auth')} className="bg-secondary hover:bg-secondary-light">
                 Comenzar Ahora
               </Button>
             </div>
@@ -116,130 +116,172 @@ const Index = () => {
 
         <main>
           {/* Hero Section */}
-          <section className="py-20 px-4 sm:px-6 lg:px-8">
-            <div className="max-w-7xl mx-auto">
-              <div className="text-center max-w-3xl mx-auto animate-fade-in-up">
-                <h1 className="text-5xl sm:text-6xl font-bold text-foreground mb-6 leading-tight">
+          <section className="relative py-24 px-4 sm:px-6 lg:px-8 bg-[linear-gradient(135deg,hsl(210_60%_25%)_0%,hsl(170_45%_45%)_100%)] text-white overflow-hidden">
+            <div className="max-w-7xl mx-auto relative z-10">
+              <div className="text-center max-w-3xl mx-auto">
+                <h1 className="text-5xl sm:text-6xl font-bold mb-6 leading-tight">
                   Inteligencia Empresarial
-                  <span className="block mt-2 bg-[linear-gradient(135deg,hsl(210_60%_25%),hsl(170_45%_45%))] bg-clip-text text-transparent">
-                    Impulsada por IA
-                  </span>
+                  <span className="block mt-2">Impulsada por IA</span>
                 </h1>
-                <p className="text-xl text-muted-foreground mb-8 leading-relaxed">
-                  Transforma tus datos en decisiones estratégicas. Diagnósticos profundos, análisis en tiempo real y planes de acción personalizados.
+                <p className="text-xl text-white/90 mb-8 leading-relaxed">
+                  Convertimos datos en resultados. Ayudamos a empresas a crecer sin límites con diagnósticos estratégicos y planes de acción personalizados.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                  <Button size="lg" variant="gradient" onClick={() => navigate('/auth')} className="text-lg px-8 gap-2">
-                    Comenzar Ahora
-                    <ArrowRight className="h-5 w-5" />
+                  <Button 
+                    size="lg" 
+                    onClick={() => navigate('/auth')} 
+                    className="bg-white text-primary hover:bg-white/90 text-lg px-8"
+                  >
+                    Agenda una sesión gratuita
+                    <ArrowRight className="ml-2 h-5 w-5" />
                   </Button>
-                  <Button size="lg" variant="outline" onClick={() => navigate('/auth')} className="text-lg px-8">
-                    Ver Demo
+                  <Button 
+                    size="lg" 
+                    variant="outline" 
+                    onClick={() => navigate('/auth')} 
+                    className="border-2 border-white text-white hover:bg-white/10 text-lg px-8"
+                  >
+                    Conoce nuestros servicios
                   </Button>
                 </div>
               </div>
             </div>
           </section>
 
-          {/* Features Section */}
-          <section className="py-20 px-4 sm:px-6 lg:px-8 bg-card/50">
+          {/* Value Proposition Section */}
+          <section className="py-20 px-4 sm:px-6 lg:px-8 bg-background">
             <div className="max-w-7xl mx-auto">
               <div className="text-center mb-16">
                 <h2 className="text-4xl font-bold text-foreground mb-4">
-                  Todo lo que necesitas para crecer
+                  No Somos Consultores, Somos Operadores
+                </h2>
+                <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+                  No te dejamos con un PDF. Nos ensuciamos las manos contigo para hacer que las cosas pasen.
+                </p>
+              </div>
+
+              <div className="grid md:grid-cols-3 gap-8 mb-16">
+                <div className="text-center">
+                  <div className="w-16 h-16 rounded-full bg-secondary/10 flex items-center justify-center mx-auto mb-4">
+                    <TrendingUp className="h-8 w-8 text-secondary" />
+                  </div>
+                  <h3 className="text-xl font-semibold text-foreground mb-2">
+                    Ejecución Directa
+                  </h3>
+                  <p className="text-muted-foreground">
+                    Trabajamos codo a codo con tu equipo, no solo damos recomendaciones
+                  </p>
+                </div>
+
+                <div className="text-center">
+                  <div className="w-16 h-16 rounded-full bg-secondary/10 flex items-center justify-center mx-auto mb-4">
+                    <BarChart3 className="h-8 w-8 text-secondary" />
+                  </div>
+                  <h3 className="text-xl font-semibold text-foreground mb-2">
+                    +15 Años de Experiencia
+                  </h3>
+                  <p className="text-muted-foreground">
+                    Operando empresas reales en México y América Latina
+                  </p>
+                </div>
+
+                <div className="text-center">
+                  <div className="w-16 h-16 rounded-full bg-secondary/10 flex items-center justify-center mx-auto mb-4">
+                    <Target className="h-8 w-8 text-secondary" />
+                  </div>
+                  <h3 className="text-xl font-semibold text-foreground mb-2">
+                    Resultados Medibles
+                  </h3>
+                  <p className="text-muted-foreground">
+                    KPIs claros desde el día uno. Crecimiento que puedes ver y medir
+                  </p>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* Who We Help Section */}
+          <section className="py-20 px-4 sm:px-6 lg:px-8 bg-muted/30">
+            <div className="max-w-7xl mx-auto">
+              <div className="text-center mb-16">
+                <h2 className="text-4xl font-bold text-foreground mb-4">
+                  ¿A Quién Ayudamos?
                 </h2>
                 <p className="text-xl text-muted-foreground">
-                  Herramientas poderosas para la gestión estratégica de tu negocio
+                  Trabajamos con tres tipos de empresas, cada una con necesidades y retos específicos
                 </p>
               </div>
 
               <div className="grid md:grid-cols-3 gap-8">
-                <Card className="p-6 hover:scale-105 transition-transform duration-200 animate-fade-in-up">
-                  <div className="h-12 w-12 rounded-lg bg-secondary/10 flex items-center justify-center mb-4">
-                    <TrendingUp className="h-6 w-6 text-secondary" />
+                <div className="bg-card p-8 rounded-xl text-center hover:shadow-lg transition-shadow border border-border">
+                  <div className="w-16 h-16 rounded-full bg-secondary/10 flex items-center justify-center mx-auto mb-6">
+                    <svg className="h-8 w-8 text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
                   </div>
-                  <h3 className="text-xl font-semibold text-foreground mb-2">
-                    Diagnósticos Estratégicos
+                  <h3 className="text-2xl font-bold text-foreground mb-3">
+                    Empresas Extranjeras
                   </h3>
-                  <p className="text-muted-foreground">
-                    Análisis profundo de todas las áreas de tu negocio con IA conversacional
+                  <p className="text-muted-foreground mb-6">
+                    Quieren entrar o crecer en México pero no conocen el mercado local
                   </p>
-                </Card>
+                  <Button variant="outline" className="border-2 border-secondary text-secondary hover:bg-secondary/10">
+                    Conoce más →
+                  </Button>
+                </div>
 
-                <Card className="p-6 hover:scale-105 transition-transform duration-200 animate-fade-in-up [animation-delay:100ms]">
-                  <div className="h-12 w-12 rounded-lg bg-secondary/10 flex items-center justify-center mb-4">
-                    <ArrowRight className="h-6 w-6 text-secondary" />
+                <div className="bg-card p-8 rounded-xl text-center hover:shadow-lg transition-shadow border border-border">
+                  <div className="w-16 h-16 rounded-full bg-secondary/10 flex items-center justify-center mx-auto mb-6">
+                    <svg className="h-8 w-8 text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                    </svg>
                   </div>
-                  <h3 className="text-xl font-semibold text-foreground mb-2">
-                    Planes de Acción
+                  <h3 className="text-2xl font-bold text-foreground mb-3">
+                    Empresas Familiares y PYMES
                   </h3>
-                  <p className="text-muted-foreground">
-                    Estrategias personalizadas basadas en tus objetivos y recursos
+                  <p className="text-muted-foreground mb-6">
+                    Necesitan profesionalizar, escalar o prepararse para una transición generacional
                   </p>
-                </Card>
+                  <Button variant="outline" className="border-2 border-secondary text-secondary hover:bg-secondary/10">
+                    Conoce más →
+                  </Button>
+                </div>
 
-                <Card className="p-6 hover:scale-105 transition-transform duration-200 animate-fade-in-up [animation-delay:200ms]">
-                  <div className="h-12 w-12 rounded-lg bg-secondary/10 flex items-center justify-center mb-4">
-                    <BarChart3 className="h-6 w-6 text-secondary" />
+                <div className="bg-card p-8 rounded-xl text-center hover:shadow-lg transition-shadow border border-border">
+                  <div className="w-16 h-16 rounded-full bg-secondary/10 flex items-center justify-center mx-auto mb-6">
+                    <svg className="h-8 w-8 text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
                   </div>
-                  <h3 className="text-xl font-semibold text-foreground mb-2">
-                    KPIs en Tiempo Real
+                  <h3 className="text-2xl font-bold text-foreground mb-3">
+                    Startups y Scaleups
                   </h3>
-                  <p className="text-muted-foreground">
-                    Monitoreo continuo con alertas inteligentes y recomendaciones
+                  <p className="text-muted-foreground mb-6">
+                    Buscan validar su modelo, acelerar crecimiento y prepararse para fundraising
                   </p>
-                </Card>
-
-                <Card className="p-6 hover:scale-105 transition-transform duration-200 animate-fade-in-up [animation-delay:300ms]">
-                  <div className="h-12 w-12 rounded-lg bg-secondary/10 flex items-center justify-center mb-4">
-                    <FolderOpen className="h-6 w-6 text-secondary" />
-                  </div>
-                  <h3 className="text-xl font-semibold text-foreground mb-2">
-                    Gestión Documental
-                  </h3>
-                  <p className="text-muted-foreground">
-                    Análisis automático de documentos y extracción de insights clave
-                  </p>
-                </Card>
-
-                <Card className="p-6 hover:scale-105 transition-transform duration-200 animate-fade-in-up [animation-delay:400ms]">
-                  <div className="h-12 w-12 rounded-lg bg-secondary/10 flex items-center justify-center mb-4">
-                    <TrendingUp className="h-6 w-6 text-secondary" />
-                  </div>
-                  <h3 className="text-xl font-semibold text-foreground mb-2">
-                    Seguimiento de Tareas
-                  </h3>
-                  <p className="text-muted-foreground">
-                    Organiza y prioriza con vistas Kanban, Gantt y gestión de dependencias
-                  </p>
-                </Card>
-
-                <Card className="p-6 hover:scale-105 transition-transform duration-200 animate-fade-in-up [animation-delay:500ms]">
-                  <div className="h-12 w-12 rounded-lg bg-secondary/10 flex items-center justify-center mb-4">
-                    <BarChart3 className="h-6 w-6 text-secondary" />
-                  </div>
-                  <h3 className="text-xl font-semibold text-foreground mb-2">
-                    Consultoría IA 24/7
-                  </h3>
-                  <p className="text-muted-foreground">
-                    Asistente estratégico disponible cuando lo necesites
-                  </p>
-                </Card>
+                  <Button variant="outline" className="border-2 border-secondary text-secondary hover:bg-secondary/10">
+                    Conoce más →
+                  </Button>
+                </div>
               </div>
             </div>
           </section>
 
           {/* CTA Section */}
-          <section className="py-20 px-4 sm:px-6 lg:px-8">
+          <section className="py-20 px-4 sm:px-6 lg:px-8 bg-[linear-gradient(135deg,hsl(210_60%_25%)_0%,hsl(170_45%_45%)_100%)] text-white">
             <div className="max-w-4xl mx-auto text-center">
-              <h2 className="text-4xl font-bold text-foreground mb-6">
-                ¿Listo para transformar tu negocio?
+              <h2 className="text-4xl font-bold mb-6">
+                ¿Listo para Crecer Sin Límites?
               </h2>
-              <p className="text-xl text-muted-foreground mb-8">
-                Únete a empresas que ya están tomando decisiones más inteligentes
+              <p className="text-xl text-white/90 mb-8">
+                Hablemos de cómo podemos ayudarte a alcanzar tus objetivos de crecimiento
               </p>
-              <Button size="lg" variant="gradient" onClick={() => navigate('/auth')} className="text-lg px-12">
-                Comenzar Gratis
+              <Button 
+                size="lg" 
+                onClick={() => navigate('/auth')} 
+                className="bg-white text-primary hover:bg-white/90 text-lg px-12"
+              >
+                Agenda una llamada →
               </Button>
             </div>
           </section>
