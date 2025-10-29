@@ -7,9 +7,10 @@ interface KPICardProps {
   value: string;
   change?: number;
   unit?: string;
+  target?: string;
 }
 
-export function KPICard({ title, value, change, unit }: KPICardProps) {
+export function KPICard({ title, value, change, unit, target }: KPICardProps) {
   const getTrendIcon = () => {
     if (!change) return <Minus className="h-4 w-4" />;
     if (change > 0) return <ArrowUp className="h-4 w-4" />;
@@ -29,6 +30,11 @@ export function KPICard({ title, value, change, unit }: KPICardProps) {
         <div className="flex items-baseline gap-2">
           <span className="text-2xl font-semibold text-foreground">{value}</span>
           {unit && <span className="text-sm text-muted-foreground">{unit}</span>}
+          {target && (
+            <span className="text-sm text-muted-foreground">
+              / {target} {unit}
+            </span>
+          )}
         </div>
         {change !== undefined && (
           <div className={cn("flex items-center gap-1 text-sm", getTrendColor())}>

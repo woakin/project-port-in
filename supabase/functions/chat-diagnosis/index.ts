@@ -1063,36 +1063,40 @@ ESTILO:
               }
               
               // Patrón 2: Comandos de KPI flexibles
-              // Intenta múltiples patrones para mayor flexibilidad
               let kpiName: string | null = null;
               let kpiValue: number | null = null;
               let kpiUnit: string | null = null;
               let kpiTarget: number | null = null;
               
-              // Primero extraer la meta si existe (para evitar que interfiera con otros matches)
-              const metaMatch = userText.match(/(?:meta|objetivo|target)(?:\s+de)?\s+(\d+(?:[.,]\d+)?)\s*([a-zA-Z%$€]+)?/i);
+              // Primero extraer la meta si existe
+              const metaMatch = userText.match(/(?:meta|objetivo|target)(?:\s+de)?\s+(\d+(?:[.,]\d+)?)/i);
               if (metaMatch) {
                 kpiTarget = parseFloat(metaMatch[1].replace(',', '.'));
               }
               
-              // Patrón principal: captura nombre y valor en múltiples formatos
+              // Patrón principal: captura nombre, valor y unidad
               const patterns = [
-                // "Crea/Actualiza KPI 'Nombre' con valor 3000"
-                /(?:crea|crear|actualizar|actualiza)(?:\s+el)?\s+kpi\s+['"]([^'"]+)['"]\s+(?:con\s+)?(?:valor\s+)?(?:de\s+)?(\d+(?:[.,]\d+)?)\s*([a-zA-Z%$€]+)?/i,
-                // "KPI Nombre: 3000" o "KPI Nombre 3000"
-                /kpi\s+([a-záéíóúñ\s]+?)[:=\s]+(\d+(?:[.,]\d+)?)\s*([a-zA-Z%$€]+)?/i,
-                // "Actualiza Nombre a 3000"
-                /(?:actualiza|actualizar|crea|crear)\s+([a-záéíóúñ\s]+?)\s+(?:a|con|valor|de)\s+(\d+(?:[.,]\d+)?)\s*([a-zA-Z%$€]+)?/i,
+                // "Crea/Actualiza el KPI 'Nombre' con valor 3000"
+                /(?:crea|crear|actualizar|actualiza)(?:\s+el)?\s+kpi\s+['"]([^'"]+)['"]\s+(?:con\s+)?(?:valor\s+)?(?:de\s+)?(\d+(?:[.,]\d+)?)\s*([$€£%]|[a-z]{1,4})?\s*(?:y|con)?/i,
+                // "KPI Nombre: 3000"
+                /kpi\s+([a-záéíóúñ\s]+?)[:=]\s*(\d+(?:[.,]\d+)?)\s*([$€£%]|[a-z]{1,4})?/i,
+                // "Actualiza/Crea Nombre a 3000"
+                /(?:actualiza|actualizar|crea|crear)\s+(?:el\s+)?(?:kpi\s+)?([a-záéíóúñ\s]+?)\s+(?:a|con\s+valor|con|valor\s+de?)\s+(\d+(?:[.,]\d+)?)\s*([$€£%]|[a-z]{1,4})?/i,
               ];
               
               for (const pattern of patterns) {
                 const match = userText.match(pattern);
                 if (match) {
-                  kpiName = match[1].trim().replace(/^['"]|['"]$/g, '');
+                  kpiName = match[1].trim().replace(/^['"]|['"]$/g, '').toLowerCase();
                   kpiValue = parseFloat(match[2].replace(',', '.'));
-                  // Solo capturar unit si es un símbolo válido o una unidad corta (max 3 chars)
-                  const potentialUnit = match[3]?.trim() || '';
-                  if (potentialUnit && (potentialUnit.length <= 3 || ['%', '$', '€', '£'].includes(potentialUnit))) {
+                  
+                  // Solo capturar unit si es válida (símbolo o palabra corta, excluyendo palabras comunes)
+                  const potentialUnit = match[3]?.trim().toLowerCase() || '';
+                  const excludedWords = ['y', 'con', 'la', 'de', 'el', 'a'];
+                  
+                  if (potentialUnit && 
+                      !excludedWords.includes(potentialUnit) && 
+                      (['$', '€', '£', '%'].includes(potentialUnit) || potentialUnit.length <= 4)) {
                     kpiUnit = potentialUnit;
                   }
                   break;
@@ -1106,12 +1110,12 @@ ESTILO:
                 const periodStart = new Date(today.getFullYear(), today.getMonth(), 1);
                 const periodEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
                 
-                // Buscar KPI existente con el mismo nombre y período actual
+                // Buscar KPI existente con el mismo nombre (case-insensitive)
                 const { data: existingKpi } = await supabaseClient
                   .from('kpis')
                   .select('*')
                   .eq('company_id', companyId)
-                  .eq('name', kpiName)
+                  .ilike('name', kpiName)
                   .gte('period_end', today.toISOString())
                   .order('created_at', { ascending: false })
                   .limit(1)
@@ -1122,19 +1126,25 @@ ESTILO:
                 
                 if (existingKpi) {
                   // Actualizar KPI existente
-                  console.log('Updating existing KPI:', existingKpi.id);
+                  console.log('Updating existing KPI:', existingKpi.id, { kpiValue, kpiTarget, kpiUnit });
                   const updateData: any = {
                     value: kpiValue,
                   };
                   
-                  // Solo actualizar target_value si se proporcionó en el comando
+                  // Actualizar target_value si se proporcionó o mantener el existente
                   if (kpiTarget !== null) {
                     updateData.target_value = kpiTarget;
                   }
                   
-                  // Solo actualizar unit si se proporcionó
+                  // Actualizar unit si se proporcionó o limpiar si no existe
                   if (kpiUnit !== null) {
                     updateData.unit = kpiUnit;
+                  } else {
+                    // Si no se proporcionó unit en la actualización, mantener la existente
+                    // a menos que sea inválida
+                    if (existingKpi.unit && ['y', 'con', 'la'].includes(existingKpi.unit.toLowerCase())) {
+                      updateData.unit = null;
+                    }
                   }
                   
                   const { data, error } = await supabaseClient
