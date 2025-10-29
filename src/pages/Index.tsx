@@ -14,7 +14,8 @@ import { Card } from "@/components/shared/Card";
 import { Badge } from "@/components/shared/Badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowRight, FolderOpen, TrendingUp, BarChart3, Target } from "lucide-react";
+import { ArrowRight, FolderOpen, TrendingUp, BarChart3, Target, Globe, Building2, Zap } from "lucide-react";
+import { IconCircle } from "@/components/shared/IconCircle";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -129,8 +130,9 @@ const Index = () => {
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
                   <Button 
                     size="lg" 
+                    variant="white"
                     onClick={() => navigate('/auth')} 
-                    className="bg-white text-primary hover:bg-white/90 text-lg px-8"
+                    className="text-lg px-8"
                   >
                     Agenda una sesión gratuita
                     <ArrowRight className="ml-2 h-5 w-5" />
@@ -139,7 +141,7 @@ const Index = () => {
                     size="lg" 
                     variant="outline" 
                     onClick={() => navigate('/auth')} 
-                    className="border-2 border-white text-white hover:bg-white/10 text-lg px-8"
+                    className="border-2 border-white bg-transparent text-white hover:bg-white/10 text-lg px-8"
                   >
                     Conoce nuestros servicios
                   </Button>
@@ -162,8 +164,8 @@ const Index = () => {
 
               <div className="grid md:grid-cols-3 gap-8 mb-16">
                 <div className="text-center">
-                  <div className="w-16 h-16 rounded-full bg-secondary/10 flex items-center justify-center mx-auto mb-4">
-                    <TrendingUp className="h-8 w-8 text-secondary" />
+                  <div className="flex justify-center mb-4">
+                    <IconCircle icon={TrendingUp} size="md" />
                   </div>
                   <h3 className="text-xl font-semibold text-foreground mb-2">
                     Ejecución Directa
@@ -174,8 +176,8 @@ const Index = () => {
                 </div>
 
                 <div className="text-center">
-                  <div className="w-16 h-16 rounded-full bg-secondary/10 flex items-center justify-center mx-auto mb-4">
-                    <BarChart3 className="h-8 w-8 text-secondary" />
+                  <div className="flex justify-center mb-4">
+                    <IconCircle icon={BarChart3} size="md" />
                   </div>
                   <h3 className="text-xl font-semibold text-foreground mb-2">
                     +15 Años de Experiencia
@@ -186,8 +188,8 @@ const Index = () => {
                 </div>
 
                 <div className="text-center">
-                  <div className="w-16 h-16 rounded-full bg-secondary/10 flex items-center justify-center mx-auto mb-4">
-                    <Target className="h-8 w-8 text-secondary" />
+                  <div className="flex justify-center mb-4">
+                    <IconCircle icon={Target} size="md" />
                   </div>
                   <h3 className="text-xl font-semibold text-foreground mb-2">
                     Resultados Medibles
@@ -214,10 +216,8 @@ const Index = () => {
 
               <div className="grid md:grid-cols-3 gap-8">
                 <div className="bg-card p-8 rounded-xl text-center hover:shadow-lg transition-shadow border border-border">
-                  <div className="w-16 h-16 rounded-full bg-secondary/10 flex items-center justify-center mx-auto mb-6">
-                    <svg className="h-8 w-8 text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
+                  <div className="flex justify-center mb-6">
+                    <IconCircle icon={Globe} size="md" />
                   </div>
                   <h3 className="text-2xl font-bold text-foreground mb-3">
                     Empresas Extranjeras
@@ -225,16 +225,14 @@ const Index = () => {
                   <p className="text-muted-foreground mb-6">
                     Quieren entrar o crecer en México pero no conocen el mercado local
                   </p>
-                  <Button variant="outline" className="border-2 border-secondary text-secondary hover:bg-secondary/10">
+                  <Button variant="outline-secondary">
                     Conoce más →
                   </Button>
                 </div>
 
                 <div className="bg-card p-8 rounded-xl text-center hover:shadow-lg transition-shadow border border-border">
-                  <div className="w-16 h-16 rounded-full bg-secondary/10 flex items-center justify-center mx-auto mb-6">
-                    <svg className="h-8 w-8 text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                    </svg>
+                  <div className="flex justify-center mb-6">
+                    <IconCircle icon={Building2} size="md" />
                   </div>
                   <h3 className="text-2xl font-bold text-foreground mb-3">
                     Empresas Familiares y PYMES
@@ -242,16 +240,14 @@ const Index = () => {
                   <p className="text-muted-foreground mb-6">
                     Necesitan profesionalizar, escalar o prepararse para una transición generacional
                   </p>
-                  <Button variant="outline" className="border-2 border-secondary text-secondary hover:bg-secondary/10">
+                  <Button variant="outline-secondary">
                     Conoce más →
                   </Button>
                 </div>
 
                 <div className="bg-card p-8 rounded-xl text-center hover:shadow-lg transition-shadow border border-border">
-                  <div className="w-16 h-16 rounded-full bg-secondary/10 flex items-center justify-center mx-auto mb-6">
-                    <svg className="h-8 w-8 text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                    </svg>
+                  <div className="flex justify-center mb-6">
+                    <IconCircle icon={Zap} size="md" />
                   </div>
                   <h3 className="text-2xl font-bold text-foreground mb-3">
                     Startups y Scaleups
@@ -259,7 +255,7 @@ const Index = () => {
                   <p className="text-muted-foreground mb-6">
                     Buscan validar su modelo, acelerar crecimiento y prepararse para fundraising
                   </p>
-                  <Button variant="outline" className="border-2 border-secondary text-secondary hover:bg-secondary/10">
+                  <Button variant="outline-secondary">
                     Conoce más →
                   </Button>
                 </div>
@@ -277,9 +273,10 @@ const Index = () => {
                 Hablemos de cómo podemos ayudarte a alcanzar tus objetivos de crecimiento
               </p>
               <Button 
-                size="lg" 
+                size="lg"
+                variant="white"
                 onClick={() => navigate('/auth')} 
-                className="bg-white text-primary hover:bg-white/90 text-lg px-12"
+                className="text-lg px-12"
               >
                 Agenda una llamada →
               </Button>

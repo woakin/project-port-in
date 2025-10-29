@@ -20,7 +20,7 @@ export default {
     extend: {
       fontFamily: {
         sans: [
-          'Inter',
+          'Manrope',
           '-apple-system',
           'BlinkMacSystemFont',
           '"Segoe UI"',
