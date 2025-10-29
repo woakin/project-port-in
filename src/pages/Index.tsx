@@ -43,6 +43,7 @@ import { IconCircle } from "@/components/shared/IconCircle";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import alashaLogo from "@/assets/alasha-logo.png";
 
 const Index = () => {
   const { user, loading } = useAuth();
@@ -120,8 +121,8 @@ const Index = () => {
         <header className="border-b border-border bg-card sticky top-0 z-50 shadow-sm">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-[linear-gradient(135deg,hsl(210_60%_25%),hsl(170_45%_45%))] flex items-center justify-center shadow-md">
-                <span className="text-primary-foreground font-bold text-xl">A</span>
+              <div className="w-10 h-10 rounded-lg overflow-hidden shadow-md">
+                <img src={alashaLogo} alt="Alasha AI Logo" className="w-full h-full object-contain" />
               </div>
               <div className="flex flex-col">
                 <h1 className="text-lg font-bold text-foreground leading-none tracking-tight">Alasha AI</h1>
