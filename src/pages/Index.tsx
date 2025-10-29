@@ -157,7 +157,7 @@ const Index = () => {
                     onClick={() => navigate('/auth')} 
                     className="text-lg px-8"
                   >
-                    👉 Empieza gratis
+                    Empieza ahora
                   </Button>
                   <Button 
                     size="lg" 
