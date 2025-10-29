@@ -550,7 +550,7 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
               Indicadores de rendimiento del proyecto
             </SheetDescription>
           </SheetHeader>
-          <KPIsSheet />
+          <KPIsSheet isOpen={openSheet === 'kpis'} />
         </SheetContent>
       </Sheet>
 

@@ -1050,12 +1050,16 @@ ESTILO:
                 }
               }
               
-              // Patrón 2: "Actualizar KPI [nombre] a [valor]"
-              const updateKpiMatch = userText.match(/actualizar\s+kpi\s+(.+?)\s+a\s+(\d+(?:\.\d+)?)\s*([a-z%$]*)?/i);
-              if (updateKpiMatch) {
-                const kpiName = updateKpiMatch[1].trim();
-                const kpiValue = parseFloat(updateKpiMatch[2]);
-                const kpiUnit = updateKpiMatch[3] || '';
+              // Patrón 2: "Actualizar/Crear KPI [nombre] a/con [valor]"
+              // Soporta múltiples variaciones:
+              // - "Actualizar KPI [nombre] a [valor]"
+              // - "Crear KPI [nombre] con valor de [valor]"
+              // - "Crea el KPI '[nombre]' con el valor de [valor]"
+              const kpiMatch = userText.match(/(crear?|actualizar)\s+(?:el\s+)?kpi\s+['""]?(.+?)['""]?\s+(?:a|con\s+(?:el\s+)?valor\s+(?:de\s+)?)\s*(\d+(?:\.\d+)?)\s*([a-z%$]*)?/i);
+              if (kpiMatch) {
+                const kpiName = kpiMatch[2].trim().replace(/^['"]|['"]$/g, ''); // Remover comillas
+                const kpiValue = parseFloat(kpiMatch[3]);
+                const kpiUnit = kpiMatch[4] || '';
                 
                 const today = new Date();
                 const periodStart = new Date(today.getFullYear(), today.getMonth(), 1);
@@ -1082,6 +1086,8 @@ ESTILO:
                     success: true,
                     data: { name: newKpi.name, value: newKpi.value, unit: newKpi.unit }
                   });
+                } else {
+                  console.error('Error creating KPI:', kpiError);
                 }
               }
               
@@ -1134,19 +1140,19 @@ ESTILO:
     if (actionResults.length > 0) {
       const actionSummary = actionResults.map(result => {
         if (result.type === 'task_created') {
-          return `✅ Tarea creada: "${result.data.title}"`;
+          return `✅ Tarea creada: "${result.data.title}"\n💡 Usa el botón "Ver Tareas" para verla.`;
         } else if (result.type === 'kpi_updated') {
-          return `✅ KPI actualizado: ${result.data.name} = ${result.data.value}${result.data.unit}`;
+          return `✅ KPI ${result.data.name}: ${result.data.value}${result.data.unit} registrado exitosamente\n💡 Usa el botón "Ver KPIs" para ver todos tus indicadores.`;
         } else if (result.type === 'objective_created') {
           return `✅ Objetivo creado: "${result.data.title}"`;
         }
         return '';
-      }).filter(s => s).join('\n');
+      }).filter(s => s).join('\n\n');
       
       // Insertar confirmación antes del último mensaje del usuario
       messagesWithActions = [
         ...messages.slice(0, -1),
-        { role: 'system' as const, content: `ACCIONES EJECUTADAS:\n${actionSummary}\n\nConfirma estas acciones al usuario.` },
+        { role: 'system' as const, content: `ACCIONES EJECUTADAS:\n${actionSummary}\n\nConfirma estas acciones al usuario de forma breve y amigable.` },
         messages[messages.length - 1]
       ];
     }

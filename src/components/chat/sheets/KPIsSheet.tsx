@@ -2,10 +2,22 @@ import { useKPIs } from '@/hooks/useKPIs';
 import { Card } from '@/components/shared/Card';
 import { Badge } from '@/components/shared/Badge';
 import { TrendingUp, TrendingDown, Target, Loader2 } from 'lucide-react';
+import { useEffect } from 'react';
 
-export default function KPIsSheet() {
-  const { getLatestKPIs, loading } = useKPIs();
+interface KPIsSheetProps {
+  isOpen?: boolean;
+}
+
+export default function KPIsSheet({ isOpen }: KPIsSheetProps) {
+  const { getLatestKPIs, loading, refetch } = useKPIs();
   const kpis = getLatestKPIs();
+
+  // Refrescar KPIs cuando se abre el sheet
+  useEffect(() => {
+    if (isOpen) {
+      refetch();
+    }
+  }, [isOpen, refetch]);
 
   if (loading) {
     return (
