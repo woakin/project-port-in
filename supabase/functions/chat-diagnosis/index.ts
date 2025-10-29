@@ -1062,11 +1062,87 @@ ESTILO:
                 }
               }
               
-              // Patrón 2: Comandos de KPI flexibles
+              // Patrón 2: Comandos de KPI flexibles con todos los campos
               let kpiName: string | null = null;
               let kpiValue: number | null = null;
               let kpiUnit: string | null = null;
               let kpiTarget: number | null = null;
+              let kpiArea: string = 'operations'; // Default area
+              let kpiPeriodStart: Date | null = null;
+              let kpiPeriodEnd: Date | null = null;
+              
+              // Extraer área si se especifica
+              const areaPatterns = [
+                /(?:en el|del)?\s*(?:área|area)(?:\s+de)?\s*(?::)?\s*(estrategia|strategy|finanzas|finance|marketing|operaciones|operations|tecnología|technology|tecnologia|legal)/i,
+                /(?:área|area)\s*[:=]\s*(estrategia|strategy|finanzas|finance|marketing|operaciones|operations|tecnología|technology|tecnologia|legal)/i,
+              ];
+              
+              for (const areaPattern of areaPatterns) {
+                const areaMatch = userText.match(areaPattern);
+                if (areaMatch) {
+                  const areaText = areaMatch[1].toLowerCase();
+                  // Mapear a nombres en inglés para la base de datos
+                  const areaMap: Record<string, string> = {
+                    'estrategia': 'strategy',
+                    'strategy': 'strategy',
+                    'finanzas': 'finance',
+                    'finance': 'finance',
+                    'marketing': 'marketing',
+                    'operaciones': 'operations',
+                    'operations': 'operations',
+                    'tecnología': 'technology',
+                    'tecnologia': 'technology',
+                    'technology': 'technology',
+                    'legal': 'legal'
+                  };
+                  kpiArea = areaMap[areaText] || 'operations';
+                  break;
+                }
+              }
+              
+              // Extraer fechas de periodo si se especifican
+              const datePatterns = [
+                // "del 1 de octubre al 31 de octubre"
+                /del\s+(\d{1,2})\s+de\s+(\w+)\s+(?:de\s+)?(\d{4})?\s+al\s+(\d{1,2})\s+de\s+(\w+)\s+(?:de\s+)?(\d{4})?/i,
+                // "desde 01/10/2025 hasta 31/10/2025" o "desde 2025-10-01 hasta 2025-10-31"
+                /desde\s+(\d{4}[-/]\d{1,2}[-/]\d{1,2}|\d{1,2}[-/]\d{1,2}[-/]\d{4})\s+hasta\s+(\d{4}[-/]\d{1,2}[-/]\d{1,2}|\d{1,2}[-/]\d{1,2}[-/]\d{4})/i,
+                // "periodo: octubre 2025" o "periodo octubre 2025"
+                /periodo[:\s]+(\w+)\s+(\d{4})/i,
+              ];
+              
+              const monthMap: Record<string, number> = {
+                'enero': 0, 'febrero': 1, 'marzo': 2, 'abril': 3, 'mayo': 4, 'junio': 5,
+                'julio': 6, 'agosto': 7, 'septiembre': 8, 'octubre': 9, 'noviembre': 10, 'diciembre': 11
+              };
+              
+              for (const datePattern of datePatterns) {
+                const dateMatch = userText.match(datePattern);
+                if (dateMatch) {
+                  if (dateMatch[0].includes('del') && dateMatch[0].includes('al')) {
+                    // Formato "del X de mes al Y de mes"
+                    const day1 = parseInt(dateMatch[1]);
+                    const month1 = monthMap[dateMatch[2].toLowerCase()] ?? 0;
+                    const year1 = dateMatch[3] ? parseInt(dateMatch[3]) : new Date().getFullYear();
+                    const day2 = parseInt(dateMatch[4]);
+                    const month2 = monthMap[dateMatch[5].toLowerCase()] ?? 0;
+                    const year2 = dateMatch[6] ? parseInt(dateMatch[6]) : new Date().getFullYear();
+                    
+                    kpiPeriodStart = new Date(year1, month1, day1);
+                    kpiPeriodEnd = new Date(year2, month2, day2);
+                  } else if (dateMatch[0].includes('desde')) {
+                    // Formato "desde X hasta Y"
+                    kpiPeriodStart = new Date(dateMatch[1]);
+                    kpiPeriodEnd = new Date(dateMatch[2]);
+                  } else if (dateMatch[0].toLowerCase().includes('periodo')) {
+                    // Formato "periodo: mes año"
+                    const month = monthMap[dateMatch[1].toLowerCase()] ?? 0;
+                    const year = parseInt(dateMatch[2]);
+                    kpiPeriodStart = new Date(year, month, 1);
+                    kpiPeriodEnd = new Date(year, month + 1, 0);
+                  }
+                  break;
+                }
+              }
               
               // Primero extraer la meta si existe
               const metaMatch = userText.match(/(?:meta|objetivo|target)(?:\s+de)?\s+(\d+(?:[.,]\d+)?)/i);
@@ -1104,11 +1180,12 @@ ESTILO:
               }
               
               if (kpiName && kpiValue !== null) {
-                console.log('KPI Match found:', { kpiName, kpiValue, kpiUnit, kpiTarget });
+                console.log('KPI Match found:', { kpiName, kpiValue, kpiUnit, kpiTarget, kpiArea, kpiPeriodStart, kpiPeriodEnd });
                 
+                // Si no se especificaron fechas, usar el mes actual por defecto
                 const today = new Date();
-                const periodStart = new Date(today.getFullYear(), today.getMonth(), 1);
-                const periodEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+                const periodStart = kpiPeriodStart || new Date(today.getFullYear(), today.getMonth(), 1);
+                const periodEnd = kpiPeriodEnd || new Date(today.getFullYear(), today.getMonth() + 1, 0);
                 
                 // Buscar KPI existente con el mismo nombre (case-insensitive)
                 const { data: existingKpi } = await supabaseClient
@@ -1126,25 +1203,36 @@ ESTILO:
                 
                 if (existingKpi) {
                   // Actualizar KPI existente
-                  console.log('Updating existing KPI:', existingKpi.id, { kpiValue, kpiTarget, kpiUnit });
+                  console.log('Updating existing KPI:', existingKpi.id, { kpiValue, kpiTarget, kpiUnit, kpiArea, periodStart, periodEnd });
                   const updateData: any = {
                     value: kpiValue,
                   };
                   
-                  // Actualizar target_value si se proporcionó o mantener el existente
+                  // Actualizar área si se especificó
+                  if (kpiArea) {
+                    updateData.area = kpiArea;
+                  }
+                  
+                  // Actualizar target_value si se proporcionó
                   if (kpiTarget !== null) {
                     updateData.target_value = kpiTarget;
                   }
                   
-                  // Actualizar unit si se proporcionó o limpiar si no existe
+                  // Actualizar unit si se proporcionó o limpiar si es inválida
                   if (kpiUnit !== null) {
                     updateData.unit = kpiUnit;
                   } else {
-                    // Si no se proporcionó unit en la actualización, mantener la existente
-                    // a menos que sea inválida
                     if (existingKpi.unit && ['y', 'con', 'la'].includes(existingKpi.unit.toLowerCase())) {
                       updateData.unit = null;
                     }
+                  }
+                  
+                  // Actualizar periodo si se especificó
+                  if (kpiPeriodStart) {
+                    updateData.period_start = periodStart.toISOString();
+                  }
+                  if (kpiPeriodEnd) {
+                    updateData.period_end = periodEnd.toISOString();
                   }
                   
                   const { data, error } = await supabaseClient
@@ -1158,12 +1246,12 @@ ESTILO:
                   kpiError = error;
                 } else {
                   // Crear nuevo KPI
-                  console.log('Creating new KPI');
+                  console.log('Creating new KPI with area:', kpiArea);
                   const { data, error } = await supabaseClient
                     .from('kpis')
                     .insert({
                       company_id: companyId,
-                      area: 'operations',
+                      area: kpiArea,
                       name: kpiName,
                       value: kpiValue,
                       target_value: kpiTarget,
