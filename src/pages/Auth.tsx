@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card } from '@/components/shared/Card';
+import alashaLogo from "@/assets/alasha-logo.png";
 
 export default function Auth() {
   const { user, signIn, signUp, loading } = useAuth();
@@ -65,8 +66,8 @@ export default function Auth() {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="w-16 h-16 mx-auto mb-4 rounded-xl bg-[linear-gradient(135deg,hsl(210_60%_25%),hsl(170_45%_45%))] flex items-center justify-center shadow-lg">
-            <span className="text-primary-foreground font-bold text-3xl">A</span>
+          <div className="w-16 h-16 mx-auto mb-4 rounded-xl overflow-hidden shadow-lg">
+            <img src={alashaLogo} alt="Alasha AI Logo" className="w-full h-full object-contain" />
           </div>
           <h1 className="text-4xl font-bold text-foreground mb-2">Bienvenido a Alasha AI</h1>
           <p className="text-muted-foreground">Tu plataforma de inteligencia empresarial</p>

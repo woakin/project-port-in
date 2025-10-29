@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useAdmin } from "@/hooks/useAdmin";
 import { Link, useNavigate } from "react-router-dom";
 import { ProjectSelector } from "@/components/projects/ProjectSelector";
+import alashaLogo from "@/assets/alasha-logo.png";
 
 export function Header() {
   const { user, signOut, loading } = useAuth();
@@ -15,8 +16,8 @@ export function Header() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         {/* Logo and Brand */}
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-[linear-gradient(135deg,hsl(210_60%_25%),hsl(170_45%_45%))] flex items-center justify-center shadow-md">
-            <span className="text-primary-foreground font-bold text-xl">A</span>
+          <div className="w-10 h-10 rounded-lg overflow-hidden shadow-md">
+            <img src={alashaLogo} alt="Alasha AI Logo" className="w-full h-full object-contain" />
           </div>
           <div className="flex flex-col">
             <h1 className="text-lg font-bold text-foreground leading-none tracking-tight">Alasha AI</h1>
