@@ -57,6 +57,8 @@ export default function KPIs() {
     value: "",
     target_value: "",
     unit: "",
+    period_start: "",
+    period_end: "",
   });
 
   // Form state for creating
@@ -83,6 +85,8 @@ export default function KPIs() {
       value: kpi.value.toString(),
       target_value: kpi.target_value?.toString() || "",
       unit: kpi.unit || "",
+      period_start: kpi.period_start.split('T')[0],
+      period_end: kpi.period_end.split('T')[0],
     });
     setIsEditDialogOpen(true);
   };
@@ -116,6 +120,8 @@ export default function KPIs() {
           value: parseFloat(editForm.value),
           target_value: editForm.target_value ? parseFloat(editForm.target_value) : null,
           unit: editForm.unit || null,
+          period_start: editForm.period_start,
+          period_end: editForm.period_end,
         })
         .eq("id", editingKPI.id);
 
@@ -535,6 +541,32 @@ export default function KPIs() {
                 }
                 placeholder="Ej: %, $, usuarios, etc."
               />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="period-start">Inicio del Periodo</Label>
+                <Input
+                  id="period-start"
+                  type="date"
+                  value={editForm.period_start}
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, period_start: e.target.value })
+                  }
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="period-end">Fin del Periodo</Label>
+                <Input
+                  id="period-end"
+                  type="date"
+                  value={editForm.period_end}
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, period_end: e.target.value })
+                  }
+                />
+              </div>
             </div>
           </div>
 
