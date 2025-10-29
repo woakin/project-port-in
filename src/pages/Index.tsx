@@ -344,7 +344,7 @@ const Index = () => {
               </p>
             </div>
             {currentProject && (
-              <div className="flex items-center gap-2 px-4 py-2 bg-secondary/50 rounded-lg">
+              <div className="flex items-center gap-2 px-4 py-2 bg-muted rounded-lg">
                 <FolderOpen className="h-4 w-4 text-primary" />
                 <div className="text-sm">
                   <span className="text-muted-foreground">Proyecto:</span>
