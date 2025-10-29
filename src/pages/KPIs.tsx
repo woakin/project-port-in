@@ -1,11 +1,19 @@
 import { useState } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { useKPIs } from "@/hooks/useKPIs";
+import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/shared/Card";
 import { Badge } from "@/components/shared/Badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -22,7 +30,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { TrendingUp, TrendingDown, Edit2, Search, Target, Trash2 } from "lucide-react";
+import { TrendingUp, TrendingDown, Edit2, Search, Target, Trash2, Plus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { KPI } from "@/types/kpi.types";
@@ -31,10 +39,12 @@ import { es } from "date-fns/locale";
 
 export default function KPIs() {
   const { kpis, loading, refetch } = useKPIs();
+  const { user } = useAuth();
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [editingKPI, setEditingKPI] = useState<KPI | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [deletingKPI, setDeletingKPI] = useState<KPI | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -43,9 +53,21 @@ export default function KPIs() {
   // Form state for editing
   const [editForm, setEditForm] = useState({
     name: "",
+    area: "",
     value: "",
     target_value: "",
     unit: "",
+  });
+
+  // Form state for creating
+  const [createForm, setCreateForm] = useState({
+    name: "",
+    area: "operations",
+    value: "",
+    target_value: "",
+    unit: "",
+    period_start: "",
+    period_end: "",
   });
 
   const filteredKPIs = kpis.filter((kpi) =>
@@ -57,11 +79,28 @@ export default function KPIs() {
     setEditingKPI(kpi);
     setEditForm({
       name: kpi.name,
+      area: kpi.area,
       value: kpi.value.toString(),
       target_value: kpi.target_value?.toString() || "",
       unit: kpi.unit || "",
     });
     setIsEditDialogOpen(true);
+  };
+
+  const handleCreateClick = () => {
+    const today = new Date();
+    const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+    
+    setCreateForm({
+      name: "",
+      area: "operations",
+      value: "",
+      target_value: "",
+      unit: "",
+      period_start: today.toISOString().split('T')[0],
+      period_end: endOfMonth.toISOString().split('T')[0],
+    });
+    setIsCreateDialogOpen(true);
   };
 
   const handleSaveEdit = async () => {
@@ -73,6 +112,7 @@ export default function KPIs() {
         .from("kpis")
         .update({
           name: editForm.name,
+          area: editForm.area,
           value: parseFloat(editForm.value),
           target_value: editForm.target_value ? parseFloat(editForm.target_value) : null,
           unit: editForm.unit || null,
@@ -94,6 +134,67 @@ export default function KPIs() {
       toast({
         title: "Error",
         description: "No se pudo actualizar el KPI",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleCreateKPI = async () => {
+    if (!user) return;
+
+    // Validación
+    if (!createForm.name || !createForm.value) {
+      toast({
+        title: "Error de validación",
+        description: "El nombre y valor son obligatorios",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      // Obtener el company_id del usuario
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('company_id')
+        .eq('id', user.id)
+        .single();
+
+      if (!profile?.company_id) {
+        throw new Error("No se encontró la empresa del usuario");
+      }
+
+      const { error } = await supabase
+        .from("kpis")
+        .insert({
+          name: createForm.name.trim(),
+          area: createForm.area,
+          value: parseFloat(createForm.value),
+          target_value: createForm.target_value ? parseFloat(createForm.target_value) : null,
+          unit: createForm.unit.trim() || null,
+          company_id: profile.company_id,
+          period_start: createForm.period_start,
+          period_end: createForm.period_end,
+          source: "manual",
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "KPI creado",
+        description: "El KPI se ha creado correctamente",
+      });
+
+      setIsCreateDialogOpen(false);
+      refetch();
+    } catch (error) {
+      console.error("Error creating KPI:", error);
+      toast({
+        title: "Error",
+        description: "No se pudo crear el KPI",
         variant: "destructive",
       });
     } finally {
@@ -160,7 +261,7 @@ export default function KPIs() {
   return (
     <MainLayout>
       <div className="container mx-auto p-comfortable">
-        <div className="mb-comfortable">
+          <div className="mb-comfortable">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h1 className="text-3xl font-bold text-foreground mb-2">KPIs</h1>
@@ -168,6 +269,10 @@ export default function KPIs() {
                 Gestiona y monitorea todos tus indicadores clave de rendimiento
               </p>
             </div>
+            <Button onClick={handleCreateClick} className="gap-2">
+              <Plus className="h-4 w-4" />
+              Crear KPI
+            </Button>
           </div>
 
           <div className="flex items-center gap-4 mb-6">
@@ -375,6 +480,28 @@ export default function KPIs() {
             </div>
 
             <div className="space-y-2">
+              <Label htmlFor="area">Área</Label>
+              <Select
+                value={editForm.area}
+                onValueChange={(value) =>
+                  setEditForm({ ...editForm, area: value })
+                }
+              >
+                <SelectTrigger id="area">
+                  <SelectValue placeholder="Selecciona un área" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="strategy">Estrategia</SelectItem>
+                  <SelectItem value="finance">Finanzas</SelectItem>
+                  <SelectItem value="marketing">Marketing</SelectItem>
+                  <SelectItem value="operations">Operaciones</SelectItem>
+                  <SelectItem value="technology">Tecnología</SelectItem>
+                  <SelectItem value="legal">Legal</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
               <Label htmlFor="value">Valor Actual</Label>
               <Input
                 id="value"
@@ -461,6 +588,135 @@ export default function KPIs() {
               disabled={isDeleting}
             >
               {isDeleting ? "Eliminando..." : "Eliminar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create KPI Dialog */}
+      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Crear Nuevo KPI</DialogTitle>
+            <DialogDescription>
+              Registra un nuevo indicador clave de rendimiento
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="create-name">Nombre *</Label>
+                <Input
+                  id="create-name"
+                  value={createForm.name}
+                  onChange={(e) =>
+                    setCreateForm({ ...createForm, name: e.target.value })
+                  }
+                  placeholder="Ej: Usuarios Registrados"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="create-area">Área *</Label>
+                <Select
+                  value={createForm.area}
+                  onValueChange={(value) =>
+                    setCreateForm({ ...createForm, area: value })
+                  }
+                >
+                  <SelectTrigger id="create-area">
+                    <SelectValue placeholder="Selecciona un área" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="strategy">Estrategia</SelectItem>
+                    <SelectItem value="finance">Finanzas</SelectItem>
+                    <SelectItem value="marketing">Marketing</SelectItem>
+                    <SelectItem value="operations">Operaciones</SelectItem>
+                    <SelectItem value="technology">Tecnología</SelectItem>
+                    <SelectItem value="legal">Legal</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="create-value">Valor Actual *</Label>
+                <Input
+                  id="create-value"
+                  type="number"
+                  value={createForm.value}
+                  onChange={(e) =>
+                    setCreateForm({ ...createForm, value: e.target.value })
+                  }
+                  placeholder="0"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="create-target">Meta</Label>
+                <Input
+                  id="create-target"
+                  type="number"
+                  value={createForm.target_value}
+                  onChange={(e) =>
+                    setCreateForm({ ...createForm, target_value: e.target.value })
+                  }
+                  placeholder="0"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="create-unit">Unidad</Label>
+              <Input
+                id="create-unit"
+                value={createForm.unit}
+                onChange={(e) =>
+                  setCreateForm({ ...createForm, unit: e.target.value })
+                }
+                placeholder="Ej: %, $, usuarios, ventas, etc."
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="create-period-start">Inicio del Periodo *</Label>
+                <Input
+                  id="create-period-start"
+                  type="date"
+                  value={createForm.period_start}
+                  onChange={(e) =>
+                    setCreateForm({ ...createForm, period_start: e.target.value })
+                  }
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="create-period-end">Fin del Periodo *</Label>
+                <Input
+                  id="create-period-end"
+                  type="date"
+                  value={createForm.period_end}
+                  onChange={(e) =>
+                    setCreateForm({ ...createForm, period_end: e.target.value })
+                  }
+                />
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsCreateDialogOpen(false)}
+              disabled={isSaving}
+            >
+              Cancelar
+            </Button>
+            <Button onClick={handleCreateKPI} disabled={isSaving}>
+              {isSaving ? "Creando..." : "Crear KPI"}
             </Button>
           </DialogFooter>
         </DialogContent>
