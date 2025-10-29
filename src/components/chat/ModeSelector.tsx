@@ -19,22 +19,22 @@ const modes = [
   {
     id: 'strategic' as ChatMode,
     icon: Target,
-    label: 'Consulta Estratégica',
-    description: 'Preguntas puntuales de estrategia',
+    label: 'Mentor Estratégico',
+    description: 'Visión de largo plazo y dirección',
     color: 'text-blue-500'
   },
   {
     id: 'follow_up' as ChatMode,
     icon: TrendingUp,
-    label: 'Seguimiento',
-    description: 'Revisión de plan y progreso',
+    label: 'Coach Operativo',
+    description: 'Ejecución táctica y priorización',
     color: 'text-green-500'
   },
   {
     id: 'document' as ChatMode,
     icon: FileText,
-    label: 'Análisis de Docs',
-    description: 'Insights de documentos subidos',
+    label: 'Analista de Datos',
+    description: 'Insights de datos y documentos',
     color: 'text-orange-500'
   }
 ];

@@ -821,6 +821,14 @@ Hacer preguntas conversacionales UNA a la vez para entender a fondo estas 6 áre
 5. **Legal** - compliance, contratos, protección de propiedad intelectual
 6. **Tecnología** - infraestructura, herramientas, digitalización, ciberseguridad
 
+QUICK ACTIONS (Comandos disponibles):
+El usuario puede ejecutar comandos como:
+- "Crear tarea: [descripción]" → Crea una tarea en el sistema
+- "Actualizar KPI [nombre] a [valor]" → Actualiza un KPI
+- "Crear objetivo: [título]" → Crea un nuevo objetivo
+
+Cuando detectes estos comandos, reconócelos y confirma que la acción se ejecutó.
+
 ESTILO DE CONVERSACIÓN:
 - Empático, profesional y cercano
 - Una pregunta clara a la vez
@@ -834,7 +842,8 @@ GUÍA DE PROGRESO:
 - Cubre las 6 áreas de manera equilibrada
 - Después de 8-12 intercambios significativos, pregunta: "¿Te gustaría que genere ahora el diagnóstico completo y un plan de acción personalizado?"
 - Si el usuario acepta, responde con: "¡Perfecto! Haz clic en el botón 'Generar Diagnóstico' para crear tu análisis completo y plan de acción."`,
-      strategic: `Eres un consultor estratégico senior experto en negocios.
+      
+      strategic: `Eres un consultor estratégico senior especializado en visión de largo plazo y dirección empresarial.
 
 INFORMACIÓN DEL PROYECTO:
 - Empresa: {{COMPANY_NAME}}
@@ -843,23 +852,33 @@ INFORMACIÓN DEL PROYECTO:
 - Proyecto: {{PROJECT_NAME}}
 {{PROJECT_DESCRIPTION}}
 
-TU ROL:
-Ayudar al usuario con consultas estratégicas puntuales sin generar diagnósticos formales. 
+TU ROL (MODO MENTOR ESTRATÉGICO):
+Proporcionar orientación estratégica de alto nivel, enfocándote en:
+- **Visión de largo plazo**: Ayudar a definir dirección a 3-5 años
+- **Liderazgo**: Guiar en toma de decisiones complejas
+- **Posicionamiento**: Análisis de mercado, competencia y diferenciación
+- **Modelos de negocio**: Evaluar y optimizar cómo se genera valor
+- **Expansión y escalabilidad**: Estrategias de crecimiento sostenible
 
-ÁREAS DE ESPECIALIZACIÓN:
-- Estrategia y crecimiento empresarial
-- Toma de decisiones complejas
-- Análisis de mercado y competencia
-- Modelos de negocio y monetización
-- Expansión y escalabilidad
-- Gestión del cambio
+FRAMEWORKS Y HERRAMIENTAS:
+- SWOT, Porter's Five Forces, Blue Ocean Strategy
+- Business Model Canvas, Value Proposition Canvas
+- OKRs para alineación estratégica
+- Análisis de escenarios y planificación estratégica
+
+QUICK ACTIONS (Comandos disponibles):
+- "Crear tarea: [descripción]" → Crea una tarea estratégica
+- "Actualizar KPI [nombre] a [valor]" → Actualiza un KPI
+- "Crear objetivo estratégico: [título]" → Crea un objetivo de largo plazo
 
 ESTILO:
-- Directo y accionable
-- Fundamentado en frameworks reconocidos (SWOT, Porter, Blue Ocean, etc.)
-- Ejemplos concretos y casos de éxito
-- Considera siempre el contexto: {{COMPANY_STAGE}} en {{COMPANY_INDUSTRY}}`,
-      follow_up: `Eres un consultor de seguimiento que ayuda a ejecutar planes de acción.
+- Directo pero reflexivo
+- Fundamentado en frameworks reconocidos
+- Usa ejemplos concretos y casos de éxito relevantes a {{COMPANY_INDUSTRY}}
+- Haz preguntas desafiantes que inviten a pensar estratégicamente
+- Conecta decisiones tácticas con impacto estratégico`,
+      
+      follow_up: `Eres un coach operativo especializado en ejecución táctica y seguimiento de planes.
 
 INFORMACIÓN DEL PROYECTO:
 - Empresa: {{COMPANY_NAME}}
@@ -869,23 +888,35 @@ INFORMACIÓN DEL PROYECTO:
 
 ${additionalContext}
 
-TU ROL:
-Ayudar al usuario a ejecutar su plan, resolver bloqueos, ajustar prioridades y celebrar avances.
+TU ROL (MODO COACH OPERATIVO):
+Ayudar al usuario a ejecutar su plan con excelencia, enfocándote en:
+- **Ejecución táctica**: Cómo hacer las cosas, no solo qué hacer
+- **Priorización**: Identificar lo urgente vs importante
+- **Productividad**: Optimizar tiempo y recursos
+- **Resolución de bloqueos**: Desatorar tareas estancadas
+- **Accountability**: Mantener compromiso con los objetivos
+
+QUICK ACTIONS (Comandos disponibles):
+- "Crear tarea: [descripción]" → Crea una tarea operativa
+- "Marcar tarea [id] como completada" → Actualiza estado de tarea
+- "Actualizar progreso de [área]" → Registra avance
+- "Crear objetivo: [título]" → Agrega un nuevo objetivo táctico
 
 ENFOQUE:
-- Analiza el progreso actual del plan
-- Identifica bloqueos y propón soluciones
-- Sugiere ajustes tácticos según resultados
-- Prioriza lo urgente e importante
-- Mantén motivación reconociendo logros
-- Conecta tareas con objetivos estratégicos
+- Analiza el progreso actual del plan (% completado, tareas bloqueadas)
+- Identifica patrones: ¿qué áreas avanzan? ¿cuáles están estancadas?
+- Propón soluciones prácticas y específicas
+- Celebra los avances reales (reconoce tareas completadas)
+- Sugiere próximos pasos claros y accionables
 
 ESTILO:
-- Práctico y orientado a acción
-- Celebra los avances reales
-- Identifica patrones (áreas con poco progreso)
-- Sugiere recursos o tácticas específicas`,
-      document: `Eres un analista de documentos empresariales especializado.
+- Práctico y orientado a acción inmediata
+- Motiva reconociendo logros
+- Usa técnicas de coaching (preguntas poderosas)
+- Proporciona recursos y tácticas concretas
+- Mantén foco en resultados medibles`,
+      
+      document: `Eres un analista de datos empresariales especializado en extraer insights accionables.
 
 INFORMACIÓN DEL PROYECTO:
 - Empresa: {{COMPANY_NAME}}
@@ -895,21 +926,32 @@ INFORMACIÓN DEL PROYECTO:
 
 ${additionalContext}
 
-TU ROL:
-Ayudar al usuario a extraer insights de documentos empresariales y conectarlos con su estrategia.
+TU ROL (MODO ANALISTA DE DATOS):
+Ayudar al usuario a tomar decisiones basadas en datos, enfocándote en:
+- **Análisis de documentos**: Extraer información clave de reportes, estados financieros, etc.
+- **Identificación de tendencias**: Detectar patrones en KPIs y métricas
+- **Conexión estratégica**: Vincular datos con objetivos del negocio
+- **Detección de riesgos**: Identificar señales de alerta temprana
+- **Oportunidades ocultas**: Encontrar insights no obvios en los datos
 
-CAPACIDADES:
-- Analizar documentos subidos (financieros, operativos, legales, etc.)
-- Identificar tendencias y patrones
-- Conectar hallazgos de documentos con objetivos estratégicos
-- Sugerir acciones basadas en los datos
-- Detectar riesgos o oportunidades ocultas
+QUICK ACTIONS (Comandos disponibles):
+- "Actualizar KPI [nombre] a [valor] [unidad]" → Registra nueva métrica
+- "Crear tarea: Revisar [aspecto]" → Genera tarea de análisis
+- "Alertar sobre [métrica]" → Configura alerta de KPI
+
+CAPACIDADES DE ANÁLISIS:
+- Documentos financieros (P&L, Balance, Cash Flow)
+- Reportes de marketing (CAC, LTV, Conversion rates)
+- Datos operativos (eficiencia, productividad)
+- Métricas legales y de compliance
+- Indicadores tecnológicos (uptime, performance)
 
 ESTILO:
-- Analítico pero accesible
-- Enfocado en insights accionables
-- Conecta datos con estrategia
-- Usa visualizaciones mentales cuando sea útil`
+- Analítico pero accesible (no uses jerga innecesaria)
+- Enfocado en insights ACCIONABLES, no solo datos
+- Conecta siempre los números con estrategia
+- Proporciona contexto (benchmarks del sector)
+- Usa analogías y visualizaciones mentales para clarificar`
     };
 
     // Inicializar con prompt por defecto según el modo
@@ -940,6 +982,175 @@ ESTILO:
       console.log(`Using default prompt for mode ${mode}:`, e);
     }
 
+    // Detección y ejecución de Quick Actions
+    let actionResults: any[] = [];
+    const lastUserMessage = messages[messages.length - 1];
+    
+    if (lastUserMessage && lastUserMessage.role === 'user') {
+      const userText = lastUserMessage.content;
+      
+      try {
+        const authHeader = req.headers.get('Authorization');
+        if (authHeader) {
+          const token = authHeader.replace('Bearer ', '');
+          const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+          const supabaseClient = createClient(supabaseUrl, token);
+          
+          // Obtener el usuario autenticado
+          const { data: { user }, error: userError } = await supabaseClient.auth.getUser(token);
+          if (!userError && user) {
+            // Buscar proyecto actual
+            const { data: projects } = await supabaseClient
+              .from('projects')
+              .select('id, company_id')
+              .eq('name', companyInfo.projectName)
+              .limit(1)
+              .maybeSingle();
+            
+            if (projects) {
+              const projectId = projects.id;
+              const companyId = projects.company_id;
+              
+              // Patrón 1: "Crear tarea: [descripción]"
+              const createTaskMatch = userText.match(/crear\s+tarea[:\s]+(.+)/i);
+              if (createTaskMatch) {
+                const taskTitle = createTaskMatch[1].trim();
+                
+                // Buscar plan activo
+                const { data: activePlan } = await supabaseClient
+                  .from('action_plans')
+                  .select('id, plan_areas(id, plan_objectives(id))')
+                  .eq('project_id', projectId)
+                  .eq('status', 'active')
+                  .maybeSingle();
+                
+                if (activePlan && activePlan.plan_areas && activePlan.plan_areas[0]?.plan_objectives?.[0]) {
+                  const firstObjectiveId = activePlan.plan_areas[0].plan_objectives[0].id;
+                  
+                  const { data: newTask, error: taskError } = await supabaseClient
+                    .from('tasks')
+                    .insert({
+                      objective_id: firstObjectiveId,
+                      title: taskTitle,
+                      description: `Tarea creada desde el chat en modo ${mode}`,
+                      status: 'pending',
+                      priority: 'medium',
+                      estimated_effort: 1
+                    })
+                    .select()
+                    .single();
+                  
+                  if (!taskError && newTask) {
+                    actionResults.push({
+                      type: 'task_created',
+                      success: true,
+                      data: { id: newTask.id, title: newTask.title }
+                    });
+                  }
+                }
+              }
+              
+              // Patrón 2: "Actualizar KPI [nombre] a [valor]"
+              const updateKpiMatch = userText.match(/actualizar\s+kpi\s+(.+?)\s+a\s+(\d+(?:\.\d+)?)\s*([a-z%$]*)?/i);
+              if (updateKpiMatch) {
+                const kpiName = updateKpiMatch[1].trim();
+                const kpiValue = parseFloat(updateKpiMatch[2]);
+                const kpiUnit = updateKpiMatch[3] || '';
+                
+                const today = new Date();
+                const periodStart = new Date(today.getFullYear(), today.getMonth(), 1);
+                const periodEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+                
+                const { data: newKpi, error: kpiError } = await supabaseClient
+                  .from('kpis')
+                  .insert({
+                    company_id: companyId,
+                    area: 'operations',
+                    name: kpiName,
+                    value: kpiValue,
+                    unit: kpiUnit,
+                    period_start: periodStart.toISOString().split('T')[0],
+                    period_end: periodEnd.toISOString().split('T')[0],
+                    source: 'manual'
+                  })
+                  .select()
+                  .single();
+                
+                if (!kpiError && newKpi) {
+                  actionResults.push({
+                    type: 'kpi_updated',
+                    success: true,
+                    data: { name: newKpi.name, value: newKpi.value, unit: newKpi.unit }
+                  });
+                }
+              }
+              
+              // Patrón 3: "Crear objetivo: [título]"
+              const createObjectiveMatch = userText.match(/crear\s+objetivo[:\s]+(.+)/i);
+              if (createObjectiveMatch) {
+                const objectiveTitle = createObjectiveMatch[1].trim();
+                
+                // Buscar plan activo
+                const { data: activePlan } = await supabaseClient
+                  .from('action_plans')
+                  .select('id, plan_areas(id)')
+                  .eq('project_id', projectId)
+                  .eq('status', 'active')
+                  .maybeSingle();
+                
+                if (activePlan && activePlan.plan_areas && activePlan.plan_areas[0]) {
+                  const firstAreaId = activePlan.plan_areas[0].id;
+                  
+                  const { data: newObjective, error: objError } = await supabaseClient
+                    .from('plan_objectives')
+                    .insert({
+                      area_id: firstAreaId,
+                      title: objectiveTitle,
+                      description: `Objetivo creado desde el chat en modo ${mode}`,
+                      priority: 'medium'
+                    })
+                    .select()
+                    .single();
+                  
+                  if (!objError && newObjective) {
+                    actionResults.push({
+                      type: 'objective_created',
+                      success: true,
+                      data: { id: newObjective.id, title: newObjective.title }
+                    });
+                  }
+                }
+              }
+            }
+          }
+        }
+      } catch (actionError) {
+        console.error('Error executing quick action:', actionError);
+      }
+    }
+    
+    // Agregar confirmación de acciones a los mensajes si se ejecutó algo
+    let messagesWithActions = [...messages];
+    if (actionResults.length > 0) {
+      const actionSummary = actionResults.map(result => {
+        if (result.type === 'task_created') {
+          return `✅ Tarea creada: "${result.data.title}"`;
+        } else if (result.type === 'kpi_updated') {
+          return `✅ KPI actualizado: ${result.data.name} = ${result.data.value}${result.data.unit}`;
+        } else if (result.type === 'objective_created') {
+          return `✅ Objetivo creado: "${result.data.title}"`;
+        }
+        return '';
+      }).filter(s => s).join('\n');
+      
+      // Insertar confirmación antes del último mensaje del usuario
+      messagesWithActions = [
+        ...messages.slice(0, -1),
+        { role: 'system' as const, content: `ACCIONES EJECUTADAS:\n${actionSummary}\n\nConfirma estas acciones al usuario.` },
+        messages[messages.length - 1]
+      ];
+    }
+
     // Reemplazar variables en el template
     const projectDescLine = companyInfo?.projectDescription 
       ? `- Descripción: ${companyInfo.projectDescription}`
@@ -962,7 +1173,7 @@ ESTILO:
         model: 'google/gemini-2.5-flash',
         messages: [
           { role: 'system', content: systemPrompt },
-          ...messages
+          ...messagesWithActions
         ],
         stream: true,
         temperature: 0.5,

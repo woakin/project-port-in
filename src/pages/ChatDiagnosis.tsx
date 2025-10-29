@@ -110,10 +110,45 @@ export default function ChatDiagnosis() {
 
   const getInitialMessage = (projectName: string, mode: ChatMode) => {
     const messages = {
-      diagnosis: `¡Hola! Soy Alasha AI, tu asistente de inteligencia empresarial para **${projectName}**. \n\nEstoy aquí para ayudarte a crear un diagnóstico completo y un plan de acción estratégico. Te haré algunas preguntas sobre diferentes áreas de tu negocio.\n\n¿Comenzamos?`,
-      strategic: `¡Hola! Soy Alasha AI, tu consultor estratégico para **${projectName}**. \n\nPuedes hacerme preguntas sobre estrategia, toma de decisiones, análisis de mercado, o cualquier desafío empresarial.\n\n¿En qué puedo ayudarte?`,
-      follow_up: `¡Hola! Soy Alasha AI, y voy a ayudarte a revisar el progreso de **${projectName}**. \n\nPuedo analizar tus tareas, identificar bloqueos, ajustar prioridades y sugerir próximos pasos.\n\n¿Qué te gustaría revisar?`,
-      document: `¡Hola! Soy Alasha AI, y estoy listo para analizar documentos de **${projectName}**. \n\nPuedo ayudarte a extraer insights, identificar patrones y conectar los hallazgos con tu estrategia.\n\n¿Qué documento quieres que analice?`
+      diagnosis: `¡Hola! Soy Alasha AI en modo **Diagnóstico** para **${projectName}**. 
+
+Voy a ayudarte a crear un diagnóstico completo y un plan de acción estratégico. Te haré preguntas sobre 6 áreas clave de tu negocio: Estrategia, Operaciones, Finanzas, Marketing, Legal y Tecnología.
+
+💡 **Tip**: También puedo ejecutar comandos como:
+- "Crear tarea: [descripción]"
+- "Actualizar KPI [nombre] a [valor]"
+
+¿Comenzamos?`,
+      
+      strategic: `¡Hola! Soy Alasha AI en modo **Mentor Estratégico** para **${projectName}**. 
+
+Me especializo en visión de largo plazo, decisiones estratégicas y posicionamiento de mercado. Puedo ayudarte con análisis de competencia, modelos de negocio, expansión y frameworks estratégicos (SWOT, Porter, Blue Ocean, etc.).
+
+💡 **Quick Actions disponibles**:
+- "Crear tarea estratégica: [descripción]"
+- "Crear objetivo: [título]"
+
+¿Qué desafío estratégico quieres abordar?`,
+      
+      follow_up: `¡Hola! Soy Alasha AI en modo **Coach Operativo** para **${projectName}**. 
+
+Voy a ayudarte a ejecutar tu plan, desbloquear tareas, optimizar prioridades y alcanzar tus objetivos. Me enfoco en la acción táctica y resultados medibles.
+
+💡 **Quick Actions disponibles**:
+- "Crear tarea: [descripción]"
+- "Actualizar progreso de [área]"
+
+¿Qué aspectos del plan quieres revisar?`,
+      
+      document: `¡Hola! Soy Alasha AI en modo **Analista de Datos** para **${projectName}**. 
+
+Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar tendencias y conectar datos con tu estrategia. Especializado en análisis financiero, operativo, de marketing y tecnológico.
+
+💡 **Quick Actions disponibles**:
+- "Actualizar KPI [nombre] a [valor] [unidad]"
+- "Crear tarea: Revisar [aspecto]"
+
+¿Qué datos quieres que analice?`
     };
     return messages[mode];
   };
@@ -123,10 +158,17 @@ export default function ChatDiagnosis() {
     
     setChatMode(newMode);
     
-    // Agregar mensaje del sistema informando del cambio
+    // Agregar mensaje del sistema informando del cambio con un estilo más claro
+    const modeLabels = {
+      diagnosis: '🎯 Diagnóstico',
+      strategic: '🧭 Mentor Estratégico',
+      follow_up: '📊 Coach Operativo',
+      document: '📈 Analista de Datos'
+    };
+    
     const modeChangeMessage = {
       role: 'assistant' as const,
-      content: `**Modo cambiado a: ${getModeLabel(newMode)}**\n\n${getInitialMessage(companyInfo?.projectName || 'tu proyecto', newMode)}`
+      content: `---\n**✨ Modo cambiado a: ${modeLabels[newMode]}**\n\n${getInitialMessage(companyInfo?.projectName || 'tu proyecto', newMode)}\n---`
     };
     
     setMessages(prev => [...prev, modeChangeMessage]);
@@ -135,9 +177,9 @@ export default function ChatDiagnosis() {
   const getModeLabel = (mode: ChatMode) => {
     const labels = {
       diagnosis: 'Diagnóstico',
-      strategic: 'Consulta Estratégica',
-      follow_up: 'Seguimiento',
-      document: 'Análisis de Documentos'
+      strategic: 'Mentor Estratégico',
+      follow_up: 'Coach Operativo',
+      document: 'Analista de Datos'
     };
     return labels[mode];
   };
