@@ -1067,13 +1067,15 @@ ESTILO:
               // - "Actualizar KPI [nombre] a [valor]"
               // - "Crear KPI [nombre] con valor de [valor]"
               // - "Crea el KPI '[nombre]' con el valor de [valor]"
-              const kpiMatch = userText.match(/(crea|crear|actualizar|actualiza)\s+(?:el\s+)?kpi\s+['""]?(.+?)['""]?\s+(?:a|con\s+(?:el\s+)?valor\s+(?:de\s+)?)\s*(\d+(?:\.\d+)?)\s*([a-z%$]*)?/i);
+              // - "Crea el KPI 'Comentarios' con valor 3000 y la meta de 5000"
+              const kpiMatch = userText.match(/(crea|crear|actualizar|actualiza)\s+(?:el\s+)?kpi\s+['""]([^'""\d]+?)['""]?\s+(?:a|con\s+(?:el\s+)?valor\s+(?:de\s+)?)\s*(\d+(?:[.,]\d+)?)\s*([a-zA-Z%$€]*)?(?:\s+y\s+(?:la\s+)?meta\s+(?:de\s+)?(\d+(?:[.,]\d+)?))?/i);
               if (kpiMatch) {
                 const kpiName = kpiMatch[2].trim().replace(/^['"]|['"]$/g, ''); // Remover comillas
-                const kpiValue = parseFloat(kpiMatch[3]);
-                const kpiUnit = kpiMatch[4] || '';
+                const kpiValue = parseFloat(kpiMatch[3].replace(',', '.'));
+                const kpiUnit = kpiMatch[4]?.trim() || '';
+                const kpiTarget = kpiMatch[5] ? parseFloat(kpiMatch[5].replace(',', '.')) : null;
                 
-                console.log('KPI Match found:', { kpiName, kpiValue, kpiUnit });
+                console.log('KPI Match found:', { kpiName, kpiValue, kpiUnit, kpiTarget });
                 
                 const today = new Date();
                 const periodStart = new Date(today.getFullYear(), today.getMonth(), 1);
@@ -1086,6 +1088,7 @@ ESTILO:
                     area: 'operations',
                     name: kpiName,
                     value: kpiValue,
+                    target_value: kpiTarget,
                     unit: kpiUnit || null,
                     period_start: periodStart.toISOString(),
                     period_end: periodEnd.toISOString(),
@@ -1099,7 +1102,7 @@ ESTILO:
                   actionResults.push({
                     type: 'kpi_updated',
                     success: true,
-                    data: { name: newKpi.name, value: newKpi.value, unit: newKpi.unit }
+                    data: { name: newKpi.name, value: newKpi.value, unit: newKpi.unit, target: newKpi.target_value }
                   });
                 } else {
                   console.error('Error creating KPI:', kpiError);
