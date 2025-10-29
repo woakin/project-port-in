@@ -190,7 +190,7 @@ const Index = () => {
                     <IconCircle icon={Activity} size="lg" />
                   </div>
                   <h3 className="text-xl font-semibold text-foreground mb-3">
-                    📊 Diagnóstico inteligente
+                    Diagnóstico inteligente
                   </h3>
                   <p className="text-muted-foreground">
                     Entiende en qué etapa estás y qué necesitas para avanzar.
@@ -202,7 +202,7 @@ const Index = () => {
                     <IconCircle icon={Compass} size="lg" />
                   </div>
                   <h3 className="text-xl font-semibold text-foreground mb-3">
-                    🧭 Plan personalizado
+                    Plan personalizado
                   </h3>
                   <p className="text-muted-foreground">
                     Acciones concretas diseñadas para tu realidad específica.
@@ -214,7 +214,7 @@ const Index = () => {
                     <IconCircle icon={Rocket} size="lg" />
                   </div>
                   <h3 className="text-xl font-semibold text-foreground mb-3">
-                    🚀 Seguimiento real
+                    Seguimiento real
                   </h3>
                   <p className="text-muted-foreground">
                     Mide progreso y ajusta en tiempo real con datos precisos.
@@ -466,7 +466,7 @@ const Index = () => {
                     <IconCircle icon={Lightbulb} size="lg" />
                   </div>
                   <h3 className="text-2xl font-bold text-foreground mb-3">
-                    💡 Founder
+                    Founder
                   </h3>
                   <p className="text-muted-foreground mb-6">
                     Estructura tu visión y lanza con foco desde el día uno.
@@ -481,7 +481,7 @@ const Index = () => {
                     <IconCircle icon={Cog} size="lg" />
                   </div>
                   <h3 className="text-2xl font-bold text-foreground mb-3">
-                    ⚙️ Startup
+                    Startup
                   </h3>
                   <p className="text-muted-foreground mb-6">
                     Mejora tu tracción y encuentra product-market fit rápido.
@@ -496,7 +496,7 @@ const Index = () => {
                     <IconCircle icon={TrendingUp} size="lg" />
                   </div>
                   <h3 className="text-2xl font-bold text-foreground mb-3">
-                    📈 PyME
+                    PyME
                   </h3>
                   <p className="text-muted-foreground mb-6">
                     Escala con eficiencia y control sin perder calidad.
