@@ -256,8 +256,10 @@ export default function Admin() {
   const getMaturityColor = (level: string | null) => {
     switch (level) {
       case 'idea':
+      case 'emergente':
         return 'bg-red-500';
       case 'startup':
+      case 'en_desarrollo':
         return 'bg-orange-500';
       case 'pyme':
         return 'bg-yellow-500';
@@ -272,8 +274,12 @@ export default function Admin() {
     switch (level) {
       case 'idea':
         return 'Idea';
+      case 'emergente':
+        return 'Emergente';
       case 'startup':
         return 'Startup';
+      case 'en_desarrollo':
+        return 'En Desarrollo';
       case 'pyme':
         return 'PYME';
       case 'corporate':
