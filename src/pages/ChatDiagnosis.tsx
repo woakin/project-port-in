@@ -110,10 +110,10 @@ export default function ChatDiagnosis() {
 
   const getInitialMessage = (projectName: string, mode: ChatMode) => {
     const messages = {
-      diagnosis: `¡Hola! Soy tu consultor de IA para **${projectName}**. \n\nEstoy aquí para ayudarte a crear un diagnóstico completo y un plan de acción. Te haré algunas preguntas sobre diferentes áreas de tu negocio.\n\n¿Comenzamos?`,
-      strategic: `¡Hola! Estoy aquí como tu consultor estratégico para **${projectName}**. \n\nPuedes hacerme preguntas sobre estrategia, toma de decisiones, análisis de mercado, o cualquier desafío empresarial.\n\n¿En qué puedo ayudarte?`,
-      follow_up: `¡Hola! Voy a ayudarte a revisar el progreso de **${projectName}**. \n\nPuedo analizar tus tareas, identificar bloqueos, ajustar prioridades y sugerir próximos pasos.\n\n¿Qué te gustaría revisar?`,
-      document: `¡Hola! Estoy listo para analizar documentos de **${projectName}**. \n\nPuedo ayudarte a extraer insights, identificar patrones y conectar los hallazgos con tu estrategia.\n\n¿Qué documento quieres que analice?`
+      diagnosis: `¡Hola! Soy Alasha AI, tu asistente de inteligencia empresarial para **${projectName}**. \n\nEstoy aquí para ayudarte a crear un diagnóstico completo y un plan de acción estratégico. Te haré algunas preguntas sobre diferentes áreas de tu negocio.\n\n¿Comenzamos?`,
+      strategic: `¡Hola! Soy Alasha AI, tu consultor estratégico para **${projectName}**. \n\nPuedes hacerme preguntas sobre estrategia, toma de decisiones, análisis de mercado, o cualquier desafío empresarial.\n\n¿En qué puedo ayudarte?`,
+      follow_up: `¡Hola! Soy Alasha AI, y voy a ayudarte a revisar el progreso de **${projectName}**. \n\nPuedo analizar tus tareas, identificar bloqueos, ajustar prioridades y sugerir próximos pasos.\n\n¿Qué te gustaría revisar?`,
+      document: `¡Hola! Soy Alasha AI, y estoy listo para analizar documentos de **${projectName}**. \n\nPuedo ayudarte a extraer insights, identificar patrones y conectar los hallazgos con tu estrategia.\n\n¿Qué documento quieres que analice?`
     };
     return messages[mode];
   };

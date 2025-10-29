@@ -91,77 +91,158 @@ const Index = () => {
   // Show landing page for logged out users
   if (!loading && !user) {
     return (
-      <div className="min-h-screen bg-background">
-        <header className="border-b border-border">
-          <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-            <h1 className="text-2xl font-bold text-primary">Consultor IA</h1>
+      <div className="min-h-screen bg-gradient-to-b from-background to-accent/20">
+        <header className="border-b border-border bg-card/95 backdrop-blur-md sticky top-0 z-50 shadow-sm">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary to-primary-darker flex items-center justify-center shadow-md">
+                <span className="text-primary-foreground font-bold text-xl">A</span>
+              </div>
+              <div className="flex flex-col">
+                <h1 className="text-lg font-bold text-foreground leading-none tracking-tight">Alasha AI</h1>
+                <span className="text-xs text-muted-foreground">Inteligencia Empresarial</span>
+              </div>
+            </div>
             <div className="flex gap-3">
               <Button variant="ghost" onClick={() => navigate('/auth')}>
                 Iniciar Sesión
               </Button>
-              <Button onClick={() => navigate('/auth')}>
-                Comenzar Gratis
+              <Button variant="gradient" onClick={() => navigate('/auth')}>
+                Comenzar Ahora
               </Button>
             </div>
           </div>
         </header>
-        
-        <main className="container mx-auto px-4 py-16">
-          <div className="max-w-4xl mx-auto text-center space-y-8">
-            <div className="space-y-4">
-              <h2 className="text-4xl md:text-5xl font-bold text-foreground">
-                Transforma tu Negocio con IA
-              </h2>
-              <p className="text-xl text-muted-foreground">
-                Diagnósticos empresariales inteligentes y planes de acción personalizados para impulsar tu crecimiento
-              </p>
-            </div>
-            
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button size="lg" onClick={() => navigate('/auth')} className="text-lg px-8">
-                Iniciar Diagnóstico Gratis
-                <ArrowRight className="ml-2 h-5 w-5" />
-              </Button>
-            </div>
 
-            <div className="grid md:grid-cols-3 gap-6 mt-16">
-              <Card variant="content" className="text-left">
-                <div className="space-y-3">
-                  <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
-                    <FolderOpen className="h-6 w-6 text-primary" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-foreground">Diagnóstico Inteligente</h3>
-                  <p className="text-muted-foreground">
-                    Análisis profundo de tu negocio en estrategia, operaciones, finanzas y más
-                  </p>
+        <main>
+          {/* Hero Section */}
+          <section className="py-20 px-4 sm:px-6 lg:px-8">
+            <div className="max-w-7xl mx-auto">
+              <div className="text-center max-w-3xl mx-auto animate-fade-in-up">
+                <h1 className="text-5xl sm:text-6xl font-bold text-foreground mb-6 leading-tight">
+                  Inteligencia Empresarial
+                  <span className="block mt-2 bg-gradient-to-r from-primary to-primary-darker bg-clip-text text-transparent">
+                    Impulsada por IA
+                  </span>
+                </h1>
+                <p className="text-xl text-muted-foreground mb-8 leading-relaxed">
+                  Transforma tus datos en decisiones estratégicas. Diagnósticos profundos, análisis en tiempo real y planes de acción personalizados.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                  <Button size="lg" variant="gradient" onClick={() => navigate('/auth')} className="text-lg px-8 gap-2">
+                    Comenzar Ahora
+                    <ArrowRight className="h-5 w-5" />
+                  </Button>
+                  <Button size="lg" variant="outline" onClick={() => navigate('/auth')} className="text-lg px-8">
+                    Ver Demo
+                  </Button>
                 </div>
-              </Card>
+              </div>
+            </div>
+          </section>
 
-              <Card variant="content" className="text-left">
-                <div className="space-y-3">
-                  <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
+          {/* Features Section */}
+          <section className="py-20 px-4 sm:px-6 lg:px-8 bg-card/50">
+            <div className="max-w-7xl mx-auto">
+              <div className="text-center mb-16">
+                <h2 className="text-4xl font-bold text-foreground mb-4">
+                  Todo lo que necesitas para crecer
+                </h2>
+                <p className="text-xl text-muted-foreground">
+                  Herramientas poderosas para la gestión estratégica de tu negocio
+                </p>
+              </div>
+
+              <div className="grid md:grid-cols-3 gap-8">
+                <Card className="p-6 hover:scale-105 transition-transform duration-200 animate-fade-in-up">
+                  <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
+                    <TrendingUp className="h-6 w-6 text-primary" />
+                  </div>
+                  <h3 className="text-xl font-semibold text-foreground mb-2">
+                    Diagnósticos Estratégicos
+                  </h3>
+                  <p className="text-muted-foreground">
+                    Análisis profundo de todas las áreas de tu negocio con IA conversacional
+                  </p>
+                </Card>
+
+                <Card className="p-6 hover:scale-105 transition-transform duration-200 animate-fade-in-up [animation-delay:100ms]">
+                  <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
                     <ArrowRight className="h-6 w-6 text-primary" />
                   </div>
-                  <h3 className="text-lg font-semibold text-foreground">Planes de Acción</h3>
+                  <h3 className="text-xl font-semibold text-foreground mb-2">
+                    Planes de Acción
+                  </h3>
                   <p className="text-muted-foreground">
-                    Recibe un plan personalizado con tareas concretas y alcanzables
+                    Estrategias personalizadas basadas en tus objetivos y recursos
                   </p>
-                </div>
-              </Card>
+                </Card>
 
-              <Card variant="content" className="text-left">
-                <div className="space-y-3">
-                  <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
+                <Card className="p-6 hover:scale-105 transition-transform duration-200 animate-fade-in-up [animation-delay:200ms]">
+                  <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
+                    <BarChart3 className="h-6 w-6 text-primary" />
+                  </div>
+                  <h3 className="text-xl font-semibold text-foreground mb-2">
+                    KPIs en Tiempo Real
+                  </h3>
+                  <p className="text-muted-foreground">
+                    Monitoreo continuo con alertas inteligentes y recomendaciones
+                  </p>
+                </Card>
+
+                <Card className="p-6 hover:scale-105 transition-transform duration-200 animate-fade-in-up [animation-delay:300ms]">
+                  <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
                     <FolderOpen className="h-6 w-6 text-primary" />
                   </div>
-                  <h3 className="text-lg font-semibold text-foreground">Seguimiento Continuo</h3>
+                  <h3 className="text-xl font-semibold text-foreground mb-2">
+                    Gestión Documental
+                  </h3>
                   <p className="text-muted-foreground">
-                    Monitorea tu progreso con KPIs y ajusta tu estrategia en tiempo real
+                    Análisis automático de documentos y extracción de insights clave
                   </p>
-                </div>
-              </Card>
+                </Card>
+
+                <Card className="p-6 hover:scale-105 transition-transform duration-200 animate-fade-in-up [animation-delay:400ms]">
+                  <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
+                    <TrendingUp className="h-6 w-6 text-primary" />
+                  </div>
+                  <h3 className="text-xl font-semibold text-foreground mb-2">
+                    Seguimiento de Tareas
+                  </h3>
+                  <p className="text-muted-foreground">
+                    Organiza y prioriza con vistas Kanban, Gantt y gestión de dependencias
+                  </p>
+                </Card>
+
+                <Card className="p-6 hover:scale-105 transition-transform duration-200 animate-fade-in-up [animation-delay:500ms]">
+                  <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
+                    <BarChart3 className="h-6 w-6 text-primary" />
+                  </div>
+                  <h3 className="text-xl font-semibold text-foreground mb-2">
+                    Consultoría IA 24/7
+                  </h3>
+                  <p className="text-muted-foreground">
+                    Asistente estratégico disponible cuando lo necesites
+                  </p>
+                </Card>
+              </div>
             </div>
-          </div>
+          </section>
+
+          {/* CTA Section */}
+          <section className="py-20 px-4 sm:px-6 lg:px-8">
+            <div className="max-w-4xl mx-auto text-center">
+              <h2 className="text-4xl font-bold text-foreground mb-6">
+                ¿Listo para transformar tu negocio?
+              </h2>
+              <p className="text-xl text-muted-foreground mb-8">
+                Únete a empresas que ya están tomando decisiones más inteligentes
+              </p>
+              <Button size="lg" variant="gradient" onClick={() => navigate('/auth')} className="text-lg px-12">
+                Comenzar Gratis
+              </Button>
+            </div>
+          </section>
         </main>
       </div>
     );

@@ -11,75 +11,77 @@ export function Header() {
   const navigate = useNavigate();
 
   return (
-    <header className="h-16 bg-card border-b border-border flex items-center justify-between px-standard">
-      <div className="flex items-center gap-comfortable">
+    <header className="border-b border-border bg-card/95 backdrop-blur-md sticky top-0 z-50 shadow-sm">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+        {/* Logo and Brand */}
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-primary rounded-md flex items-center justify-center">
-            <span className="text-primary-foreground font-semibold text-sm">CI</span>
+          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary to-primary-darker flex items-center justify-center shadow-md">
+            <span className="text-primary-foreground font-bold text-xl">A</span>
           </div>
-          <h1 className="text-lg font-semibold text-foreground">Consultoría Inteligente</h1>
+          <div className="flex flex-col">
+            <h1 className="text-lg font-bold text-foreground leading-none tracking-tight">Alasha AI</h1>
+            <span className="text-xs text-muted-foreground">Inteligencia Empresarial</span>
+          </div>
         </div>
-      </div>
 
-      {user && (
-        <nav className="flex items-center gap-6">
-          <Link to="/" className="text-base text-foreground hover:text-primary transition-colors">
-            Dashboard
-          </Link>
-          <Link to="/tasks" className="text-base text-muted-foreground hover:text-foreground transition-colors">
-            Tareas
-          </Link>
-          <Link to="/documents" className="text-base text-muted-foreground hover:text-foreground transition-colors">
-            Documentos
-          </Link>
-        </nav>
-      )}
-
-      <div className="flex items-center gap-4">
-        {!loading && user ? (
-          <>
-            <div className="flex items-center gap-3 border-l border-border pl-4">
-              <ProjectSelector />
-            </div>
-            
-            <Link to="/chat-diagnosis">
-              <Button className="gap-2">
-                <MessageCircle className="h-4 w-4" />
-                Consultor IA
-              </Button>
+        {user && (
+          <nav className="flex items-center gap-6">
+            <Link to="/" className="text-sm font-medium text-foreground hover:text-primary transition-colors">
+              Dashboard
             </Link>
-            
-            <Button variant="ghost" size="icon" className="relative">
-              <Bell className="h-5 w-5" />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-destructive rounded-full" />
-            </Button>
-            
-            <div className="flex items-center gap-2 border-l border-border pl-4">
-              <User className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm text-muted-foreground">{user.email}</span>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={signOut}
-                className="ml-2"
-              >
-                <LogOut className="h-4 w-4" />
-              </Button>
-            </div>
-            
-            {isAdmin && (
-              <Link to="/admin">
-                <Button variant="ghost" size="icon" title="Administración">
-                  <Shield className="h-5 w-5" />
+            <Link to="/tasks" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+              Tareas
+            </Link>
+            <Link to="/documents" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+              Documentos
+            </Link>
+          </nav>
+        )}
+
+        <div className="flex items-center gap-3">
+          {!loading && user ? (
+            <>
+              <ProjectSelector />
+              
+              <Link to="/chat-diagnosis">
+                <Button variant="gradient" size="sm" className="gap-2">
+                  <MessageCircle className="h-4 w-4" />
+                  Asistente IA
                 </Button>
               </Link>
-            )}
-          </>
-        ) : !loading && !user ? (
-          <Button onClick={() => navigate('/auth')}>
-            Iniciar Sesión
-          </Button>
-        ) : null}
+              
+              <Button variant="ghost" size="icon" className="relative">
+                <Bell className="h-5 w-5" />
+                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-destructive rounded-full" />
+              </Button>
+              
+              <div className="flex items-center gap-2 border-l border-border pl-3">
+                <User className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm text-muted-foreground max-w-[150px] truncate">{user.email}</span>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={signOut}
+                  title="Cerrar sesión"
+                >
+                  <LogOut className="h-4 w-4" />
+                </Button>
+              </div>
+              
+              {isAdmin && (
+                <Link to="/admin">
+                  <Button variant="ghost" size="icon" title="Administración">
+                    <Shield className="h-5 w-5" />
+                  </Button>
+                </Link>
+              )}
+            </>
+          ) : !loading && !user ? (
+            <Button onClick={() => navigate('/auth')} variant="gradient">
+              Iniciar Sesión
+            </Button>
+          ) : null}
+        </div>
       </div>
     </header>
   );
