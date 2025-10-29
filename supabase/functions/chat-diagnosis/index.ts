@@ -1062,19 +1062,44 @@ ESTILO:
                 }
               }
               
-              // Patrón 2: "Actualizar/Crear KPI [nombre] a/con [valor]"
-              // Soporta múltiples variaciones:
-              // - "Actualizar KPI [nombre] a [valor]"
-              // - "Crear KPI [nombre] con valor de [valor]"
-              // - "Crea el KPI '[nombre]' con el valor de [valor]"
-              // - "Crea el KPI 'Comentarios' con valor 3000 y la meta de 5000"
-              const kpiMatch = userText.match(/(crea|crear|actualizar|actualiza)\s+(?:el\s+)?kpi\s+['""]([^'""\d]+?)['""]?\s+(?:a|con\s+(?:el\s+)?valor\s+(?:de\s+)?)\s*(\d+(?:[.,]\d+)?)\s*([a-zA-Z%$€]*)?(?:\s+y\s+(?:la\s+)?meta\s+(?:de\s+)?(\d+(?:[.,]\d+)?))?/i);
-              if (kpiMatch) {
-                const kpiName = kpiMatch[2].trim().replace(/^['"]|['"]$/g, ''); // Remover comillas
-                const kpiValue = parseFloat(kpiMatch[3].replace(',', '.'));
-                const kpiUnit = kpiMatch[4]?.trim() || '';
-                const kpiTarget = kpiMatch[5] ? parseFloat(kpiMatch[5].replace(',', '.')) : null;
-                
+              // Patrón 2: Comandos de KPI flexibles
+              // Intenta múltiples patrones para mayor flexibilidad
+              let kpiName: string | null = null;
+              let kpiValue: number | null = null;
+              let kpiUnit: string | null = null;
+              let kpiTarget: number | null = null;
+              
+              // Primero extraer la meta si existe (para evitar que interfiera con otros matches)
+              const metaMatch = userText.match(/(?:meta|objetivo|target)(?:\s+de)?\s+(\d+(?:[.,]\d+)?)\s*([a-zA-Z%$€]+)?/i);
+              if (metaMatch) {
+                kpiTarget = parseFloat(metaMatch[1].replace(',', '.'));
+              }
+              
+              // Patrón principal: captura nombre y valor en múltiples formatos
+              const patterns = [
+                // "Crea/Actualiza KPI 'Nombre' con valor 3000"
+                /(?:crea|crear|actualizar|actualiza)(?:\s+el)?\s+kpi\s+['"]([^'"]+)['"]\s+(?:con\s+)?(?:valor\s+)?(?:de\s+)?(\d+(?:[.,]\d+)?)\s*([a-zA-Z%$€]+)?/i,
+                // "KPI Nombre: 3000" o "KPI Nombre 3000"
+                /kpi\s+([a-záéíóúñ\s]+?)[:=\s]+(\d+(?:[.,]\d+)?)\s*([a-zA-Z%$€]+)?/i,
+                // "Actualiza Nombre a 3000"
+                /(?:actualiza|actualizar|crea|crear)\s+([a-záéíóúñ\s]+?)\s+(?:a|con|valor|de)\s+(\d+(?:[.,]\d+)?)\s*([a-zA-Z%$€]+)?/i,
+              ];
+              
+              for (const pattern of patterns) {
+                const match = userText.match(pattern);
+                if (match) {
+                  kpiName = match[1].trim().replace(/^['"]|['"]$/g, '');
+                  kpiValue = parseFloat(match[2].replace(',', '.'));
+                  // Solo capturar unit si es un símbolo válido o una unidad corta (max 3 chars)
+                  const potentialUnit = match[3]?.trim() || '';
+                  if (potentialUnit && (potentialUnit.length <= 3 || ['%', '$', '€', '£'].includes(potentialUnit))) {
+                    kpiUnit = potentialUnit;
+                  }
+                  break;
+                }
+              }
+              
+              if (kpiName && kpiValue !== null) {
                 console.log('KPI Match found:', { kpiName, kpiValue, kpiUnit, kpiTarget });
                 
                 const today = new Date();
@@ -1108,7 +1133,7 @@ ESTILO:
                   }
                   
                   // Solo actualizar unit si se proporcionó
-                  if (kpiUnit) {
+                  if (kpiUnit !== null) {
                     updateData.unit = kpiUnit;
                   }
                   
