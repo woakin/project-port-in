@@ -259,9 +259,9 @@ export default function Admin() {
         return 'bg-red-500';
       case 'startup':
         return 'bg-orange-500';
-      case 'growth':
+      case 'pyme':
         return 'bg-yellow-500';
-      case 'mature':
+      case 'corporate':
         return 'bg-green-500';
       default:
         return 'bg-gray-500';
@@ -274,10 +274,10 @@ export default function Admin() {
         return 'Idea';
       case 'startup':
         return 'Startup';
-      case 'growth':
-        return 'Crecimiento';
-      case 'mature':
-        return 'Maduro';
+      case 'pyme':
+        return 'PYME';
+      case 'corporate':
+        return 'Corporativo';
       default:
         return 'Sin diagnóstico';
     }
