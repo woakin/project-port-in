@@ -1081,31 +1081,78 @@ ESTILO:
                 const periodStart = new Date(today.getFullYear(), today.getMonth(), 1);
                 const periodEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
                 
-                const { data: newKpi, error: kpiError } = await supabaseClient
+                // Buscar KPI existente con el mismo nombre y período actual
+                const { data: existingKpi } = await supabaseClient
                   .from('kpis')
-                  .insert({
-                    company_id: companyId,
-                    area: 'operations',
-                    name: kpiName,
-                    value: kpiValue,
-                    target_value: kpiTarget,
-                    unit: kpiUnit || null,
-                    period_start: periodStart.toISOString(),
-                    period_end: periodEnd.toISOString(),
-                    source: 'manual'
-                  })
-                  .select()
-                  .single();
+                  .select('*')
+                  .eq('company_id', companyId)
+                  .eq('name', kpiName)
+                  .gte('period_end', today.toISOString())
+                  .order('created_at', { ascending: false })
+                  .limit(1)
+                  .maybeSingle();
                 
-                if (!kpiError && newKpi) {
-                  console.log('KPI created successfully:', newKpi);
+                let resultKpi;
+                let kpiError;
+                
+                if (existingKpi) {
+                  // Actualizar KPI existente
+                  console.log('Updating existing KPI:', existingKpi.id);
+                  const updateData: any = {
+                    value: kpiValue,
+                  };
+                  
+                  // Solo actualizar target_value si se proporcionó en el comando
+                  if (kpiTarget !== null) {
+                    updateData.target_value = kpiTarget;
+                  }
+                  
+                  // Solo actualizar unit si se proporcionó
+                  if (kpiUnit) {
+                    updateData.unit = kpiUnit;
+                  }
+                  
+                  const { data, error } = await supabaseClient
+                    .from('kpis')
+                    .update(updateData)
+                    .eq('id', existingKpi.id)
+                    .select()
+                    .single();
+                  
+                  resultKpi = data;
+                  kpiError = error;
+                } else {
+                  // Crear nuevo KPI
+                  console.log('Creating new KPI');
+                  const { data, error } = await supabaseClient
+                    .from('kpis')
+                    .insert({
+                      company_id: companyId,
+                      area: 'operations',
+                      name: kpiName,
+                      value: kpiValue,
+                      target_value: kpiTarget,
+                      unit: kpiUnit || null,
+                      period_start: periodStart.toISOString(),
+                      period_end: periodEnd.toISOString(),
+                      source: 'manual'
+                    })
+                    .select()
+                    .single();
+                  
+                  resultKpi = data;
+                  kpiError = error;
+                }
+                
+                if (!kpiError && resultKpi) {
+                  console.log('KPI operation successful:', resultKpi);
                   actionResults.push({
                     type: 'kpi_updated',
                     success: true,
-                    data: { name: newKpi.name, value: newKpi.value, unit: newKpi.unit, target: newKpi.target_value }
+                    data: { name: resultKpi.name, value: resultKpi.value, unit: resultKpi.unit, target: resultKpi.target_value }
                   });
                 } else {
-                  console.error('Error creating KPI:', kpiError);
+                  console.error('Error with KPI operation:', kpiError);
                 }
               }
               
