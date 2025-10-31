@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { MessageCircle, Send, X, Sparkles, TrendingUp, CheckSquare, FileText, LayoutDashboard } from 'lucide-react';
+import { MessageCircle, Send, X, Sparkles, TrendingUp, CheckSquare, FileText, LayoutDashboard, Zap, Target, BarChart, Lightbulb, AlertCircle, Brain, Clock, Activity, FileCheck } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -22,20 +22,36 @@ const PAGE_NAMES: Record<string, string> = {
 
 const QUICK_ACTIONS: Record<string, Array<{ label: string; prompt: string; icon: any }>> = {
   '/': [
-    { label: 'Resumir métricas', prompt: 'Resume las métricas clave del dashboard', icon: TrendingUp },
-    { label: 'Analizar tendencias', prompt: 'Analiza las tendencias principales que veo en el dashboard', icon: Sparkles },
+    { label: 'Resumir métricas', prompt: 'Resume las métricas clave del dashboard', icon: BarChart },
+    { label: 'Analizar tendencias', prompt: 'Analiza las tendencias principales que veo en el dashboard', icon: TrendingUp },
+    { label: 'Próximas acciones', prompt: '¿Cuáles son las 3 acciones prioritarias que debo tomar esta semana?', icon: Zap },
+    { label: 'Estado del proyecto', prompt: 'Dame un resumen ejecutivo del estado actual del proyecto', icon: Target },
   ],
   '/kpis': [
     { label: 'Explicar KPI', prompt: 'Explica el KPI que estoy viendo actualmente', icon: TrendingUp },
-    { label: 'Sugerir mejora', prompt: 'Sugiere cómo puedo mejorar este KPI', icon: Sparkles },
+    { label: 'Sugerir mejora', prompt: 'Sugiere cómo puedo mejorar este KPI', icon: Lightbulb },
+    { label: 'Comparar con objetivo', prompt: 'Compara el valor actual del KPI con su objetivo y analiza la brecha', icon: Target },
+    { label: 'Proyección próxima', prompt: '¿Vamos a cumplir el objetivo de este KPI? Proyecta los próximos 3 meses', icon: TrendingUp },
   ],
   '/tasks': [
-    { label: 'Crear tarea prioritaria', prompt: 'Ayúdame a crear una tarea con alta prioridad', icon: CheckSquare },
-    { label: 'Ver próximas tareas', prompt: 'Muéstrame las tareas más urgentes', icon: CheckSquare },
+    { label: 'Tareas urgentes', prompt: 'Muéstrame las 5 tareas más urgentes con sus fechas límite y estado', icon: Zap },
+    { label: 'Tareas atrasadas', prompt: '¿Qué tareas están atrasadas y qué debo priorizar?', icon: AlertCircle },
+    { label: 'Resumen semanal', prompt: 'Resume el progreso de tareas de esta semana', icon: CheckSquare },
+    { label: 'Sugerir priorización', prompt: 'Basándote en las tareas pendientes, ¿qué debería hacer primero?', icon: Brain },
   ],
   '/documents': [
-    { label: 'Analizar documento', prompt: 'Analiza el documento actual', icon: FileText },
-    { label: 'Buscar información', prompt: 'Busca información específica en los documentos', icon: FileText },
+    { label: 'Sin analizar', prompt: '¿Cuántos documentos tengo pendientes de análisis?', icon: Clock },
+    { label: 'Resumen insights', prompt: 'Resume los principales insights de los documentos analizados', icon: Sparkles },
+    { label: 'Por categoría', prompt: 'Muéstrame la distribución de documentos por categoría', icon: BarChart },
+  ],
+  '/plans': [
+    { label: 'Plan más reciente', prompt: 'Resume el plan de acción más reciente y su progreso', icon: FileText },
+    { label: 'Planes activos', prompt: '¿Cuántos planes tengo activos y cuál requiere más atención?', icon: Activity },
+    { label: 'Próximos hitos', prompt: '¿Cuáles son los próximos hitos importantes de mis planes activos?', icon: Target },
+  ],
+  '/diagnosticos': [
+    { label: 'Último diagnóstico', prompt: 'Resume los hallazgos del último diagnóstico realizado', icon: FileCheck },
+    { label: 'Evolución', prompt: '¿Cómo ha evolucionado mi negocio desde el primer diagnóstico?', icon: TrendingUp },
   ],
 };
 
@@ -207,8 +223,124 @@ export function GlobalAIAssistant() {
     }
   };
 
-  const handleQuickAction = (prompt: string) => {
-    setInput(prompt);
+  const handleQuickAction = async (prompt: string) => {
+    if (isStreaming) return;
+    
+    setInput('');
+    addMessage({ role: 'user', content: prompt });
+    setIsStreaming(true);
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error('Debes iniciar sesión para usar el asistente');
+        return;
+      }
+
+      const currentMessages = [...messages, { role: 'user', content: prompt }];
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat-diagnosis`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            messages: currentMessages,
+            context: {
+              currentPage: context.page,
+              project: currentProject ? { id: currentProject.id, name: currentProject.name } : null,
+              focus: context.focus,
+              data: context.data,
+            },
+            mode: 'contextual',
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        if (response.status === 429) {
+          toast.error('Límite de solicitudes excedido', { description: 'Por favor intenta de nuevo más tarde' });
+          return;
+        }
+        if (response.status === 402) {
+          toast.error('Créditos insuficientes', { description: 'Por favor agrega fondos a tu workspace' });
+          return;
+        }
+        throw new Error('Error en la respuesta del servidor');
+      }
+
+      if (!response.body) {
+        throw new Error('No se recibió respuesta del servidor');
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let assistantMessage = '';
+      let textBuffer = '';
+      let streamDone = false;
+
+      while (!streamDone) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        textBuffer += decoder.decode(value, { stream: true });
+
+        let newlineIndex: number;
+        while ((newlineIndex = textBuffer.indexOf('\n')) !== -1) {
+          let line = textBuffer.slice(0, newlineIndex);
+          textBuffer = textBuffer.slice(newlineIndex + 1);
+
+          if (line.endsWith('\r')) line = line.slice(0, -1);
+          if (line.startsWith(':') || line.trim() === '') continue;
+          if (!line.startsWith('data: ')) continue;
+
+          const jsonStr = line.slice(6).trim();
+          if (jsonStr === '[DONE]') {
+            streamDone = true;
+            break;
+          }
+
+          try {
+            const parsed = JSON.parse(jsonStr);
+            const content = parsed.choices?.[0]?.delta?.content as string | undefined;
+            if (content) {
+              assistantMessage += content;
+              addMessage({ role: 'assistant', content: assistantMessage });
+            }
+          } catch {
+            textBuffer = line + '\n' + textBuffer;
+            break;
+          }
+        }
+      }
+
+      // Final flush
+      if (textBuffer.trim()) {
+        for (let raw of textBuffer.split('\n')) {
+          if (!raw || raw.startsWith(':') || raw.trim() === '') continue;
+          if (!raw.startsWith('data: ')) continue;
+          const jsonStr = raw.slice(6).trim();
+          if (jsonStr === '[DONE]') continue;
+          try {
+            const parsed = JSON.parse(jsonStr);
+            const content = parsed.choices?.[0]?.delta?.content as string | undefined;
+            if (content) {
+              assistantMessage += content;
+              addMessage({ role: 'assistant', content: assistantMessage });
+            }
+          } catch {
+            // ignore
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error sending quick action message:', error);
+      toast.error('Error al enviar mensaje', { description: 'Por favor intenta de nuevo' });
+    } finally {
+      setIsStreaming(false);
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -250,6 +382,7 @@ export function GlobalAIAssistant() {
                   size="sm"
                   className="text-xs gap-1.5"
                   onClick={() => handleQuickAction(action.prompt)}
+                  disabled={isStreaming}
                 >
                   <action.icon className="h-3 w-3" />
                   {action.label}
