@@ -204,22 +204,9 @@ ${data.kpis.map((k: any) => {
       // Intentar detectar y APLICAR actualizaciones de KPIs solicitadas por el usuario
       try {
         const lastUserMessage = [...messages].reverse().find((m: any) => m.role === 'user')?.content || '';
-        const parseKPIUpdates = (text: string) => {
-          const results: Array<{ name: string; value: number }> = [];
-          const regex = /(?:kpi\s*(?:de|del)?\s*)?([a-záéíóúñü ]+?)\s*(?:a|en)\s*([0-9][\d.,]*)/gi;
-          for (const m of text.matchAll(regex)) {
-            const name = (m[1] || '').trim().replace(/^(el|la)\s+/i, '');
-            const num = (m[2] || '').replace(/[.,\s]/g, '');
-            const value = Number(num);
-            if (name && Number.isFinite(value)) {
-              results.push({ name, value });
-            }
-          }
-          return results;
-        };
 
-        const updates = currentPage === '/kpis' ? parseKPIUpdates(lastUserMessage) : [];
-        if (updates.length > 0) {
+        // Solo intentamos actualizar si estamos en la página de KPIs
+        if (currentPage === '/kpis' && lastUserMessage) {
           const authHeader = req.headers.get('Authorization');
           if (authHeader) {
             const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -237,41 +224,60 @@ ${data.kpis.map((k: any) => {
 
               const companyId = profile?.company_id;
               if (companyId) {
-                const applied: string[] = [];
-                for (const u of updates) {
-                  const { data: existing } = await admin
-                    .from('kpis')
-                    .select('id,name')
-                    .eq('company_id', companyId)
-                    .ilike('name', u.name)
-                    .order('created_at', { ascending: false })
-                    .limit(1)
-                    .maybeSingle();
+                // Obtener lista de nombres de KPI existentes de la compañía
+                const { data: existingKPIs } = await admin
+                  .from('kpis')
+                  .select('name')
+                  .eq('company_id', companyId);
 
-                  if (existing?.id) {
-                    await admin
-                      .from('kpis')
-                      .update({ value: u.value, source: 'assistant' })
-                      .eq('id', existing.id);
-                  } else {
-                    const now = new Date().toISOString();
-                    await admin.from('kpis').insert({
-                      name: u.name,
-                      area: 'general',
-                      value: u.value,
-                      target_value: null,
-                      unit: null,
-                      company_id: companyId,
-                      period_start: now,
-                      period_end: now,
-                      source: 'assistant',
-                    });
+                const uniqueNames = Array.from(new Set((existingKPIs || []).map((k: any) => k.name))).sort((a, b) => b.length - a.length);
+
+                // Función para escapar nombres en regex
+                const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                const text = lastUserMessage.toLowerCase();
+
+                const updates: Array<{ name: string; value: number }> = [];
+                for (const name of uniqueNames) {
+                  const pattern = new RegExp(`${escapeRegExp(name.toLowerCase())}\\s*(?:a|en|=|:)\\s*([0-9][\\d.,]*)`,'i');
+                  const m = text.match(pattern);
+                  if (m) {
+                    const raw = (m[1] || '').replace(/\s/g, '').replace(/\.(?=\d{3}(\D|$))/g, '').replace(/,/g, '');
+                    const value = Number(raw);
+                    if (Number.isFinite(value)) {
+                      updates.push({ name, value });
+                    }
                   }
-                  applied.push(`${u.name}: ${u.value}`);
                 }
 
-                if (applied.length > 0) {
-                  systemPrompt += `\n\nACTUALIZACIONES REALIZADAS (aplicadas en la base de datos):\n${applied.map((s) => '• ' + s).join('\n')}`;
+                if (updates.length > 0) {
+                  const applied: string[] = [];
+
+                  for (const u of updates) {
+                    // Buscar el registro más reciente de ese KPI y actualizarlo
+                    const { data: latest } = await admin
+                      .from('kpis')
+                      .select('id, period_end')
+                      .eq('company_id', companyId)
+                      .ilike('name', u.name)
+                      .order('period_end', { ascending: false })
+                      .limit(1)
+                      .maybeSingle();
+
+                    if (latest?.id) {
+                      await admin
+                        .from('kpis')
+                        .update({ value: u.value, source: 'assistant' })
+                        .eq('id', latest.id);
+                      applied.push(`${u.name}: ${u.value.toLocaleString()}`);
+                    }
+                    // Si no existe, NO creamos uno nuevo automáticamente para evitar duplicados por mal parsing
+                  }
+
+                  if (applied.length > 0) {
+                    systemPrompt += `\n\nACTUALIZACIONES REALIZADAS (aplicadas en la base de datos):\n${applied.map((s) => '• ' + s).join('\n')}`;
+                  } else {
+                    systemPrompt += `\n\nNo se encontró ningún KPI existente que coincida con tu solicitud. Verifica los nombres exactos en la tabla.`;
+                  }
                 }
               }
             }
