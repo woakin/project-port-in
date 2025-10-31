@@ -4,8 +4,6 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ProjectProvider } from "./contexts/ProjectContext";
-import { AIAssistantProvider } from "./contexts/AIAssistantContext";
-import { AIAssistant } from "./components/chat/AIAssistant";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import ForgotPassword from "./pages/ForgotPassword";
@@ -28,31 +26,28 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <ProjectProvider>
-        <AIAssistantProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/auth" element={<Auth />} />
-              <Route path="/auth/forgot-password" element={<ForgotPassword />} />
-              <Route path="/onboarding" element={<Onboarding />} />
-              <Route path="/chat-diagnosis" element={<ChatDiagnosis />} />
-              <Route path="/diagnosis/:id" element={<DiagnosisResults />} />
-              <Route path="/plans" element={<Plans />} />
-              <Route path="/plans/:id" element={<PlanView />} />
-              <Route path="/tasks" element={<Tasks />} />
-              <Route path="/projects" element={<Projects />} />
-              <Route path="/diagnosticos" element={<Diagnosticos />} />
-              <Route path="/documents" element={<Documents />} />
-              <Route path="/kpis" element={<KPIs />} />
-              <Route path="/admin" element={<Admin />} />
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-            <AIAssistant />
-          </BrowserRouter>
-        </AIAssistantProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/auth" element={<Auth />} />
+            <Route path="/auth/forgot-password" element={<ForgotPassword />} />
+            <Route path="/onboarding" element={<Onboarding />} />
+            <Route path="/chat-diagnosis" element={<ChatDiagnosis />} />
+            <Route path="/diagnosis/:id" element={<DiagnosisResults />} />
+            <Route path="/plans" element={<Plans />} />
+            <Route path="/plans/:id" element={<PlanView />} />
+            <Route path="/tasks" element={<Tasks />} />
+            <Route path="/projects" element={<Projects />} />
+            <Route path="/diagnosticos" element={<Diagnosticos />} />
+            <Route path="/documents" element={<Documents />} />
+            <Route path="/kpis" element={<KPIs />} />
+            <Route path="/admin" element={<Admin />} />
+            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
       </ProjectProvider>
     </TooltipProvider>
   </QueryClientProvider>
