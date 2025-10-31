@@ -68,7 +68,6 @@ export function DiagnosticHeroCard({ diagnosis }: DiagnosticHeroCardProps) {
       variant="content" 
       className={cn(
         "border-2 transition-all duration-300",
-        status.bgColor,
         status.borderColor
       )}
     >
@@ -139,12 +138,8 @@ export function DiagnosticHeroCard({ diagnosis }: DiagnosticHeroCardProps) {
             })}
           </div>
 
-          <div className={cn(
-            "p-4 rounded-lg border",
-            status.bgColor,
-            status.borderColor
-          )}>
-            <p className={cn("text-sm font-medium mb-1", status.textColor)}>
+          <div className="p-4 rounded-lg border border-border bg-muted/30">
+            <p className="text-sm font-medium mb-1 text-foreground">
               {status.message}
             </p>
             <p className="text-xs text-muted-foreground">
