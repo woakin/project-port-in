@@ -240,6 +240,33 @@ export default function DiagnosisResults() {
     return insights.slice(0, 5); // Limitar a 5 insights principales
   };
 
+  // Determinar el tipo de insight basado en el contenido semántico
+  const getInsightType = (insight: string): 'strength' | 'recommendation' | 'neutral' => {
+    const lowerInsight = insight.toLowerCase();
+    
+    // Detectar mensajes neutrales/negativos (ausencia de fortalezas)
+    if (lowerInsight.includes('no se ha discutido') || 
+        lowerInsight.includes('no hay fortalezas') ||
+        lowerInsight.includes('no hay información') ||
+        lowerInsight.includes('no detectadas') ||
+        lowerInsight.includes('no se detectaron') ||
+        lowerInsight.includes('sin información')) {
+      return 'neutral';
+    }
+    
+    // Si empieza con ✓ y no es neutral, es una fortaleza
+    if (insight.startsWith('✓')) {
+      return 'strength';
+    }
+    
+    // Si empieza con → es una recomendación
+    if (insight.startsWith('→')) {
+      return 'recommendation';
+    }
+    
+    return 'neutral';
+  };
+
   // Identificar áreas críticas (score < 40)
   const getCriticalAreas = () => {
     const critical: Array<{ name: string; score: number }> = [];
@@ -356,19 +383,27 @@ export default function DiagnosisResults() {
               Insights Clave
             </h3>
             <div className="space-y-3">
-              {keyInsights.map((insight, index) => (
-                <div 
-                  key={index} 
-                  className="flex items-start gap-3 p-4 bg-muted rounded-md"
-                >
-                  {insight.startsWith('✓') ? (
-                    <TrendingUp className="h-5 w-5 text-color-success-default flex-shrink-0 mt-0.5" />
-                  ) : (
-                    <TrendingDown className="h-5 w-5 text-color-warning-default flex-shrink-0 mt-0.5" />
-                  )}
-                  <p className="text-foreground">{insight}</p>
-                </div>
-              ))}
+              {keyInsights.map((insight, index) => {
+                const type = getInsightType(insight);
+                
+                return (
+                  <div 
+                    key={index} 
+                    className="flex items-start gap-3 p-4 bg-muted rounded-md"
+                  >
+                    {type === 'strength' && (
+                      <TrendingUp className="h-5 w-5 text-color-success-default flex-shrink-0 mt-0.5" />
+                    )}
+                    {type === 'recommendation' && (
+                      <ArrowRight className="h-5 w-5 text-color-warning-default flex-shrink-0 mt-0.5" />
+                    )}
+                    {type === 'neutral' && (
+                      <div className="h-5 w-5 rounded-full border-2 border-muted-foreground flex-shrink-0 mt-0.5" />
+                    )}
+                    <p className="text-foreground">{insight}</p>
+                  </div>
+                );
+              })}
             </div>
           </Card>
         )}
