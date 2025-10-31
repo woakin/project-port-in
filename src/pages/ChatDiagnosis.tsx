@@ -12,6 +12,7 @@ import ReactMarkdown from 'react-markdown';
 import ModeSelector from '@/components/chat/ModeSelector';
 import QuickActions, { SheetType } from '@/components/chat/QuickActions';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import KPIsSheet from '@/components/chat/sheets/KPIsSheet';
 import TasksSheet from '@/components/chat/sheets/TasksSheet';
 import DocumentsSheet from '@/components/chat/sheets/DocumentsSheet';
@@ -67,6 +68,9 @@ export default function ChatDiagnosis() {
     legal: '',
     technology: ''
   });
+  
+  // FASE 3: Estado para diálogo de resumen
+  const [showSummary, setShowSummary] = useState(false);
 
   useEffect(() => {
     if (authLoading || projectLoading) return;
@@ -211,6 +215,20 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
       technology: 'Tecnología'
     };
     return names[section];
+  };
+
+  // FASE 3: Función para cambiar de área manualmente
+  const moveToNextSection = () => {
+    const order: Array<typeof currentSection> = ['strategy', 'operations', 'finance', 'marketing', 'legal', 'technology'];
+    const currentIndex = order.indexOf(currentSection);
+    if (currentIndex < order.length - 1) {
+      const nextSection = order[currentIndex + 1];
+      setCurrentSection(nextSection);
+      toast({
+        title: 'Área cambiada',
+        description: `Ahora estamos en: ${getSectionName(nextSection)}`
+      });
+    }
   };
 
   const handleQuickAction = (prompt: string) => {
@@ -656,27 +674,112 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
         </SheetContent>
       </Sheet>
 
-      {/* FASE 1: Indicador de progreso en modo diagnóstico */}
+      {/* FASE 3: Diálogo de resumen antes de generar diagnóstico */}
+      <Dialog open={showSummary} onOpenChange={setShowSummary}>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Resumen de Diagnóstico</DialogTitle>
+            <DialogDescription>
+              Revisa la información recopilada antes de generar el diagnóstico final
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 mt-4">
+            {Object.entries(sectionAnswers).map(([section, answer]) => (
+              <div key={section} className="border rounded-lg p-4 bg-muted/30">
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="font-semibold text-base">
+                    {getSectionName(section as typeof currentSection)}
+                  </h4>
+                  {answer.length > 0 ? (
+                    <CheckCircle className="h-4 w-4 text-green-500" />
+                  ) : (
+                    <div className="text-xs text-muted-foreground">Sin respuestas</div>
+                  )}
+                </div>
+                {answer.length > 0 ? (
+                  <>
+                    <p className="text-sm text-foreground whitespace-pre-wrap mb-2">
+                      {answer.length > 300 ? `${answer.substring(0, 300)}...` : answer}
+                    </p>
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span>{answer.length} caracteres</span>
+                      {answer.length < 20 && (
+                        <span className="text-amber-500">⚠️ Muy corta</span>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <p className="text-sm text-muted-foreground italic">
+                    No se recopiló información para esta área
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+          
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setShowSummary(false)}>
+              Continuar conversación
+            </Button>
+            <Button 
+              onClick={() => {
+                setShowSummary(false);
+                generateDiagnosis();
+              }}
+              disabled={generatingDiagnosis}
+              className="gap-2"
+            >
+              {generatingDiagnosis ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Generando...
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="h-4 w-4" />
+                  Generar Diagnóstico
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* FASE 1 & 3: Indicador de progreso en modo diagnóstico */}
       {chatMode === 'diagnosis' && (
         <div className="border-b border-border bg-muted/50 px-6 py-3">
-          <div className="flex items-center justify-between text-sm">
+          <div className="flex items-center justify-between text-sm gap-4">
             <span className="font-medium">
               Área actual: {getSectionName(currentSection)} ({getSectionNumber(currentSection)}/6)
             </span>
-            <div className="flex gap-1">
-              {(['strategy', 'operations', 'finance', 'marketing', 'legal', 'technology'] as const).map((section) => (
-                <div
-                  key={section}
-                  className={`h-2 w-8 rounded-full transition-colors ${
-                    sectionAnswers[section]?.length > 0
-                      ? 'bg-green-500'
-                      : section === currentSection
-                      ? 'bg-blue-500'
-                      : 'bg-gray-300'
-                  }`}
-                  title={getSectionName(section)}
-                />
-              ))}
+            <div className="flex items-center gap-2">
+              <div className="flex gap-1">
+                {(['strategy', 'operations', 'finance', 'marketing', 'legal', 'technology'] as const).map((section) => (
+                  <div
+                    key={section}
+                    className={`h-2 w-8 rounded-full transition-colors ${
+                      sectionAnswers[section]?.length > 0
+                        ? 'bg-green-500'
+                        : section === currentSection
+                        ? 'bg-blue-500'
+                        : 'bg-gray-300'
+                    }`}
+                    title={getSectionName(section)}
+                  />
+                ))}
+              </div>
+              {/* FASE 3: Botón para avanzar de área */}
+              {getSectionNumber(currentSection) < 6 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={moveToNextSection}
+                  className="text-xs"
+                >
+                  Siguiente área
+                </Button>
+              )}
             </div>
           </div>
         </div>
@@ -722,7 +825,7 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
           {messages.length > 6 && chatMode === 'diagnosis' && (
             <div className="flex justify-center">
               <Button
-                onClick={generateDiagnosis}
+                onClick={() => setShowSummary(true)}
                 disabled={generatingDiagnosis}
                 size="lg"
                 className="gap-2 w-full max-w-md"
