@@ -201,6 +201,86 @@ ${data.kpis.map((k: any) => {
       
       systemPrompt += `\n\n- Responde en español`;
 
+      // Intentar detectar y APLICAR actualizaciones de KPIs solicitadas por el usuario
+      try {
+        const lastUserMessage = [...messages].reverse().find((m: any) => m.role === 'user')?.content || '';
+        const parseKPIUpdates = (text: string) => {
+          const results: Array<{ name: string; value: number }> = [];
+          const regex = /(?:kpi\s*(?:de|del)?\s*)?([a-záéíóúñü ]+?)\s*(?:a|en)\s*([0-9][\d.,]*)/gi;
+          for (const m of text.matchAll(regex)) {
+            const name = (m[1] || '').trim().replace(/^(el|la)\s+/i, '');
+            const num = (m[2] || '').replace(/[.,\s]/g, '');
+            const value = Number(num);
+            if (name && Number.isFinite(value)) {
+              results.push({ name, value });
+            }
+          }
+          return results;
+        };
+
+        const updates = currentPage === '/kpis' ? parseKPIUpdates(lastUserMessage) : [];
+        if (updates.length > 0) {
+          const authHeader = req.headers.get('Authorization');
+          if (authHeader) {
+            const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+            const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+            const admin = createClient(supabaseUrl, supabaseServiceKey);
+
+            const token = authHeader.replace('Bearer ', '');
+            const { data: { user } } = await admin.auth.getUser(token);
+            if (user) {
+              const { data: profile } = await admin
+                .from('profiles')
+                .select('company_id')
+                .eq('id', user.id)
+                .maybeSingle();
+
+              const companyId = profile?.company_id;
+              if (companyId) {
+                const applied: string[] = [];
+                for (const u of updates) {
+                  const { data: existing } = await admin
+                    .from('kpis')
+                    .select('id,name')
+                    .eq('company_id', companyId)
+                    .ilike('name', u.name)
+                    .order('created_at', { ascending: false })
+                    .limit(1)
+                    .maybeSingle();
+
+                  if (existing?.id) {
+                    await admin
+                      .from('kpis')
+                      .update({ value: u.value, source: 'assistant' })
+                      .eq('id', existing.id);
+                  } else {
+                    const now = new Date().toISOString();
+                    await admin.from('kpis').insert({
+                      name: u.name,
+                      area: 'general',
+                      value: u.value,
+                      target_value: null,
+                      unit: null,
+                      company_id: companyId,
+                      period_start: now,
+                      period_end: now,
+                      source: 'assistant',
+                    });
+                  }
+                  applied.push(`${u.name}: ${u.value}`);
+                }
+
+                if (applied.length > 0) {
+                  systemPrompt += `\n\nACTUALIZACIONES REALIZADAS (aplicadas en la base de datos):\n${applied.map((s) => '• ' + s).join('\n')}`;
+                }
+              }
+            }
+          }
+        }
+      } catch (e) {
+        console.error('Error applying KPI updates:', e);
+      }
+
       const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
         method: 'POST',
         headers: {

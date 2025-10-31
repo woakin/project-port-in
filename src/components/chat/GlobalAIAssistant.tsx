@@ -215,6 +215,11 @@ export function GlobalAIAssistant() {
           }
         }
       }
+
+      // Notificar a la página de KPIs para que recargue datos si hubo actualizaciones
+      if (assistantMessage.includes('ACTUALIZACIONES REALIZADAS') && location.pathname === '/kpis') {
+        window.dispatchEvent(new CustomEvent('kpis-updated'));
+      }
     } catch (error) {
       console.error('Error sending message:', error);
       toast.error('Error al enviar mensaje', { description: 'Por favor intenta de nuevo' });
@@ -334,6 +339,11 @@ export function GlobalAIAssistant() {
             // ignore
           }
         }
+      }
+
+      // Notificar a la página de KPIs si hubo actualizaciones aplicadas
+      if (assistantMessage.includes('ACTUALIZACIONES REALIZADAS') && location.pathname === '/kpis') {
+        window.dispatchEvent(new CustomEvent('kpis-updated'));
       }
     } catch (error) {
       console.error('Error sending quick action message:', error);
