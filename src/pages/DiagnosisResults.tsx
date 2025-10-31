@@ -220,7 +220,7 @@ export default function DiagnosisResults() {
 
   // Extraer insights clave (mejores fortalezas y recomendaciones principales)
   const getKeyInsights = () => {
-    const insights: string[] = [];
+    const insights: Array<{ text: string; type: 'strength' | 'recommendation' }> = [];
     const areas = ['strategy', 'operations', 'finance', 'marketing', 'legal', 'technology'] as const;
     
     areas.forEach(area => {
@@ -228,11 +228,17 @@ export default function DiagnosisResults() {
       if (areaInsights) {
         // Agregar la primera fortaleza si existe
         if (areaInsights.strengths?.[0]) {
-          insights.push(`✓ ${area.charAt(0).toUpperCase() + area.slice(1)}: ${areaInsights.strengths[0]}`);
+          insights.push({
+            text: `${area.charAt(0).toUpperCase() + area.slice(1)}: ${areaInsights.strengths[0]}`,
+            type: 'strength'
+          });
         }
         // Agregar la primera recomendación si existe
         if (areaInsights.recommendations?.[0] && insights.length < 6) {
-          insights.push(`→ ${area.charAt(0).toUpperCase() + area.slice(1)}: ${areaInsights.recommendations[0]}`);
+          insights.push({
+            text: `${area.charAt(0).toUpperCase() + area.slice(1)}: ${areaInsights.recommendations[0]}`,
+            type: 'recommendation'
+          });
         }
       }
     });
@@ -241,27 +247,22 @@ export default function DiagnosisResults() {
   };
 
   // Determinar el tipo de insight basado en el contenido semántico
-  const getInsightType = (insight: string): 'strength' | 'recommendation' | 'neutral' => {
-    const lowerInsight = insight.toLowerCase();
-    
-    // Detectar mensajes neutrales/negativos (ausencia de fortalezas)
-    if (lowerInsight.includes('no se ha discutido') || 
-        lowerInsight.includes('no hay fortalezas') ||
-        lowerInsight.includes('no hay información') ||
-        lowerInsight.includes('no detectadas') ||
-        lowerInsight.includes('no se detectaron') ||
-        lowerInsight.includes('sin información')) {
-      return 'neutral';
-    }
-    
-    // Si empieza con ✓ y no es neutral, es una fortaleza
-    if (insight.startsWith('✓')) {
-      return 'strength';
-    }
-    
-    // Si empieza con → es una recomendación
-    if (insight.startsWith('→')) {
-      return 'recommendation';
+  const getInsightType = (text: string, explicitType?: 'strength' | 'recommendation'): 'strength' | 'recommendation' | 'neutral' => {
+    // Si ya tenemos un tipo explícito, verificar si es neutral por contenido
+    if (explicitType) {
+      const lowerText = text.toLowerCase();
+      
+      // Detectar mensajes neutrales/negativos (ausencia de fortalezas)
+      if (lowerText.includes('no se ha discutido') || 
+          lowerText.includes('no hay fortalezas') ||
+          lowerText.includes('no hay información') ||
+          lowerText.includes('no detectadas') ||
+          lowerText.includes('no se detectaron') ||
+          lowerText.includes('sin información')) {
+        return 'neutral';
+      }
+      
+      return explicitType;
     }
     
     return 'neutral';
@@ -384,7 +385,7 @@ export default function DiagnosisResults() {
             </h3>
             <div className="space-y-3">
               {keyInsights.map((insight, index) => {
-                const type = getInsightType(insight);
+                const type = getInsightType(insight.text, insight.type);
                 
                 return (
                   <div 
@@ -400,7 +401,7 @@ export default function DiagnosisResults() {
                     {type === 'neutral' && (
                       <div className="h-5 w-5 rounded-full border-2 border-muted-foreground flex-shrink-0 mt-0.5" />
                     )}
-                    <p className="text-foreground">{insight}</p>
+                    <p className="text-foreground">{insight.text}</p>
                   </div>
                 );
               })}
