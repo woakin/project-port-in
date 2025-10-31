@@ -219,17 +219,128 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
     return names[section];
   };
 
-  // FASE 3: Función para cambiar de área manualmente
-  const moveToNextSection = () => {
+  // FASE 3: Función para cambiar de área manualmente con coherencia total
+  const moveToNextSection = async () => {
+    if (sending) return; // No cambiar si hay mensaje en proceso
+    
     const order: Array<typeof currentSection> = ['strategy', 'operations', 'finance', 'marketing', 'legal', 'technology'];
     const currentIndex = order.indexOf(currentSection);
     if (currentIndex < order.length - 1) {
       const nextSection = order[currentIndex + 1];
+      const previousSectionName = getSectionName(currentSection);
+      const nextSectionName = getSectionName(nextSection);
+      
+      // 1. Cambiar la sección actual
       setCurrentSection(nextSection);
+      
+      // 2. Agregar mensaje del sistema visible
+      const systemMessage: Message = {
+        role: 'assistant',
+        content: `🔄 **Avanzaste a: ${nextSectionName}**\n\nPerfecto, hemos cubierto ${previousSectionName}. Ahora continuemos con ${nextSectionName}.`
+      };
+      
+      const updatedMessages = [...messages, systemMessage];
+      setMessages(updatedMessages);
+      
+      // 3. Toast de confirmación
       toast({
         title: 'Área cambiada',
-        description: `Ahora estamos en: ${getSectionName(nextSection)}`
+        description: `Ahora estamos en: ${nextSectionName}`
       });
+      
+      // 4. El AI genera automáticamente una pregunta para el área nueva
+      setSending(true);
+      
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          throw new Error('No hay sesión activa');
+        }
+
+        // Prompt específico para iniciar el área nueva
+        const areaPrompts = {
+          operations: '¿Cómo describirías tus procesos operativos actuales? ¿Qué sistemas o metodologías utilizas?',
+          finance: '¿Cuál es tu modelo de ingresos principal? ¿Cómo gestionas actualmente las finanzas de tu proyecto?',
+          marketing: '¿Qué estrategias de marketing estás utilizando? ¿Cómo adquieres y retienes clientes?',
+          legal: '¿Has considerado los aspectos legales de tu negocio? ¿Qué estructura legal tiene tu empresa?',
+          technology: '¿Qué tecnologías utilizas en tu negocio? ¿Cómo gestionas la infraestructura tecnológica?'
+        };
+
+        const contextualPrompt = `El usuario acaba de avanzar al área de ${nextSectionName}. Genera una pregunta inicial contextual y amigable para comenzar a explorar esta área. La pregunta sugerida sería: "${areaPrompts[nextSection as keyof typeof areaPrompts]}" pero puedes adaptarla según el contexto de la conversación previa.`;
+
+        const response = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat-diagnosis`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${session.access_token}`,
+            },
+            body: JSON.stringify({
+              messages: [
+                ...updatedMessages,
+                { role: 'system', content: contextualPrompt }
+              ],
+              companyInfo,
+              isComplete: false,
+              mode: chatMode
+            }),
+          }
+        );
+
+        if (!response.ok || !response.body) {
+          throw new Error('Error al conectar con el asistente');
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let assistantMessage = '';
+        let textBuffer = '';
+
+        // Agregar mensaje del asistente vacío que iremos llenando
+        setMessages([...updatedMessages, { role: 'assistant', content: '' }]);
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          textBuffer += decoder.decode(value, { stream: true });
+
+          let newlineIndex: number;
+          while ((newlineIndex = textBuffer.indexOf('\n')) !== -1) {
+            let line = textBuffer.slice(0, newlineIndex);
+            textBuffer = textBuffer.slice(newlineIndex + 1);
+
+            if (line.endsWith('\r')) line = line.slice(0, -1);
+            if (line.startsWith(':') || line.trim() === '') continue;
+            if (!line.startsWith('data: ')) continue;
+
+            const jsonStr = line.slice(6).trim();
+            if (jsonStr === '[DONE]') continue;
+
+            try {
+              const parsed = JSON.parse(jsonStr);
+              const content = parsed.choices?.[0]?.delta?.content;
+              if (content) {
+                assistantMessage += content;
+                setMessages([...updatedMessages, { role: 'assistant', content: assistantMessage }]);
+              }
+            } catch (e) {
+              console.error('Error parsing JSON:', e);
+            }
+          }
+        }
+
+      } catch (error) {
+        console.error('Error al cambiar de área:', error);
+        toast({
+          title: 'Error',
+          description: 'No se pudo generar la pregunta automática, pero puedes continuar escribiendo.',
+          variant: 'destructive'
+        });
+      } finally {
+        setSending(false);
+      }
     }
   };
 
