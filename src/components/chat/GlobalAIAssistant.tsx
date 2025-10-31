@@ -151,6 +151,21 @@ export function GlobalAIAssistant() {
         throw new Error('Error en la respuesta del servidor');
       }
 
+      // Check for data updates and dispatch events
+      const dataUpdated = response.headers.get('x-data-updated') === '1';
+      const updatedEntities = response.headers.get('x-updated-entities')?.split(',').filter(Boolean) || [];
+      
+      if (dataUpdated && updatedEntities.length > 0) {
+        updatedEntities.forEach(entity => {
+          console.log(`Dispatching ${entity}-updated event`);
+          window.dispatchEvent(new CustomEvent(`${entity}-updated`));
+        });
+        
+        toast.success('Cambios aplicados', {
+          description: `Se actualizaron: ${updatedEntities.join(', ')}`
+        });
+      }
+
       if (!response.body) {
         throw new Error('No se recibió respuesta del servidor');
       }
@@ -275,6 +290,20 @@ export function GlobalAIAssistant() {
           return;
         }
         throw new Error('Error en la respuesta del servidor');
+      }
+
+      const dataUpdated = response.headers.get('x-data-updated') === '1';
+      const updatedEntities = response.headers.get('x-updated-entities')?.split(',').filter(Boolean) || [];
+      
+      if (dataUpdated && updatedEntities.length > 0) {
+        updatedEntities.forEach(entity => {
+          console.log(`Dispatching ${entity}-updated event`);
+          window.dispatchEvent(new CustomEvent(`${entity}-updated`));
+        });
+        
+        toast.success('Cambios aplicados', {
+          description: `Se actualizaron: ${updatedEntities.join(', ')}`
+        });
       }
 
       if (!response.body) {

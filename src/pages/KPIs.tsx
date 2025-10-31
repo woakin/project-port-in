@@ -86,14 +86,15 @@ export default function KPIs() {
   const uniqueKPINames = getUniqueKPINames();
   const latestKPIs = getLatestKPIs();
 
-  // Refrescar KPIs cuando el asistente aplique cambios
   useEffect(() => {
-    const onUpdated = () => {
+    const handleKPIsUpdated = () => {
+      console.log('KPIs updated event received');
       refetch();
-      toast({ title: 'KPIs actualizados', description: 'Se aplicaron cambios desde el asistente' });
+      toast({ title: 'KPIs actualizados', description: 'Datos actualizados exitosamente' });
     };
-    window.addEventListener('kpis-updated', onUpdated);
-    return () => window.removeEventListener('kpis-updated', onUpdated);
+
+    window.addEventListener('kpis-updated', handleKPIsUpdated);
+    return () => window.removeEventListener('kpis-updated', handleKPIsUpdated);
   }, [refetch, toast]);
 
   // Update AI Assistant context when selected KPI changes
