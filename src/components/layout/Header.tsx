@@ -4,11 +4,13 @@ import { useAuth } from "@/hooks/useAuth";
 import { useAdmin } from "@/hooks/useAdmin";
 import { NavLink, useNavigate } from "react-router-dom";
 import { ProjectSelector } from "@/components/projects/ProjectSelector";
+import { useAIAssistant } from "@/contexts/AIAssistantContext";
 import alashaLogo from "@/assets/alasha-logo.png";
 
 export function Header() {
   const { user, signOut, loading } = useAuth();
   const { isAdmin } = useAdmin();
+  const { openAssistant } = useAIAssistant();
   const navigate = useNavigate();
 
   return (
@@ -84,12 +86,15 @@ export function Header() {
             <>
               <ProjectSelector />
               
-              <NavLink to="/chat-diagnosis">
-                <Button variant="gradient" size="sm" className="gap-2">
-                  <MessageCircle className="h-4 w-4" />
-                  Asistente IA
-                </Button>
-              </NavLink>
+              <Button 
+                variant="gradient" 
+                size="sm" 
+                className="gap-2"
+                onClick={openAssistant}
+              >
+                <MessageCircle className="h-4 w-4" />
+                Asistente IA
+              </Button>
               
               <Button variant="ghost" size="icon" className="relative">
                 <Bell className="h-5 w-5" />
