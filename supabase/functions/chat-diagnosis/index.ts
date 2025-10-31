@@ -1187,8 +1187,7 @@ ESTILO:
                 const periodStart = kpiPeriodStart || new Date(today.getFullYear(), today.getMonth(), 1);
                 const periodEnd = kpiPeriodEnd || new Date(today.getFullYear(), today.getMonth() + 1, 0);
                 
-                // Buscar KPI existente con el mismo nombre (case-insensitive)
-                // Buscar el más reciente sin filtrar por fecha para actualizar el último registrado
+                // Buscar KPI existente con el mismo nombre para obtener valores por defecto
                 const { data: existingKpi } = await supabaseClient
                   .from('kpis')
                   .select('*')
@@ -1198,74 +1197,23 @@ ESTILO:
                   .limit(1)
                   .maybeSingle();
                 
-                let resultKpi;
-                let kpiError;
-                
-                if (existingKpi) {
-                  // Actualizar KPI existente
-                  console.log('Updating existing KPI:', existingKpi.id, { kpiValue, kpiTarget, kpiUnit, kpiArea, periodStart, periodEnd });
-                  const updateData: any = {
+                // Siempre crear un nuevo registro histórico
+                console.log('Creating new historical KPI record with area:', kpiArea);
+                const { data: resultKpi, error: kpiError } = await supabaseClient
+                  .from('kpis')
+                  .insert({
+                    company_id: companyId,
+                    area: kpiArea || existingKpi?.area || 'operations',
+                    name: kpiName,
                     value: kpiValue,
-                  };
-                  
-                  // Actualizar área si se especificó
-                  if (kpiArea) {
-                    updateData.area = kpiArea;
-                  }
-                  
-                  // Actualizar target_value si se proporcionó
-                  if (kpiTarget !== null) {
-                    updateData.target_value = kpiTarget;
-                  }
-                  
-                  // Actualizar unit si se proporcionó o limpiar si es inválida
-                  if (kpiUnit !== null) {
-                    updateData.unit = kpiUnit;
-                  } else {
-                    if (existingKpi.unit && ['y', 'con', 'la'].includes(existingKpi.unit.toLowerCase())) {
-                      updateData.unit = null;
-                    }
-                  }
-                  
-                  // Actualizar periodo si se especificó
-                  if (kpiPeriodStart) {
-                    updateData.period_start = periodStart.toISOString();
-                  }
-                  if (kpiPeriodEnd) {
-                    updateData.period_end = periodEnd.toISOString();
-                  }
-                  
-                  const { data, error } = await supabaseClient
-                    .from('kpis')
-                    .update(updateData)
-                    .eq('id', existingKpi.id)
-                    .select()
-                    .single();
-                  
-                  resultKpi = data;
-                  kpiError = error;
-                } else {
-                  // Crear nuevo KPI
-                  console.log('Creating new KPI with area:', kpiArea);
-                  const { data, error } = await supabaseClient
-                    .from('kpis')
-                    .insert({
-                      company_id: companyId,
-                      area: kpiArea,
-                      name: kpiName,
-                      value: kpiValue,
-                      target_value: kpiTarget,
-                      unit: kpiUnit || null,
-                      period_start: periodStart.toISOString(),
-                      period_end: periodEnd.toISOString(),
-                      source: 'manual'
-                    })
-                    .select()
-                    .single();
-                  
-                  resultKpi = data;
-                  kpiError = error;
-                }
+                    target_value: kpiTarget !== null ? kpiTarget : (existingKpi?.target_value || null),
+                    unit: kpiUnit || existingKpi?.unit || null,
+                    period_start: periodStart.toISOString(),
+                    period_end: periodEnd.toISOString(),
+                    source: 'manual'
+                  })
+                  .select()
+                  .single();
                 
                 if (!kpiError && resultKpi) {
                   console.log('KPI operation successful:', resultKpi);
