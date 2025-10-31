@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ProjectProvider } from "./contexts/ProjectContext";
 import { AIAssistantProvider } from "./contexts/AIAssistantContext";
 import { GlobalAIAssistant } from "./components/chat/GlobalAIAssistant";
+import { FloatingAIButton } from "./components/chat/FloatingAIButton";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import ForgotPassword from "./pages/ForgotPassword";
@@ -51,6 +52,7 @@ const App = () => (
               <Route path="*" element={<NotFound />} />
             </Routes>
             <GlobalAIAssistant />
+            <FloatingAIButton />
           </AIAssistantProvider>
         </BrowserRouter>
       </ProjectProvider>

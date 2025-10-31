@@ -1,16 +1,14 @@
-import { Bell, LogOut, User, MessageCircle, Shield } from "lucide-react";
+import { Bell, LogOut, User, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useAdmin } from "@/hooks/useAdmin";
 import { NavLink, useNavigate } from "react-router-dom";
 import { ProjectSelector } from "@/components/projects/ProjectSelector";
-import { useAIAssistant } from "@/contexts/AIAssistantContext";
 import alashaLogo from "@/assets/alasha-logo.png";
 
 export function Header() {
   const { user, signOut, loading } = useAuth();
   const { isAdmin } = useAdmin();
-  const { open: openAssistant } = useAIAssistant();
   const navigate = useNavigate();
 
   return (
@@ -78,6 +76,18 @@ export function Header() {
             >
               Documentos
             </NavLink>
+            <NavLink 
+              to="/chat-diagnosis" 
+              className={({ isActive }) => 
+                `text-sm font-medium transition-colors ${
+                  isActive 
+                    ? 'text-foreground' 
+                    : 'text-muted-foreground hover:text-foreground'
+                }`
+              }
+            >
+              Chat
+            </NavLink>
           </nav>
         )}
 
@@ -85,16 +95,6 @@ export function Header() {
           {!loading && user ? (
             <>
               <ProjectSelector />
-              
-              <Button 
-                variant="gradient" 
-                size="sm" 
-                className="gap-2"
-                onClick={openAssistant}
-              >
-                <MessageCircle className="h-4 w-4" />
-                Asistente IA
-              </Button>
               
               <Button variant="ghost" size="icon" className="relative">
                 <Bell className="h-5 w-5" />
