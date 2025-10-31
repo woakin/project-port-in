@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card } from '@/components/shared/Card';
 import { toast } from '@/hooks/use-toast';
-import { Send, Loader2, CheckCircle, Home, Info } from 'lucide-react';
+import { Send, Loader2, CheckCircle, Home, Info, ArrowLeft, ArrowRight } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { supabase } from '@/integrations/supabase/client';
 import ReactMarkdown from 'react-markdown';
@@ -225,10 +225,17 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
     
     const order: Array<typeof currentSection> = ['strategy', 'operations', 'finance', 'marketing', 'legal', 'technology'];
     const currentIndex = order.indexOf(currentSection);
-    if (currentIndex < order.length - 1) {
-      const nextSection = order[currentIndex + 1];
-      const previousSectionName = getSectionName(currentSection);
-      const nextSectionName = getSectionName(nextSection);
+    if (currentIndex >= order.length - 1) {
+      toast({
+        title: 'Última área',
+        description: 'Ya estás en la última área del diagnóstico',
+      });
+      return;
+    }
+    
+    const nextSection = order[currentIndex + 1];
+    const previousSectionName = getSectionName(currentSection);
+    const nextSectionName = getSectionName(nextSection);
       
       // 1. Cambiar la sección actual
       setCurrentSection(nextSection);
@@ -323,7 +330,9 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
               const content = parsed.choices?.[0]?.delta?.content;
               if (content) {
                 assistantMessage += content;
-                setMessages([...updatedMessages, { role: 'assistant', content: assistantMessage }]);
+                // Filtrar metadata técnica antes de mostrar
+                const cleanContent = filterMetadata(assistantMessage);
+                setMessages([...updatedMessages, { role: 'assistant', content: cleanContent }]);
               }
             } catch (e) {
               console.error('Error parsing JSON:', e);
@@ -341,6 +350,130 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
       } finally {
         setSending(false);
       }
+    
+  };
+
+  // FASE 3: Función para retroceder a área anterior
+  const moveToPreviousSection = async () => {
+    if (sending) return; // No cambiar si hay mensaje en proceso
+    
+    const order: Array<typeof currentSection> = ['strategy', 'operations', 'finance', 'marketing', 'legal', 'technology'];
+    const currentIndex = order.indexOf(currentSection);
+    if (currentIndex <= 0) {
+      toast({
+        title: 'Primera área',
+        description: 'Ya estás en la primera área del diagnóstico',
+      });
+      return;
+    }
+    
+    const previousSection = order[currentIndex - 1];
+    const currentSectionName = getSectionName(currentSection);
+    const previousSectionName = getSectionName(previousSection);
+    
+    // 1. Cambiar la sección actual
+    setCurrentSection(previousSection);
+    
+    // 2. Agregar mensaje del sistema visible
+    const systemMessage: Message = {
+      role: 'assistant',
+      content: `🔄 **Retrocediste a: ${previousSectionName}**\n\nVolvamos a revisar ${previousSectionName}.`
+    };
+    
+    const updatedMessages = [...messages, systemMessage];
+    setMessages(updatedMessages);
+    
+    // 3. Toast de confirmación
+    toast({
+      title: 'Área cambiada',
+      description: `Regresaste a: ${previousSectionName}`
+    });
+    
+    // 4. El AI genera automáticamente una pregunta contextual para el área
+    setSending(true);
+    
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error('No hay sesión activa');
+      }
+
+      const contextualPrompt = `El usuario retrocedió al área de ${previousSectionName}. Genera una pregunta contextual considerando que ya habían discutido esta área anteriormente. Pregunta si quieren revisar o agregar algo más sobre ${previousSectionName}.`;
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat-diagnosis`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            messages: [
+              ...updatedMessages,
+              { role: 'system', content: contextualPrompt }
+            ],
+            companyInfo,
+            isComplete: false,
+            mode: chatMode
+          }),
+        }
+      );
+
+      if (!response.ok || !response.body) {
+        throw new Error('Error al conectar con el asistente');
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let assistantMessage = '';
+      let textBuffer = '';
+
+      // Agregar mensaje del asistente vacío que iremos llenando
+      setMessages([...updatedMessages, { role: 'assistant', content: '' }]);
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        textBuffer += decoder.decode(value, { stream: true });
+
+        let newlineIndex: number;
+        while ((newlineIndex = textBuffer.indexOf('\n')) !== -1) {
+          let line = textBuffer.slice(0, newlineIndex);
+          textBuffer = textBuffer.slice(newlineIndex + 1);
+
+          if (line.endsWith('\r')) line = line.slice(0, -1);
+          if (line.startsWith(':') || line.trim() === '') continue;
+          if (!line.startsWith('data: ')) continue;
+
+          const jsonStr = line.slice(6).trim();
+          if (jsonStr === '[DONE]') continue;
+
+          try {
+            const parsed = JSON.parse(jsonStr);
+            const content = parsed.choices?.[0]?.delta?.content;
+            if (content) {
+              assistantMessage += content;
+              // Filtrar metadata técnica antes de mostrar
+              const cleanContent = filterMetadata(assistantMessage);
+              setMessages([...updatedMessages, { role: 'assistant', content: cleanContent }]);
+            }
+          } catch (e) {
+            console.error('Error parsing JSON:', e);
+          }
+        }
+      }
+
+    } catch (error) {
+      console.error('Error al cambiar de área:', error);
+      toast({
+        title: 'Error',
+        description: 'No se pudo generar la pregunta automática, pero puedes continuar escribiendo.',
+        variant: 'destructive'
+      });
+    } finally {
+      setSending(false);
     }
   };
 
@@ -374,6 +507,12 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
 
   // FASE 3.4: Detectar dispositivo móvil
   const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+  // Función para filtrar metadata técnica del AI
+  const filterMetadata = (content: string): string => {
+    // Eliminar bloque de metadata al inicio (entre --- y ---)
+    return content.replace(/^---\s*\n[\s\S]*?\n---\s*\n/m, '').trim();
+  };
 
   const handleQuickAction = (prompt: string) => {
     setInput(prompt);
@@ -503,11 +642,13 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
 
           try {
             const parsed = JSON.parse(jsonStr);
-            const content = parsed.choices?.[0]?.delta?.content;
-            if (content) {
-              assistantMessage += content;
-              setMessages([...newMessages, { role: 'assistant', content: assistantMessage }]);
-            }
+              const content = parsed.choices?.[0]?.delta?.content;
+              if (content) {
+                assistantMessage += content;
+                // Filtrar metadata técnica antes de mostrar
+                const cleanContent = filterMetadata(assistantMessage);
+                setMessages([...newMessages, { role: 'assistant', content: cleanContent }]);
+              }
           } catch (e) {
             console.error('Error parsing JSON:', e);
           }
@@ -919,17 +1060,33 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
                   />
                 ))}
               </div>
-              {/* FASE 3: Botón para avanzar de área */}
-              {getSectionNumber(currentSection) < 6 && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={moveToNextSection}
-                  className="text-xs"
-                >
-                  Siguiente área
-                </Button>
-              )}
+              {/* FASE 3: Botones para navegar entre áreas */}
+              <div className="flex gap-2">
+                {getSectionNumber(currentSection) > 1 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={moveToPreviousSection}
+                    className="text-xs"
+                    disabled={sending}
+                  >
+                    <ArrowLeft className="w-3 h-3 mr-1" />
+                    Área anterior
+                  </Button>
+                )}
+                {getSectionNumber(currentSection) < 6 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={moveToNextSection}
+                    className="text-xs"
+                    disabled={sending}
+                  >
+                    Siguiente área
+                    <ArrowRight className="w-3 h-3 ml-1" />
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
         </div>
