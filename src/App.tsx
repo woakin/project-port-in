@@ -28,10 +28,10 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <ProjectProvider>
-        <AIAssistantProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <AIAssistantProvider>
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/auth" element={<Auth />} />
@@ -51,8 +51,8 @@ const App = () => (
               <Route path="*" element={<NotFound />} />
             </Routes>
             <GlobalAIAssistant />
-          </BrowserRouter>
-        </AIAssistantProvider>
+          </AIAssistantProvider>
+        </BrowserRouter>
       </ProjectProvider>
     </TooltipProvider>
   </QueryClientProvider>

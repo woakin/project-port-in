@@ -1,5 +1,4 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
-import { useLocation } from 'react-router-dom';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -34,10 +33,9 @@ const AIAssistantContext = createContext<AIAssistantContextType | undefined>(und
 
 export function AIAssistantProvider({ children }: { children: ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
-  const location = useLocation();
   const [messages, setMessages] = useState<Message[]>([]);
   const [context, setContext] = useState<AIContext>({
-    page: location.pathname,
+    page: '/',
     projectId: null,
     projectName: null,
   });
