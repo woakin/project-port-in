@@ -1,10 +1,15 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
+
+const requestSchema = z.object({
+  documentId: z.string().uuid('Invalid document ID format')
+})
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -12,7 +17,8 @@ serve(async (req) => {
   }
 
   try {
-    const { documentId } = await req.json()
+    const body = await req.json()
+    const { documentId } = requestSchema.parse(body)
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
@@ -168,21 +174,21 @@ Responde SOLO con JSON en este formato:
   } catch (error) {
     console.error('Error analyzing document:', error)
     
-    // Actualizar estado a failed si hay error
-    if (error instanceof Error && error.message.includes('documentId')) {
-      try {
-        const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-        const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-        const supabase = createClient(supabaseUrl, supabaseServiceKey)
-        
-        const { documentId } = await req.json()
-        await supabase
-          .from('documents')
-          .update({ analysis_status: 'failed' })
-          .eq('id', documentId)
-      } catch (e) {
-        console.error('Error updating failed status:', e)
-      }
+    // Handle validation errors
+    if (error instanceof z.ZodError) {
+      return new Response(
+        JSON.stringify({ 
+          error: 'Invalid request data',
+          details: error.errors 
+        }),
+        { 
+          status: 400,
+          headers: { 
+            ...corsHeaders, 
+            'Content-Type': 'application/json' 
+          } 
+        }
+      )
     }
 
     return new Response(
