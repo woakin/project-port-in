@@ -2,7 +2,7 @@ import { Bell, LogOut, User, MessageCircle, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useAdmin } from "@/hooks/useAdmin";
-import { Link, useNavigate } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import { ProjectSelector } from "@/components/projects/ProjectSelector";
 import alashaLogo from "@/assets/alasha-logo.png";
 
@@ -27,18 +27,55 @@ export function Header() {
 
         {user && (
           <nav className="flex items-center gap-6">
-            <Link to="/" className="text-sm font-medium text-foreground hover:text-primary transition-colors">
+            <NavLink 
+              to="/" 
+              end
+              className={({ isActive }) => 
+                `text-sm font-medium transition-colors ${
+                  isActive 
+                    ? 'text-foreground' 
+                    : 'text-muted-foreground hover:text-foreground'
+                }`
+              }
+            >
               Dashboard
-            </Link>
-            <Link to="/kpis" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+            </NavLink>
+            <NavLink 
+              to="/kpis" 
+              className={({ isActive }) => 
+                `text-sm font-medium transition-colors ${
+                  isActive 
+                    ? 'text-foreground' 
+                    : 'text-muted-foreground hover:text-foreground'
+                }`
+              }
+            >
               KPIs
-            </Link>
-            <Link to="/tasks" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+            </NavLink>
+            <NavLink 
+              to="/tasks" 
+              className={({ isActive }) => 
+                `text-sm font-medium transition-colors ${
+                  isActive 
+                    ? 'text-foreground' 
+                    : 'text-muted-foreground hover:text-foreground'
+                }`
+              }
+            >
               Tareas
-            </Link>
-            <Link to="/documents" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+            </NavLink>
+            <NavLink 
+              to="/documents" 
+              className={({ isActive }) => 
+                `text-sm font-medium transition-colors ${
+                  isActive 
+                    ? 'text-foreground' 
+                    : 'text-muted-foreground hover:text-foreground'
+                }`
+              }
+            >
               Documentos
-            </Link>
+            </NavLink>
           </nav>
         )}
 
@@ -47,12 +84,12 @@ export function Header() {
             <>
               <ProjectSelector />
               
-              <Link to="/chat-diagnosis">
+              <NavLink to="/chat-diagnosis">
                 <Button variant="gradient" size="sm" className="gap-2">
                   <MessageCircle className="h-4 w-4" />
                   Asistente IA
                 </Button>
-              </Link>
+              </NavLink>
               
               <Button variant="ghost" size="icon" className="relative">
                 <Bell className="h-5 w-5" />
@@ -73,11 +110,11 @@ export function Header() {
               </div>
               
               {isAdmin && (
-                <Link to="/admin">
+                <NavLink to="/admin">
                   <Button variant="ghost" size="icon" title="Administración">
                     <Shield className="h-5 w-5" />
                   </Button>
-                </Link>
+                </NavLink>
               )}
             </>
           ) : !loading && !user ? (
