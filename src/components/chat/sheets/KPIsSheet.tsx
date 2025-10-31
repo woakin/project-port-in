@@ -91,7 +91,7 @@ export default function KPIsSheet({ isOpen }: KPIsSheetProps) {
                       <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
                         <div 
                           className={`h-full transition-all ${
-                            isOnTarget ? 'bg-success' : 'bg-warning'
+                            isOnTarget ? 'bg-color-success-default' : 'bg-color-warning-default'
                           }`}
                           style={{ width: `${Math.min(progress || 0, 100)}%` }}
                         />
