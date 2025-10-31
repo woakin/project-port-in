@@ -33,6 +33,40 @@ const requestSchema = z.object({
   mode: z.enum(['diagnosis', 'strategic', 'follow_up', 'document']).optional()
 });
 
+// KPI validation schema for chat commands
+const kpiDataSchema = z.object({
+  name: z.string()
+    .min(1, 'El nombre del KPI no puede estar vacío')
+    .max(100, 'El nombre del KPI es demasiado largo (máximo 100 caracteres)')
+    .regex(/^[a-záéíóúñ0-9\s\-_]+$/i, 'El nombre contiene caracteres no permitidos'),
+  area: z.enum(['estrategia', 'finanzas', 'marketing', 'operaciones', 'tecnología', 'legal', 'general'], {
+    errorMap: () => ({ message: 'Área inválida. Debe ser: estrategia, finanzas, marketing, operaciones, tecnología, legal o general' })
+  }),
+  value: z.number()
+    .min(-1000000000, 'El valor es demasiado bajo')
+    .max(1000000000, 'El valor es demasiado alto')
+    .finite('El valor debe ser un número finito'),
+  target_value: z.number()
+    .min(-1000000000, 'El valor objetivo es demasiado bajo')
+    .max(1000000000, 'El valor objetivo es demasiado alto')
+    .finite('El valor objetivo debe ser un número finito')
+    .nullable()
+    .optional(),
+  unit: z.string()
+    .max(20, 'La unidad es demasiado larga (máximo 20 caracteres)')
+    .regex(/^[a-z$€£%]+$/i, 'Formato de unidad inválido')
+    .nullable()
+    .optional(),
+  period_start: z.date()
+    .min(new Date('2000-01-01'), 'La fecha de inicio está muy en el pasado (mínimo: año 2000)')
+    .max(new Date('2100-12-31'), 'La fecha de inicio está muy en el futuro (máximo: año 2100)'),
+  period_end: z.date()
+    .min(new Date('2000-01-01'), 'La fecha de fin está muy en el pasado (mínimo: año 2000)')
+    .max(new Date('2100-12-31'), 'La fecha de fin está muy en el futuro (máximo: año 2100)')
+}).refine(data => data.period_end >= data.period_start, {
+  message: 'La fecha de fin debe ser igual o posterior a la fecha de inicio'
+});
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -1197,33 +1231,68 @@ ESTILO:
                   .limit(1)
                   .maybeSingle();
                 
-                // Siempre crear un nuevo registro histórico
-                console.log('Creating new historical KPI record with area:', kpiArea);
-                const { data: resultKpi, error: kpiError } = await supabaseClient
-                  .from('kpis')
-                  .insert({
-                    company_id: companyId,
-                    area: kpiArea || existingKpi?.area || 'operations',
+                // Validate extracted KPI data before insertion
+                try {
+                  const validatedData = kpiDataSchema.parse({
                     name: kpiName,
+                    area: kpiArea || existingKpi?.area || 'operaciones',
                     value: kpiValue,
                     target_value: kpiTarget !== null ? kpiTarget : (existingKpi?.target_value || null),
                     unit: kpiUnit || existingKpi?.unit || null,
-                    period_start: periodStart.toISOString(),
-                    period_end: periodEnd.toISOString(),
-                    source: 'manual'
-                  })
-                  .select()
-                  .single();
-                
-                if (!kpiError && resultKpi) {
-                  console.log('KPI operation successful:', resultKpi);
-                  actionResults.push({
-                    type: 'kpi_updated',
-                    success: true,
-                    data: { name: resultKpi.name, value: resultKpi.value, unit: resultKpi.unit, target: resultKpi.target_value }
+                    period_start: periodStart,
+                    period_end: periodEnd
                   });
-                } else {
-                  console.error('Error with KPI operation:', kpiError);
+                  
+                  // Siempre crear un nuevo registro histórico con datos validados
+                  console.log('Creating new historical KPI record with validated data:', validatedData);
+                  const { data: resultKpi, error: kpiError } = await supabaseClient
+                    .from('kpis')
+                    .insert({
+                      company_id: companyId,
+                      area: validatedData.area,
+                      name: validatedData.name,
+                      value: validatedData.value,
+                      target_value: validatedData.target_value,
+                      unit: validatedData.unit,
+                      period_start: validatedData.period_start.toISOString(),
+                      period_end: validatedData.period_end.toISOString(),
+                      source: 'manual'
+                    })
+                    .select()
+                    .single();
+                  
+                  if (!kpiError && resultKpi) {
+                    console.log('KPI operation successful:', resultKpi);
+                    actionResults.push({
+                      type: 'kpi_updated',
+                      success: true,
+                      data: { name: resultKpi.name, value: resultKpi.value, unit: resultKpi.unit, target: resultKpi.target_value }
+                    });
+                  } else {
+                    console.error('Error with KPI operation:', kpiError);
+                    actionResults.push({
+                      type: 'kpi_updated',
+                      success: false,
+                      error: kpiError?.message || 'Error al guardar el KPI'
+                    });
+                  }
+                } catch (validationError) {
+                  if (validationError instanceof z.ZodError) {
+                    console.error('KPI validation failed:', validationError.errors);
+                    const errorMessages = validationError.errors.map(e => e.message).join('. ');
+                    actionResults.push({
+                      type: 'kpi_updated',
+                      success: false,
+                      error: `Datos de KPI inválidos: ${errorMessages}`
+                    });
+                  } else {
+                    console.error('Unexpected validation error:', validationError);
+                    actionResults.push({
+                      type: 'kpi_updated',
+                      success: false,
+                      error: 'Error inesperado al validar los datos del KPI'
+                    });
+                  }
                 }
               }
               
