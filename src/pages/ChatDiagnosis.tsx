@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card } from '@/components/shared/Card';
 import { toast } from '@/hooks/use-toast';
 import { Send, Loader2, CheckCircle, Home, Info } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { supabase } from '@/integrations/supabase/client';
 import ReactMarkdown from 'react-markdown';
 import ModeSelector from '@/components/chat/ModeSelector';
@@ -232,6 +233,37 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
     }
   };
 
+  // FASE 2: Auto-resize del textarea según contenido
+  const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setInput(e.target.value);
+    
+    // Reset height para calcular el scrollHeight correcto
+    e.target.style.height = 'auto';
+    
+    // Ajustar altura basada en contenido, con límites
+    const newHeight = Math.min(e.target.scrollHeight, 200); // max 200px
+    e.target.style.height = `${newHeight}px`;
+  };
+
+  // FASE 3.1: Placeholder contextual según modo
+  const getPlaceholder = () => {
+    switch (chatMode) {
+      case 'diagnosis':
+        return 'Describe tu situación actual... (Enter para enviar, Shift+Enter para nueva línea)';
+      case 'strategic':
+        return 'Pregunta sobre estrategia... (Enter para enviar, Shift+Enter para nueva línea)';
+      case 'follow_up':
+        return 'Gestiona tus tareas o actualiza progreso... (Enter para enviar, Shift+Enter para nueva línea)';
+      case 'document':
+        return 'Pregunta sobre tus documentos... (Enter para enviar, Shift+Enter para nueva línea)';
+      default:
+        return 'Escribe tu mensaje... (Enter para enviar, Shift+Enter para nueva línea)';
+    }
+  };
+
+  // FASE 3.4: Detectar dispositivo móvil
+  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
   const handleQuickAction = (prompt: string) => {
     setInput(prompt);
     inputRef.current?.focus();
@@ -293,6 +325,12 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
     }
     
     setInput('');
+    
+    // FASE 2: Resetear altura del textarea después de enviar
+    if (inputRef.current) {
+      inputRef.current.style.height = '60px';
+    }
+    
     setSending(true);
     
     // Mantener foco en el input
@@ -846,25 +884,64 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
             </div>
           )}
           <div className="flex gap-2 items-end">
-            <Textarea
-              ref={inputRef}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && e.shiftKey) {
-                  e.preventDefault();
-                  sendMessage();
-                }
-              }}
-              placeholder="Escribe tu respuesta... (Shift+Enter para enviar)"
-              disabled={sending || generatingDiagnosis}
-              autoFocus
-              className="min-h-[60px] max-h-[200px] resize-none"
-              rows={2}
-            />
-            <Button onClick={sendMessage} disabled={sending || generatingDiagnosis || !input.trim()}>
-              <Send className="h-4 w-4" />
-            </Button>
+            <div className="relative flex-1">
+              <Textarea
+                ref={inputRef}
+                value={input}
+                onChange={handleTextareaChange}
+                onKeyDown={(e) => {
+                  // FASE 3.4: En móvil, Enter siempre hace salto de línea
+                  if (isMobile) return;
+                  
+                  // FASE 1: Comportamiento estándar - Enter envía, Shift+Enter hace salto de línea
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                  }
+                }}
+                placeholder={getPlaceholder()}
+                disabled={sending || generatingDiagnosis}
+                autoFocus
+                className="min-h-[60px] max-h-[200px] resize-none overflow-y-auto transition-all pr-20"
+                rows={1}
+                style={{ height: '60px' }}
+                aria-label="Campo de entrada de mensaje"
+                aria-describedby="chat-input-hint"
+                aria-invalid={chatMode === 'diagnosis' && input.length > 0 && input.length < 20}
+              />
+              {/* FASE 3.2: Indicador de caracteres para respuestas largas */}
+              {input.length > 500 && (
+                <span className="absolute bottom-2 right-2 text-xs text-muted-foreground bg-background/80 px-2 py-1 rounded">
+                  {input.length} caracteres
+                </span>
+              )}
+              {/* FASE 4: Accesibilidad - descripción del input */}
+              <span id="chat-input-hint" className="sr-only">
+                Presiona Enter para enviar tu mensaje o Shift+Enter para crear una nueva línea. En dispositivos móviles, usa el botón para enviar.
+              </span>
+            </div>
+            {/* FASE 3.3: Botón de envío mejorado con tooltip */}
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    onClick={sendMessage} 
+                    disabled={sending || generatingDiagnosis || !input.trim()}
+                    size="icon"
+                    className="h-[60px] w-[60px] shrink-0"
+                  >
+                    {sending ? (
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                    ) : (
+                      <Send className="h-5 w-5" />
+                    )}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Enviar mensaje {!isMobile && '(Enter)'}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
         </div>
       </div>
