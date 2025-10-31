@@ -42,7 +42,8 @@ const requestSchema = z.object({
       kpiName: z.string().optional(),
       taskId: z.string().optional(),
       documentId: z.string().optional()
-    }).optional()
+    }).optional(),
+    data: z.any().optional() // Datos contextuales de la página
   }).optional()
 });
 
@@ -113,7 +114,7 @@ serve(async (req) => {
 
     // Modo contextual: asistente global
     if (mode === 'contextual') {
-      const { currentPage, project, focus } = requestContext || {};
+      const { currentPage, project, focus, data } = requestContext || {};
       
       const pageName = currentPage === '/' ? 'Dashboard' : 
                        currentPage === '/kpis' ? 'KPIs' : 
@@ -127,13 +128,61 @@ serve(async (req) => {
         systemPrompt += ` del proyecto "${project.name}"`;
       }
       
-      if (focus) {
-        if (focus.kpiName) systemPrompt += `. El usuario está viendo el KPI: ${focus.kpiName}`;
-        if (focus.taskId) systemPrompt += `. El usuario está viendo una tarea específica`;
-        if (focus.documentId) systemPrompt += `. El usuario está viendo un documento específico`;
+      // Añadir datos contextuales si existen
+      if (data) {
+        if (data.tasks && Array.isArray(data.tasks)) {
+          const urgentTasks = data.tasks.filter((t: any) => t.priority === 'high' && t.status !== 'completed');
+          const inProgressTasks = data.tasks.filter((t: any) => t.status === 'in_progress');
+          const completedTasks = data.tasks.filter((t: any) => t.status === 'completed');
+          
+          systemPrompt += `\n\nINFORMACIÓN DE TAREAS DEL PROYECTO:
+- Total de tareas: ${data.tasks.length}
+- Tareas completadas: ${completedTasks.length}
+- Tareas en progreso: ${inProgressTasks.length}
+- Tareas urgentes (prioridad alta): ${urgentTasks.length}
+
+TAREAS URGENTES:
+${urgentTasks.length > 0 ? urgentTasks.map((t: any) => 
+  `• ${t.title} - ${t.status} ${t.due_date ? `(Fecha límite: ${new Date(t.due_date).toLocaleDateString()})` : ''}`
+).join('\n') : '(No hay tareas urgentes pendientes)'}
+
+TAREAS EN PROGRESO:
+${inProgressTasks.length > 0 ? inProgressTasks.slice(0, 5).map((t: any) => 
+  `• ${t.title} - Prioridad: ${t.priority}`
+).join('\n') : '(No hay tareas en progreso)'}`;
+        }
+        
+        if (data.kpis && Array.isArray(data.kpis)) {
+          systemPrompt += `\n\nINFORMACIÓN DE KPIs DEL PROYECTO:
+- Total de KPIs: ${data.kpis.length}
+
+KPIs ACTUALES:
+${data.kpis.map((k: any) => {
+  const progress = k.target_value ? Math.round((k.value / k.target_value) * 100) : 0;
+  const onTarget = k.target_value ? k.value >= k.target_value : null;
+  return `• ${k.name} (${k.area}): ${k.value}${k.unit || ''} ${k.target_value ? `/ Meta: ${k.target_value}${k.unit || ''} (${progress}% ${onTarget ? '✓ En meta' : '⚠ Bajo meta'})` : ''}`;
+}).join('\n')}`;
+
+          if (data.selectedKPI) {
+            systemPrompt += `\n\nKPI ACTUALMENTE SELECCIONADO:
+• ${data.selectedKPI.name}: ${data.selectedKPI.value}${data.selectedKPI.unit || ''}${data.selectedKPI.target_value ? ` / Meta: ${data.selectedKPI.target_value}${data.selectedKPI.unit || ''}` : ''}`;
+          }
+        }
       }
       
-      systemPrompt += `.\n\nSé breve, específico y accionable. No repitas información que el usuario ya puede ver en pantalla. Responde en español.`;
+      if (focus) {
+        if (focus.kpiName) systemPrompt += `\n\nEl usuario está consultando el KPI: ${focus.kpiName}`;
+        if (focus.taskId) systemPrompt += `\n\nEl usuario está consultando una tarea específica`;
+        if (focus.documentId) systemPrompt += `\n\nEl usuario está consultando un documento específico`;
+      }
+      
+      systemPrompt += `.\n\nINSTRUCCIONES:
+- Usa la información proporcionada arriba para dar respuestas específicas y precisas
+- Si el usuario pregunta por datos (tareas, KPIs), usa SOLO la información real que te di
+- Sé breve, específico y accionable
+- No inventes números ni información que no tienes
+- Si no tienes la información solicitada, dilo claramente
+- Responde en español`;
 
       const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
         method: 'POST',

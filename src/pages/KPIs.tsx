@@ -94,11 +94,35 @@ export default function KPIs() {
         focus: {
           kpiName: selectedKPIName,
           kpiId: selectedKPI?.id,
+        },
+        data: {
+          kpis: latestKPIs.map(k => ({
+            name: k.name,
+            area: k.area,
+            value: k.value,
+            target_value: k.target_value,
+            unit: k.unit,
+          })),
+          selectedKPI: selectedKPI ? {
+            name: selectedKPI.name,
+            value: selectedKPI.value,
+            target_value: selectedKPI.target_value,
+            unit: selectedKPI.unit,
+          } : null
         }
       });
     } else {
       updateContext({
-        focus: undefined
+        focus: undefined,
+        data: {
+          kpis: latestKPIs.map(k => ({
+            name: k.name,
+            area: k.area,
+            value: k.value,
+            target_value: k.target_value,
+            unit: k.unit,
+          }))
+        }
       });
     }
   }, [selectedKPIName, latestKPIs, updateContext]);

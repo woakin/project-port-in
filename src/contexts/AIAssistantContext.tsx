@@ -15,6 +15,7 @@ interface AIContext {
     taskId?: string;
     documentId?: string;
   };
+  data?: any; // Datos contextuales de la página actual
 }
 
 interface AIAssistantContextType {

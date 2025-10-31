@@ -9,12 +9,14 @@ import { TaskDetails } from "@/components/tasks/TaskDetails";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Loader2, KanbanSquare, GanttChart } from "lucide-react";
+import { useAIAssistant } from "@/contexts/AIAssistantContext";
 
 export default function Tasks() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const { updateContext } = useAIAssistant();
 
   useEffect(() => {
     fetchTasks();
@@ -70,7 +72,23 @@ export default function Tasks() {
 
       if (tasksError) throw tasksError;
 
-      setTasks((tasksData || []) as Task[]);
+      const tasksWithDetails = (tasksData || []) as Task[];
+      setTasks(tasksWithDetails);
+      
+      // Update AI context with tasks data
+      updateContext({
+        data: {
+          tasks: tasksWithDetails.map(t => ({
+            id: t.id,
+            title: t.title,
+            description: t.description,
+            status: t.status,
+            priority: t.priority,
+            estimated_effort: t.estimated_effort,
+            due_date: t.due_date,
+          }))
+        }
+      });
     } catch (error) {
       console.error('Error fetching tasks:', error);
       toast.error('Error al cargar tareas');

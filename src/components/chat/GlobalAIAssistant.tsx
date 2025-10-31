@@ -116,6 +116,7 @@ export function GlobalAIAssistant() {
               currentPage: context.page,
               project: currentProject ? { id: currentProject.id, name: currentProject.name } : null,
               focus: context.focus,
+              data: context.data,
             },
             mode: 'contextual',
           }),
