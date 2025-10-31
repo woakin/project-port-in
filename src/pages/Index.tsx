@@ -7,6 +7,7 @@ import { MainLayout } from "@/components/layout/MainLayout";
 import { KPICard } from "@/components/dashboard/KPICard";
 import { TasksList } from "@/components/dashboard/TasksList";
 import { MainKPIChart } from "@/components/kpi/MainKPIChart";
+import { DiagnosticHeroCard } from "@/components/dashboard/DiagnosticHeroCard";
 import { Card } from "@/components/shared/Card";
 import { Badge } from "@/components/shared/Badge";
 import { Button } from "@/components/ui/button";
@@ -639,6 +640,40 @@ const Index = () => {
           </div>
         </div>
 
+        {/* Diagnostic Hero Card - Full Width */}
+        {latestDiagnosis ? (
+          <div className="mb-comfortable">
+            <DiagnosticHeroCard diagnosis={latestDiagnosis} />
+          </div>
+        ) : (
+          <div className="mb-comfortable">
+            <Card variant="content" className="border-2 border-dashed">
+              <div className="text-center py-12">
+                <div className="flex justify-center mb-4">
+                  <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+                    <Activity className="h-8 w-8 text-primary" />
+                  </div>
+                </div>
+                <h3 className="text-xl font-semibold text-foreground mb-2">
+                  Comienza con un diagnóstico
+                </h3>
+                <p className="text-muted-foreground mb-6 max-w-2xl mx-auto">
+                  Descubre el estado actual de tu negocio y recibe un plan de acción personalizado en minutos
+                </p>
+                <Button 
+                  onClick={() => navigate('/chat-diagnosis')}
+                  size="lg"
+                  variant="gradient"
+                >
+                  Iniciar Diagnóstico
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </Button>
+              </div>
+            </Card>
+          </div>
+        )}
+
+        {/* KPI Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-standard mb-comfortable">
           <KPICard 
             title="Progreso General" 
@@ -662,6 +697,7 @@ const Index = () => {
           />
         </div>
 
+        {/* Tasks Section - 2 columns */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-standard">
           <div className="lg:col-span-2">
             <Card variant="service">
@@ -692,82 +728,6 @@ const Index = () => {
           </div>
 
           <div className="space-y-standard">
-            <Card variant="content">
-              {latestDiagnosis ? (
-                <>
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-base font-semibold text-foreground">Diagnóstico</h3>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="default" className="text-xs">v{latestDiagnosis.version}</Badge>
-                      <Badge variant="default">Completado</Badge>
-                    </div>
-                  </div>
-                  <div className="space-y-3 mb-4">
-                    {latestDiagnosis.version > 1 && (
-                      <div className="text-xs text-muted-foreground pb-2 border-b border-border">
-                        Actualizado hace {Math.floor((Date.now() - new Date(latestDiagnosis.updated_at || latestDiagnosis.created_at).getTime()) / (1000 * 60 * 60 * 24))} días
-                      </div>
-                    )}
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <p className="text-xs text-muted-foreground">Estrategia</p>
-                        <p className="text-lg font-semibold text-foreground">{latestDiagnosis.strategy_score}%</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-muted-foreground">Operaciones</p>
-                        <p className="text-lg font-semibold text-foreground">{latestDiagnosis.operations_score}%</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-muted-foreground">Finanzas</p>
-                        <p className="text-lg font-semibold text-foreground">{latestDiagnosis.finance_score}%</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-muted-foreground">Marketing</p>
-                        <p className="text-lg font-semibold text-foreground">{latestDiagnosis.marketing_score}%</p>
-                      </div>
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      Nivel: <span className="font-medium text-foreground capitalize">{latestDiagnosis.maturity_level}</span>
-                    </p>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button 
-                      onClick={() => navigate(`/diagnosis/${latestDiagnosis.id}`)}
-                      variant="outline"
-                      size="sm"
-                      className="flex-1"
-                    >
-                      Ver Completo
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                    </Button>
-                    <Button 
-                      onClick={() => navigate('/chat-diagnosis')}
-                      variant="default"
-                      size="sm"
-                      className="flex-1"
-                    >
-                      Actualizar
-                    </Button>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <h3 className="text-base font-semibold text-foreground mb-2">Diagnóstico</h3>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Realiza un diagnóstico de tu negocio
-                  </p>
-                  <Button 
-                    onClick={() => navigate('/chat-diagnosis')}
-                    size="sm"
-                    className="w-full"
-                  >
-                    Iniciar Diagnóstico
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
-                </>
-              )}
-            </Card>
-
             {overdueTasks.length > 0 && (
               <Card variant="service" className="border-destructive">
                 <h3 className="text-base font-semibold text-destructive mb-4">
