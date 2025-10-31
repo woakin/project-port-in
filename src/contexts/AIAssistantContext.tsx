@@ -49,7 +49,13 @@ export function AIAssistantProvider({ children }: { children: ReactNode }) {
   };
 
   const addMessage = (message: Message) => {
-    setMessages((prev) => [...prev, message]);
+    setMessages((prev) => {
+      // If this is an assistant message and the last message is also assistant, replace it
+      if (message.role === 'assistant' && prev.length > 0 && prev[prev.length - 1].role === 'assistant') {
+        return [...prev.slice(0, -1), message];
+      }
+      return [...prev, message];
+    });
   };
 
   const clearMessages = () => {

@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { useKPIs } from "@/hooks/useKPIs";
 import { useAuth } from "@/hooks/useAuth";
+import { useAIAssistant } from "@/contexts/AIAssistantContext";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/shared/Card";
 import { Badge } from "@/components/shared/Badge";
@@ -47,6 +48,7 @@ export default function KPIs() {
   const { kpis, loading, refetch, getKPIHistory, getUniqueKPINames, getKPITrend, markAsMainKPI, getLatestKPIs } = useKPIs();
   const { user } = useAuth();
   const { toast } = useToast();
+  const { updateContext } = useAIAssistant();
   const [searchTerm, setSearchTerm] = useState("");
   const [areaFilter, setAreaFilter] = useState<string>("all");
   const [editingKPI, setEditingKPI] = useState<KPI | null>(null);
@@ -83,6 +85,23 @@ export default function KPIs() {
 
   const uniqueKPINames = getUniqueKPINames();
   const latestKPIs = getLatestKPIs();
+
+  // Update AI Assistant context when selected KPI changes
+  useEffect(() => {
+    if (selectedKPIName) {
+      const selectedKPI = latestKPIs.find(kpi => kpi.name === selectedKPIName);
+      updateContext({
+        focus: {
+          kpiName: selectedKPIName,
+          kpiId: selectedKPI?.id,
+        }
+      });
+    } else {
+      updateContext({
+        focus: undefined
+      });
+    }
+  }, [selectedKPIName, latestKPIs, updateContext]);
 
   const filteredKPIs = latestKPIs.filter((kpi) => {
     const matchesSearch = kpi.name.toLowerCase().includes(searchTerm.toLowerCase()) ||

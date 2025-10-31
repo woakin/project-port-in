@@ -40,7 +40,7 @@ const QUICK_ACTIONS: Record<string, Array<{ label: string; prompt: string; icon:
 };
 
 export function GlobalAIAssistant() {
-  const { isOpen, close, messages, addMessage, context, updateContext } = useAIAssistant();
+  const { isOpen, close, messages, addMessage, context, updateContext, clearMessages } = useAIAssistant();
   const { currentProject } = useProjectContext();
   const location = useLocation();
   const isMobile = useIsMobile();
@@ -89,6 +89,8 @@ export function GlobalAIAssistant() {
     if (!input.trim() || isStreaming) return;
 
     const userMessage = input.trim();
+    const currentMessages = [...messages, { role: 'user' as const, content: userMessage }];
+    
     setInput('');
     addMessage({ role: 'user', content: userMessage });
     setIsStreaming(true);
@@ -109,7 +111,7 @@ export function GlobalAIAssistant() {
             Authorization: `Bearer ${session.access_token}`,
           },
           body: JSON.stringify({
-            messages: [...messages, { role: 'user', content: userMessage }],
+            messages: currentMessages,
             context: {
               currentPage: context.page,
               project: currentProject ? { id: currentProject.id, name: currentProject.name } : null,
@@ -142,9 +144,6 @@ export function GlobalAIAssistant() {
       let textBuffer = '';
       let streamDone = false;
 
-      // Add placeholder for assistant message
-      addMessage({ role: 'assistant', content: '' });
-
       while (!streamDone) {
         const { done, value } = await reader.read();
         if (done) break;
@@ -170,7 +169,7 @@ export function GlobalAIAssistant() {
             const content = parsed.choices?.[0]?.delta?.content as string | undefined;
             if (content) {
               assistantMessage += content;
-              // Update the last message
+              // This will replace the last assistant message or add a new one
               addMessage({ role: 'assistant', content: assistantMessage });
             }
           } catch {
@@ -228,15 +227,10 @@ export function GlobalAIAssistant() {
         className={`flex flex-col ${isMobile ? 'w-full' : 'w-[45%] min-w-[500px]'} p-0`}
       >
         <SheetHeader className="border-b border-border p-4 space-y-3">
-          <div className="flex items-center justify-between">
-            <SheetTitle className="flex items-center gap-2">
-              <MessageCircle className="h-5 w-5 text-primary" />
-              Alasha AI
-            </SheetTitle>
-            <Button variant="ghost" size="icon" onClick={close}>
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
+          <SheetTitle className="flex items-center gap-2">
+            <MessageCircle className="h-5 w-5 text-primary" />
+            Alasha AI
+          </SheetTitle>
           <SheetDescription className="text-left">
             Estás en: <span className="font-semibold text-foreground">{currentPageName}</span>
             {currentProject && (
