@@ -1188,12 +1188,12 @@ ESTILO:
                 const periodEnd = kpiPeriodEnd || new Date(today.getFullYear(), today.getMonth() + 1, 0);
                 
                 // Buscar KPI existente con el mismo nombre (case-insensitive)
+                // Buscar el más reciente sin filtrar por fecha para actualizar el último registrado
                 const { data: existingKpi } = await supabaseClient
                   .from('kpis')
                   .select('*')
                   .eq('company_id', companyId)
                   .ilike('name', kpiName)
-                  .gte('period_end', today.toISOString())
                   .order('created_at', { ascending: false })
                   .limit(1)
                   .maybeSingle();
