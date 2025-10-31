@@ -56,6 +56,17 @@ export default function ChatDiagnosis() {
   const [chatMode, setChatMode] = useState<ChatMode>('diagnosis');
   const [showModeInfo, setShowModeInfo] = useState(false);
   const [openSheet, setOpenSheet] = useState<SheetType>(null);
+  
+  // Estados para seguimiento de progreso por área (FASE 1)
+  const [currentSection, setCurrentSection] = useState<'strategy'|'operations'|'finance'|'marketing'|'legal'|'technology'>('strategy');
+  const [sectionAnswers, setSectionAnswers] = useState<Record<string, string>>({
+    strategy: '',
+    operations: '',
+    finance: '',
+    marketing: '',
+    legal: '',
+    technology: ''
+  });
 
   useEffect(() => {
     if (authLoading || projectLoading) return;
@@ -184,6 +195,24 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
     return labels[mode];
   };
 
+  // Funciones auxiliares para el seguimiento de progreso (FASE 1)
+  const getSectionNumber = (section: typeof currentSection): number => {
+    const order = ['strategy', 'operations', 'finance', 'marketing', 'legal', 'technology'];
+    return order.indexOf(section) + 1;
+  };
+
+  const getSectionName = (section: typeof currentSection): string => {
+    const names = {
+      strategy: 'Estrategia',
+      operations: 'Operaciones',
+      finance: 'Finanzas',
+      marketing: 'Marketing',
+      legal: 'Legal',
+      technology: 'Tecnología'
+    };
+    return names[section];
+  };
+
   const handleQuickAction = (prompt: string) => {
     setInput(prompt);
     inputRef.current?.focus();
@@ -220,9 +249,30 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
   const sendMessage = async () => {
     if (!input.trim() || sending || !companyInfo) return;
 
+    // FASE 1: Validación de respuestas cortas en modo diagnóstico
+    if (chatMode === 'diagnosis' && input.trim().length < 20) {
+      toast({
+        title: 'Necesito más detalle',
+        description: 'Por favor proporciona una respuesta más completa para esta área (al menos 20 caracteres)',
+        variant: 'destructive'
+      });
+      return;
+    }
+
     const userMessage: Message = { role: 'user', content: input };
     const newMessages = [...messages, userMessage];
     setMessages(newMessages);
+    
+    // FASE 1: Guardar respuesta por área en modo diagnóstico
+    if (chatMode === 'diagnosis') {
+      setSectionAnswers(prev => ({
+        ...prev,
+        [currentSection]: prev[currentSection]
+          ? prev[currentSection] + '\n' + input.trim()
+          : input.trim()
+      }));
+    }
+    
     setInput('');
     setSending(true);
     
@@ -309,19 +359,33 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
   };
 
   const generateDiagnosis = async () => {
-    if (!companyInfo) return;
+    if (!companyInfo || !currentProject) return;
+    
+    // FASE 1: Validar que todas las áreas tengan respuestas
+    const emptyAreas = Object.entries(sectionAnswers)
+      .filter(([_, answer]) => !answer || answer.trim().length < 20)
+      .map(([area, _]) => getSectionName(area as typeof currentSection));
+    
+    if (emptyAreas.length > 0) {
+      toast({
+        title: 'Áreas incompletas',
+        description: `Por favor completa las siguientes áreas: ${emptyAreas.join(', ')}`,
+        variant: 'destructive'
+      });
+      return;
+    }
     
     setGeneratingDiagnosis(true);
 
     try {
-      // Obtener token de la sesión actual
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         throw new Error('No hay sesión activa');
       }
 
+      // FASE 1: Llamar a diagnose-company en lugar de chat-diagnosis
       const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat-diagnosis`,
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/diagnose-company`,
         {
           method: 'POST',
           headers: {
@@ -329,15 +393,18 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
             'Authorization': `Bearer ${session.access_token}`,
           },
           body: JSON.stringify({
-            messages,
-            companyInfo,
-            isComplete: true
+            formResponses: sectionAnswers,
+            maturityLevel: companyInfo.stage,
+            companyId: currentProject.company_id,
+            userId: user.id,
+            projectId: currentProject.id
           }),
         }
       );
 
       if (!response.ok) {
-        throw new Error('Error al generar diagnóstico');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Error al generar diagnóstico');
       }
 
       const data = await response.json();
@@ -353,7 +420,6 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
         description: 'Redirigiendo a los resultados...'
       });
 
-      // Pequeña pausa para que el usuario vea el toast
       setTimeout(() => {
         navigate(`/diagnosis/${data.diagnosis_id}`);
       }, 500);
@@ -589,6 +655,32 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
           <DiagnosesSheet />
         </SheetContent>
       </Sheet>
+
+      {/* FASE 1: Indicador de progreso en modo diagnóstico */}
+      {chatMode === 'diagnosis' && (
+        <div className="border-b border-border bg-muted/50 px-6 py-3">
+          <div className="flex items-center justify-between text-sm">
+            <span className="font-medium">
+              Área actual: {getSectionName(currentSection)} ({getSectionNumber(currentSection)}/6)
+            </span>
+            <div className="flex gap-1">
+              {(['strategy', 'operations', 'finance', 'marketing', 'legal', 'technology'] as const).map((section) => (
+                <div
+                  key={section}
+                  className={`h-2 w-8 rounded-full transition-colors ${
+                    sectionAnswers[section]?.length > 0
+                      ? 'bg-green-500'
+                      : section === currentSection
+                      ? 'bg-blue-500'
+                      : 'bg-gray-300'
+                  }`}
+                  title={getSectionName(section)}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="flex-1 overflow-y-auto p-4">
         <div className="max-w-4xl mx-auto space-y-4">
