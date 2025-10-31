@@ -181,8 +181,25 @@ ${data.kpis.map((k: any) => {
 - Si el usuario pregunta por datos (tareas, KPIs), usa SOLO la información real que te di
 - Sé breve, específico y accionable
 - No inventes números ni información que no tienes
-- Si no tienes la información solicitada, dilo claramente
-- Responde en español`;
+- Si no tienes la información solicitada, dilo claramente`;
+
+      // Instrucciones específicas para la página de KPIs
+      if (currentPage === '/kpis') {
+        systemPrompt += `\n\nINSTRUCCIONES ESPECIALES PARA KPIs:
+- Cuando el usuario solicite ACTUALIZAR un KPI, proporciona los valores actualizados de forma clara y explica que debe:
+  1. Hacer clic en el botón de editar (ícono de lápiz) en la tabla de KPIs
+  2. En el formulario que se abre, modificar el valor actual del KPI
+  3. Si necesita crear un nuevo registro histórico, debe hacer clic en "Crear KPI" (+) y agregar un nuevo registro con los valores actuales
+- Si el usuario proporciona nuevos valores para actualizar, presenta los valores de forma clara:
+  • Nombre del KPI
+  • Valor actual sugerido
+  • Meta (si aplica)
+  • Explicación del cambio
+- Proporciona el valor numérico exacto que debe ingresar basándote en los datos que te dio el usuario
+- Sé específico con las fechas del periodo (período_inicio y período_fin)`;
+      }
+      
+      systemPrompt += `\n\n- Responde en español`;
 
       const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
         method: 'POST',
