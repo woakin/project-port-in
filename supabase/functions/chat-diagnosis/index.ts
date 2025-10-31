@@ -28,9 +28,22 @@ const companyInfoSchema = z.object({
 
 const requestSchema = z.object({
   messages: z.array(messageSchema).max(100, 'Too many messages'),
-  companyInfo: companyInfoSchema,
-  isComplete: z.boolean(),
-  mode: z.enum(['diagnosis', 'strategic', 'follow_up', 'document']).optional()
+  companyInfo: companyInfoSchema.optional(),
+  isComplete: z.boolean().optional(),
+  mode: z.enum(['diagnosis', 'strategic', 'follow_up', 'document', 'contextual']).optional(),
+  context: z.object({
+    currentPage: z.string().optional(),
+    project: z.object({
+      id: z.string(),
+      name: z.string()
+    }).nullable().optional(),
+    focus: z.object({
+      kpiId: z.string().optional(),
+      kpiName: z.string().optional(),
+      taskId: z.string().optional(),
+      documentId: z.string().optional()
+    }).optional()
+  }).optional()
 });
 
 // KPI validation schema for chat commands
@@ -91,15 +104,88 @@ serve(async (req) => {
       );
     }
 
-    const { messages, companyInfo, isComplete, mode = 'diagnosis' } = validationResult.data;
+    const { messages, companyInfo, isComplete, mode = 'diagnosis', context: requestContext } = validationResult.data;
     
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
       throw new Error('LOVABLE_API_KEY not configured');
     }
 
+    // Modo contextual: asistente global
+    if (mode === 'contextual') {
+      const { currentPage, project, focus } = requestContext || {};
+      
+      const pageName = currentPage === '/' ? 'Dashboard' : 
+                       currentPage === '/kpis' ? 'KPIs' : 
+                       currentPage === '/tasks' ? 'Tareas' : 
+                       currentPage === '/documents' ? 'Documentos' : 
+                       currentPage || 'la aplicación';
+
+      let systemPrompt = `Eres Alasha AI, un asistente empresarial experto que ayuda al usuario en la página "${pageName}"`;
+      
+      if (project) {
+        systemPrompt += ` del proyecto "${project.name}"`;
+      }
+      
+      if (focus) {
+        if (focus.kpiName) systemPrompt += `. El usuario está viendo el KPI: ${focus.kpiName}`;
+        if (focus.taskId) systemPrompt += `. El usuario está viendo una tarea específica`;
+        if (focus.documentId) systemPrompt += `. El usuario está viendo un documento específico`;
+      }
+      
+      systemPrompt += `.\n\nSé breve, específico y accionable. No repitas información que el usuario ya puede ver en pantalla. Responde en español.`;
+
+      const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'google/gemini-2.5-flash',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            ...messages
+          ],
+          stream: true,
+        }),
+      });
+
+      if (!response.ok) {
+        if (response.status === 429) {
+          return new Response(JSON.stringify({ error: 'Rate limits exceeded, please try again later.' }), {
+            status: 429,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+        if (response.status === 402) {
+          return new Response(JSON.stringify({ error: 'Payment required, please add funds to your Lovable AI workspace.' }), {
+            status: 402,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+        const errorText = await response.text();
+        console.error('Lovable AI error:', response.status, errorText);
+        return new Response(JSON.stringify({ error: 'AI gateway error' }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      return new Response(response.body, {
+        headers: { ...corsHeaders, 'Content-Type': 'text/event-stream' },
+      });
+    }
+
     // Si el usuario indica que terminó, generamos el diagnóstico final
     if (isComplete) {
+      if (!companyInfo) {
+        return new Response(JSON.stringify({ error: 'companyInfo is required when isComplete is true' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      
       const authHeader = req.headers.get('Authorization');
       if (!authHeader) {
         throw new Error('No authorization header');
@@ -751,6 +837,13 @@ IMPORTANTE: Solo incluye tareas marcadas con "is_new": true. NO incluyas tareas 
     let additionalContext = '';
     
     if (mode === 'follow_up' || mode === 'document') {
+      if (!companyInfo) {
+        return new Response(JSON.stringify({ error: 'companyInfo is required for follow_up and document modes' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      
       const authHeader = req.headers.get('Authorization');
       if (authHeader) {
         const token = authHeader.replace('Bearer ', '');
@@ -1056,7 +1149,7 @@ ESTILO:
       
       try {
         const authHeader = req.headers.get('Authorization');
-        if (authHeader) {
+        if (authHeader && companyInfo) {
           const token = authHeader.replace('Bearer ', '');
           const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
           const supabaseClient = createClient(
