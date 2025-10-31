@@ -4,6 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useProjectContext } from '@/contexts/ProjectContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Card } from '@/components/shared/Card';
 import { toast } from '@/hooks/use-toast';
 import { Send, Loader2, CheckCircle, Home, Info } from 'lucide-react';
@@ -43,7 +44,7 @@ export default function ChatDiagnosis() {
   const [companyInfo, setCompanyInfo] = useState<CompanyInfo | null>(null);
   const [step, setStep] = useState<'company-info' | 'chat'>('company-info');
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const [generatingDiagnosis, setGeneratingDiagnosis] = useState(false);
 
   // Formulario inicial
@@ -844,15 +845,22 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
               </Button>
             </div>
           )}
-          <div className="flex gap-2">
-            <Input
+          <div className="flex gap-2 items-end">
+            <Textarea
               ref={inputRef}
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && sendMessage()}
-              placeholder="Escribe tu respuesta..."
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && e.shiftKey) {
+                  e.preventDefault();
+                  sendMessage();
+                }
+              }}
+              placeholder="Escribe tu respuesta... (Shift+Enter para enviar)"
               disabled={sending || generatingDiagnosis}
               autoFocus
+              className="min-h-[60px] max-h-[200px] resize-none"
+              rows={2}
             />
             <Button onClick={sendMessage} disabled={sending || generatingDiagnosis || !input.trim()}>
               <Send className="h-4 w-4" />
