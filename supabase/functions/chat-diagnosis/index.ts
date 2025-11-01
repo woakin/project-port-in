@@ -7,7 +7,7 @@ const kpiUpdateSchema = z.object({
   updates: z.array(z.object({
     name: z.string(),
     value: z.number(),
-    action: z.enum(['update_latest', 'insert_new']).default('update_latest'),
+    action: z.enum(['update_current', 'new_period']).default('update_current'),
     period_start: z.string().optional(),
     period_end: z.string().optional(),
     unit: z.string().optional(),
@@ -192,7 +192,7 @@ serve(async (req) => {
           type: "function",
           function: {
             name: "manage_kpis",
-            description: "Detecta cuando el usuario quiere actualizar, crear o consultar KPIs. Extrae los datos estructurados.",
+            description: "Detecta cuando el usuario quiere actualizar, crear o consultar KPIs. IMPORTANTE: distingue entre actualizar periodo actual (update_current) y registrar nuevo periodo histórico (new_period).",
             parameters: {
               type: "object",
               properties: {
@@ -205,11 +205,11 @@ serve(async (req) => {
                       value: { type: "number", description: "Nuevo valor numérico" },
                       action: { 
                         type: "string", 
-                        enum: ["update_latest", "insert_new"],
-                        description: "update_latest para actualizar el registro más reciente, insert_new para crear nuevo periodo"
+                        enum: ["update_current", "new_period"],
+                        description: "update_current: actualiza el valor del periodo actual (sin fechas). new_period: crea un registro histórico nuevo (requiere period_start y period_end)"
                       },
-                      period_start: { type: "string", format: "date", nullable: true },
-                      period_end: { type: "string", format: "date", nullable: true },
+                      period_start: { type: "string", format: "date", nullable: true, description: "Obligatorio para new_period. Formato YYYY-MM-DD" },
+                      period_end: { type: "string", format: "date", nullable: true, description: "Obligatorio para new_period. Formato YYYY-MM-DD" },
                       unit: { type: "string", nullable: true },
                       area: { 
                         type: "string", 
@@ -315,10 +315,16 @@ serve(async (req) => {
             model: 'google/gemini-2.5-flash',
             messages: [
               { 
-                role: 'system', 
+              role: 'system', 
                 content: `Eres un asistente que identifica intenciones de gestión de datos.
 
 KPIs existentes: ${uniqueKPINames.join(', ')}
+
+REGLAS IMPORTANTES PARA KPIs:
+- Si el usuario dice "actualiza X a Y" SIN mencionar fechas/periodo → usa action: "update_current"
+- Si el usuario dice "registra X de Y para [mes]" o menciona fechas/periodo específico → usa action: "new_period" con period_start y period_end
+- Para "new_period", calcula las fechas apropiadas del mes mencionado (ejemplo: "noviembre" → "2025-11-01" a "2025-11-30")
+- Si es ambiguo, usa "update_current" por defecto
 
 Extrae operaciones estructuradas del mensaje del usuario. Si no detectas ninguna operación, no invoques herramientas.` 
               },
@@ -344,10 +350,11 @@ Extrae operaciones estructuradas del mensaje del usuario. Si no detectas ninguna
                 const validated = kpiUpdateSchema.parse(functionArgs);
                 
                 for (const update of validated.updates) {
-                  if (update.action === 'update_latest') {
+                  if (update.action === 'update_current') {
+                    // Actualizar el valor del periodo actual (el más reciente)
                     const { data: latest } = await admin
                       .from('kpis')
-                      .select('id, name, value')
+                      .select('id, name, value, unit, area')
                       .eq('company_id', companyId)
                       .ilike('name', update.name)
                       .order('period_end', { ascending: false })
@@ -359,15 +366,14 @@ Extrae operaciones estructuradas del mensaje del usuario. Si no detectas ninguna
                         .from('kpis')
                         .update({ 
                           value: update.value, 
-                          source: 'assistant',
-                          updated_at: new Date().toISOString()
+                          source: 'assistant'
                         })
                         .eq('id', latest.id);
                       
                       if (!updateError) {
                         appliedOperations.push({
                           entity: 'kpis',
-                          summary: `${update.name}: ${latest.value} → ${update.value}`
+                          summary: `Actualizado ${update.name}: ${latest.value} → ${update.value}${latest.unit || ''} (periodo actual)`
                         });
                         
                         await admin.from('audit_logs').insert({
@@ -377,16 +383,65 @@ Extrae operaciones estructuradas del mensaje del usuario. Si no detectas ninguna
                           metadata: { kpi_name: update.name, old_value: latest.value, new_value: update.value }
                         });
                       }
+                    } else {
+                      // Si no existe, crear uno nuevo para el mes actual
+                      const now = new Date();
+                      const periodStart = new Date(now.getFullYear(), now.getMonth(), 1);
+                      const periodEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+                      
+                      const { error: insertError } = await admin
+                        .from('kpis')
+                        .insert({
+                          company_id: companyId,
+                          name: update.name,
+                          value: update.value,
+                          area: update.area || 'general',
+                          unit: update.unit || '',
+                          period_start: periodStart.toISOString().split('T')[0],
+                          period_end: periodEnd.toISOString().split('T')[0],
+                          source: 'assistant'
+                        });
+                      
+                      if (!insertError) {
+                        appliedOperations.push({
+                          entity: 'kpis',
+                          summary: `Creado nuevo KPI "${update.name}": ${update.value}${update.unit || ''}`
+                        });
+                        
+                        await admin.from('audit_logs').insert({
+                          resource_type: 'kpi',
+                          action: 'create',
+                          user_id: user.id,
+                          metadata: { kpi_name: update.name, value: update.value }
+                        });
+                      }
                     }
-                  } else if (update.action === 'insert_new' && update.period_start && update.period_end) {
+                  } else if (update.action === 'new_period') {
+                    // Crear nuevo registro histórico
+                    if (!update.period_start || !update.period_end) {
+                      console.error(`new_period requiere period_start y period_end para ${update.name}`);
+                      continue;
+                    }
+                    
+                    // Obtener el KPI más reciente para heredar área y unidad si no se especifican
+                    const { data: latest } = await admin
+                      .from('kpis')
+                      .select('area, unit, target_value')
+                      .eq('company_id', companyId)
+                      .ilike('name', update.name)
+                      .order('period_end', { ascending: false })
+                      .limit(1)
+                      .maybeSingle();
+                    
                     const { error: insertError } = await admin
                       .from('kpis')
                       .insert({
                         company_id: companyId,
                         name: update.name,
                         value: update.value,
-                        area: update.area || 'general',
-                        unit: update.unit,
+                        area: update.area || latest?.area || 'general',
+                        unit: update.unit || latest?.unit || '',
+                        target_value: latest?.target_value || null,
                         period_start: update.period_start,
                         period_end: update.period_end,
                         source: 'assistant'
@@ -395,14 +450,14 @@ Extrae operaciones estructuradas del mensaje del usuario. Si no detectas ninguna
                     if (!insertError) {
                       appliedOperations.push({
                         entity: 'kpis',
-                        summary: `Creado KPI "${update.name}": ${update.value}`
+                        summary: `Registrado nuevo periodo de "${update.name}": ${update.value}${update.unit || latest?.unit || ''} (${update.period_start} a ${update.period_end})`
                       });
                       
                       await admin.from('audit_logs').insert({
                         resource_type: 'kpi',
                         action: 'create',
                         user_id: user.id,
-                        metadata: { kpi_name: update.name, value: update.value }
+                        metadata: { kpi_name: update.name, value: update.value, period_start: update.period_start, period_end: update.period_end }
                       });
                     }
                   }
