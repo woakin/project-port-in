@@ -4,7 +4,7 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ClipboardCheck, Plus, Calendar, TrendingUp } from 'lucide-react';
+import { ClipboardCheck, Plus, Calendar, TrendingUp, MessageSquare, Mic } from 'lucide-react';
 import { useProjectContext } from '@/contexts/ProjectContext';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -105,21 +105,57 @@ export default function Diagnosticos() {
           </Button>
         </div>
 
-        {diagnoses.length === 0 ? (
-          <Card className="p-12 text-center">
-            <ClipboardCheck className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-            <h3 className="text-lg font-semibold mb-2">No hay diagnósticos</h3>
-            <p className="text-muted-foreground mb-6">
-              {currentProject
-                ? `El proyecto "${currentProject.name}" aún no tiene diagnósticos`
-                : 'Comienza creando tu primer diagnóstico'}
-            </p>
-            <Button onClick={() => navigate('/chat-diagnosis')}>
-              <Plus className="h-4 w-4 mr-2" />
-              Crear Diagnóstico
-            </Button>
+        {/* Opciones de diagnóstico */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate('/chat-diagnosis')}>
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-primary/10 rounded-lg">
+                <MessageSquare className="w-6 h-6 text-primary" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-xl font-semibold mb-2">Chat con IA</h3>
+                <p className="text-muted-foreground mb-4">
+                  Conversa con nuestro asistente de IA que te guiará a través del proceso de diagnóstico.
+                </p>
+                <Button>
+                  Iniciar Chat
+                </Button>
+              </div>
+            </div>
           </Card>
-        ) : (
+
+          <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate('/voice-diagnosis')}>
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-primary/10 rounded-lg">
+                <Mic className="w-6 h-6 text-primary" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-xl font-semibold mb-2">Entrevista por Voz</h3>
+                <p className="text-muted-foreground mb-4">
+                  Habla directamente con nuestro asistente de IA. Una experiencia conversacional natural.
+                </p>
+                <Button>
+                  Iniciar Entrevista
+                </Button>
+              </div>
+            </div>
+          </Card>
+        </div>
+
+        {/* Lista de diagnósticos */}
+        <div className="mt-8">
+          <h2 className="text-2xl font-bold mb-4">Diagnósticos Previos</h2>
+          {diagnoses.length === 0 ? (
+            <Card className="p-12 text-center">
+              <ClipboardCheck className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+              <h3 className="text-lg font-semibold mb-2">No hay diagnósticos previos</h3>
+              <p className="text-muted-foreground">
+                {currentProject
+                  ? `El proyecto "${currentProject.name}" aún no tiene diagnósticos`
+                  : 'Los diagnósticos aparecerán aquí una vez completados'}
+              </p>
+            </Card>
+          ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {diagnoses.map((diagnosis) => {
               const avgScore = getAverageScore(diagnosis);
@@ -194,7 +230,8 @@ export default function Diagnosticos() {
               );
             })}
           </div>
-        )}
+          )}
+        </div>
       </div>
     </MainLayout>
   );
