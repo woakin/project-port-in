@@ -260,8 +260,10 @@ export default function VoiceDiagnosis() {
       console.log('🚀 Starting conversation with variables:', companyData);
       console.log('🔗 Signed URL obtained:', data.signed_url?.substring(0, 50) + '...');
 
-      // Iniciar conversación con ElevenLabs - la URL firmada ya contiene el agentId
-      await conversation.startSession(data.signed_url);
+      // Iniciar conversación con ElevenLabs usando objeto de opciones
+      const options = { url: data.signed_url } as any;
+      console.log('🛰️ Starting session with options:', options);
+      await (conversation as any).startSession(options);
       
       console.log('✅ Session started successfully');
 
