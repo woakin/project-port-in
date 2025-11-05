@@ -36,8 +36,12 @@ serve(async (req) => {
 
       // Add each variable exactly once with the exact key the template uses
       Object.entries(requiredVars).forEach(([key, value]) => {
-        if (value) { // Only add if there's a value
-          queryParams.append(`variables[${key}]`, value);
+        if (value !== undefined && value !== null) {
+          const v = String(value);
+          // Standard variables (agent-level)
+          queryParams.append(`variables[${key}]`, v);
+          // Also pass as first_message_variables to satisfy agents requiring it
+          queryParams.append(`first_message_variables[${key}]`, v);
         }
       });
     }
