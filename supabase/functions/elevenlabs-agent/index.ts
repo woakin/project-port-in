@@ -19,37 +19,47 @@ serve(async (req) => {
     // Get variables from request body
     const { variables } = await req.json();
 
-    // Prepare variables object (exact keys expected by the agent)
-    const vars = {
-      COMPANY_NAME: variables?.COMPANY_NAME || variables?.company_name || 'tu empresa',
-      COMPANY_INDUSTRY: variables?.COMPANY_INDUSTRY || variables?.company_industry || 'tu industria',
-      COMPANY_STAGE: variables?.COMPANY_STAGE || variables?.company_stage || 'startup',
-      PROJECT_NAME: variables?.PROJECT_NAME || variables?.project_name || 'tu proyecto',
-      PROJECT_DESCRIPTION: variables?.PROJECT_DESCRIPTION || variables?.project_description || 'este proyecto',
-    };
+    // Build query params with agent_id
+    const queryParams = new URLSearchParams({
+      agent_id: "agent_9801k98jdzhse9ea40vs7gws9d1c",
+    });
 
-    console.log('Variables being sent to ElevenLabs (POST body):', vars);
+    // Add ONLY the exact 5 variables that the template expects (no duplicates, no aliases)
+    if (variables) {
+      const requiredVars: Record<string, string> = {
+        'COMPANY_NAME': variables.COMPANY_NAME || variables.company_name || '',
+        'COMPANY_INDUSTRY': variables.COMPANY_INDUSTRY || variables.company_industry || '',
+        'COMPANY_STAGE': variables.COMPANY_STAGE || variables.company_stage || '',
+        'PROJECT_NAME': variables.PROJECT_NAME || variables.project_name || '',
+        'PROJECT_DESCRIPTION': variables.PROJECT_DESCRIPTION || variables.project_description || '',
+      };
 
-    // Generate signed URL for agent with variables via POST body (more reliable than query params)
+      // Add each variable exactly once with the exact key the template uses
+      Object.entries(requiredVars).forEach(([key, value]) => {
+        if (value) { // Only add if there's a value
+          queryParams.append(`variables[${key}]`, value);
+        }
+      });
+    }
+
+    console.log('Variables being sent to ElevenLabs:', variables);
+    console.log('Full query string:', queryParams.toString());
+
+    // Generate signed URL for agent with variables using GET
     const response = await fetch(
-      `https://api.elevenlabs.io/v1/convai/conversation/get_signed_url`,
+      `https://api.elevenlabs.io/v1/convai/conversation/get_signed_url?${queryParams.toString()}`,
       {
-        method: "POST",
+        method: "GET",
         headers: {
           "xi-api-key": ELEVENLABS_API_KEY,
-          "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          agent_id: "agent_9801k98jdzhse9ea40vs7gws9d1c",
-          variables: vars,
-        }),
       },
     );
 
     if (!response.ok) {
-      const t = await response.text();
-      console.error("ElevenLabs error:", response.status, t);
-      throw new Error("Failed to get signed URL");
+      const errorText = await response.text();
+      console.error("ElevenLabs API error:", response.status, errorText);
+      throw new Error(`Failed to get signed URL: ${response.status} - ${errorText}`);
     }
 
     const data = await response.json();
