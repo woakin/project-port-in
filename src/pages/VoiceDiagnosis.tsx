@@ -144,8 +144,22 @@ export default function VoiceDiagnosis() {
     },
     clientTools: {
       // Tool para guardar respuesta de cada área
-      saveAreaResponse: async ({ area, response }: { area: string; response: string }) => {
+      saveAreaResponse: async (parameters: any) => {
         try {
+          console.log(`🔍 saveAreaResponse called with parameters:`, parameters);
+          
+          const { area, response } = parameters || {};
+          
+          if (!area) {
+            console.error('❌ Area parameter is missing');
+            return 'Error: area parameter is required';
+          }
+          
+          if (!response) {
+            console.error(`❌ Response parameter is missing for area: ${area}`);
+            return `Error: response parameter is required for ${area}`;
+          }
+          
           console.log(`💾 Saving ${area} response:`, response.substring(0, 100) + '...');
           
           setResponses(prev => ({
@@ -164,8 +178,8 @@ export default function VoiceDiagnosis() {
           
           return `Respuesta de ${area} guardada exitosamente`;
         } catch (error) {
-          console.error(`❌ Error saving ${area} response:`, error);
-          return `Error al guardar respuesta de ${area}`;
+          console.error(`❌ Error saving response:`, error);
+          return `Error al guardar respuesta`;
         }
       },
       
@@ -173,6 +187,18 @@ export default function VoiceDiagnosis() {
       finalizeDiagnosis: async () => {
         try {
           console.log("🏁 Finalizing diagnosis with responses:", Object.keys(responses));
+          
+          // Validar que tenemos respuestas
+          const responseKeys = Object.keys(responses);
+          if (responseKeys.length === 0) {
+            console.error("❌ No responses collected");
+            toast({
+              title: "Error",
+              description: "No se guardaron respuestas durante la conversación. Por favor intenta nuevamente.",
+              variant: "destructive",
+            });
+            return "Error: No se recopilaron respuestas";
+          }
           
           const { data: { user } } = await supabase.auth.getUser();
           if (!user) {
@@ -212,20 +238,20 @@ export default function VoiceDiagnosis() {
           console.log("✅ Diagnosis created:", data.diagnosis_id);
 
           toast({
-            title: "Diagnóstico completado",
-            description: "Procesando resultados...",
+            title: "¡Diagnóstico completado!",
+            description: "Redirigiendo a los resultados...",
           });
 
-          // Navegar a resultados después de 2 segundos
+          // Navegar a resultados inmediatamente
           setTimeout(() => {
             navigate(`/diagnosis-results/${data.diagnosis_id}`);
-          }, 2000);
+          }, 1500);
 
           return "Diagnóstico completado y guardado. Redirigiendo a resultados...";
         } catch (error) {
           console.error("❌ Error finalizing diagnosis:", error);
           toast({
-            title: "Error",
+            title: "Error al finalizar",
             description: error instanceof Error ? error.message : "No se pudo completar el diagnóstico",
             variant: "destructive",
           });
