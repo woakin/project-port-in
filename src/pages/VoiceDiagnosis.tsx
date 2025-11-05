@@ -252,14 +252,16 @@ export default function VoiceDiagnosis() {
       });
       
       if (error) throw error;
+      
+      if (!data?.signed_url) {
+        throw new Error("No se obtuvo la URL firmada del servidor");
+      }
 
       console.log('🚀 Starting conversation with variables:', companyData);
       console.log('🔗 Signed URL obtained:', data.signed_url?.substring(0, 50) + '...');
 
-      // Iniciar conversación con ElevenLabs
-      await conversation.startSession({ 
-        signedUrl: data.signed_url 
-      });
+      // Iniciar conversación con ElevenLabs - la URL firmada ya contiene el agentId
+      await conversation.startSession(data.signed_url);
       
       console.log('✅ Session started successfully');
 
