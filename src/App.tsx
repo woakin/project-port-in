@@ -10,7 +10,7 @@ import { FloatingAIButton } from "./components/chat/FloatingAIButton";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import ForgotPassword from "./pages/ForgotPassword";
-import Onboarding from "./pages/Onboarding";
+
 import ChatDiagnosis from "./pages/ChatDiagnosis";
 import DiagnosisResults from "./pages/DiagnosisResults";
 import VoiceDiagnosis from "./pages/VoiceDiagnosis";
@@ -38,7 +38,7 @@ const App = () => (
               <Route path="/" element={<Index />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/auth/forgot-password" element={<ForgotPassword />} />
-              <Route path="/onboarding" element={<Onboarding />} />
+              
               <Route path="/chat-diagnosis" element={<ChatDiagnosis />} />
               <Route path="/voice-diagnosis" element={<VoiceDiagnosis />} />
               <Route path="/diagnosis/:id" element={<DiagnosisResults />} />
