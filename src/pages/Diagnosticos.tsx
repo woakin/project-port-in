@@ -115,16 +115,16 @@ export default function Diagnosticos() {
               <div className="flex-1">
                 <h3 className="text-xl font-semibold mb-2">Chat con IA</h3>
                 <p className="text-muted-foreground mb-4">
-                  Conversa con nuestro asistente de IA que te guiará a través del proceso de diagnóstico.
+                  Conversa con nuestro asistente de IA por escrito. Ideal para tomarte tu tiempo.
                 </p>
                 <Button>
-                  Iniciar Chat
+                  Comenzar
                 </Button>
               </div>
             </div>
           </Card>
 
-          <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate('/voice-diagnosis')}>
+          <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate('/chat-diagnosis')}>
             <div className="flex items-start gap-4">
               <div className="p-3 bg-primary/10 rounded-lg">
                 <Mic className="w-6 h-6 text-primary" />
@@ -132,10 +132,10 @@ export default function Diagnosticos() {
               <div className="flex-1">
                 <h3 className="text-xl font-semibold mb-2">Entrevista por Voz</h3>
                 <p className="text-muted-foreground mb-4">
-                  Habla directamente con nuestro asistente de IA. Una experiencia conversacional natural.
+                  Habla directamente con nuestro asistente. Experiencia conversacional natural.
                 </p>
                 <Button>
-                  Iniciar Entrevista
+                  Comenzar
                 </Button>
               </div>
             </div>

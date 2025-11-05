@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card } from '@/components/shared/Card';
 import { toast } from '@/hooks/use-toast';
-import { Send, Loader2, CheckCircle, Home, Info, ArrowLeft, ArrowRight } from 'lucide-react';
+import { Send, Loader2, CheckCircle, Home, Info, ArrowLeft, ArrowRight, MessageSquare, Mic } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { supabase } from '@/integrations/supabase/client';
 import ReactMarkdown from 'react-markdown';
@@ -43,7 +43,7 @@ export default function ChatDiagnosis() {
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const [companyInfo, setCompanyInfo] = useState<CompanyInfo | null>(null);
-  const [step, setStep] = useState<'company-info' | 'chat'>('company-info');
+  const [step, setStep] = useState<'company-info' | 'method-selection' | 'chat'>('company-info');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const [generatingDiagnosis, setGeneratingDiagnosis] = useState(false);
@@ -81,7 +81,7 @@ export default function ChatDiagnosis() {
       return;
     }
 
-    // Si hay proyecto activo, ir directo al chat y cargar diagnóstico previo
+    // Si hay proyecto activo, saltarse el formulario e ir a selección de método
     if (currentProject && step === 'company-info') {
       const info: CompanyInfo = {
         name: currentProject.name,
@@ -110,16 +110,21 @@ export default function ChatDiagnosis() {
       };
 
       fetchPreviousDiagnosis();
-      setStep('chat');
       
-      // Mensaje inicial basado en modo
-      const initialMessage = getInitialMessage(currentProject.name, 'diagnosis');
-      setMessages([{
-        role: 'assistant',
-        content: initialMessage
-      }]);
+      // Ir a selección de método si no hay diagnóstico previo
+      // Si ya hay diagnóstico, ir directo al chat
+      if (hasPreviousDiagnosis) {
+        setStep('chat');
+        const initialMessage = getInitialMessage(currentProject.name, 'diagnosis');
+        setMessages([{
+          role: 'assistant',
+          content: initialMessage
+        }]);
+      } else {
+        setStep('method-selection');
+      }
     }
-  }, [user, authLoading, currentProject, projectLoading, step, navigate]);
+  }, [user, authLoading, currentProject, projectLoading, step, navigate, hasPreviousDiagnosis]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -519,6 +524,91 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
     inputRef.current?.focus();
   };
 
+  // Función para guardar datos y redirigir a Voice Diagnosis
+  const saveAndRedirectToVoice = async () => {
+    if (!user) return;
+    
+    setSending(true);
+    try {
+      // 1. Crear o actualizar empresa
+      let companyId: string;
+      
+      const { data: existingProfile } = await supabase
+        .from('profiles')
+        .select('company_id')
+        .eq('id', user.id)
+        .single();
+
+      if (existingProfile?.company_id) {
+        // Actualizar empresa existente
+        await supabase
+          .from('companies')
+          .update({
+            name: tempName,
+            industry: tempIndustry,
+            size: tempStage,
+          })
+          .eq('id', existingProfile.company_id);
+        
+        companyId = existingProfile.company_id;
+      } else {
+        // Crear nueva empresa
+        const { data: newCompany, error: companyError } = await supabase
+          .from('companies')
+          .insert({
+            name: tempName,
+            industry: tempIndustry,
+            size: tempStage,
+            created_by: user.id,
+          })
+          .select()
+          .single();
+
+        if (companyError) throw companyError;
+        companyId = newCompany.id;
+
+        // Actualizar perfil con company_id
+        await supabase
+          .from('profiles')
+          .update({ company_id: companyId })
+          .eq('id', user.id);
+      }
+
+      // 2. Crear proyecto
+      const { error: projectError } = await supabase
+        .from('projects')
+        .insert({
+          company_id: companyId,
+          name: tempProjectName,
+          description: tempProjectDescription,
+          is_default: true,
+          status: 'active',
+        });
+
+      if (projectError) throw projectError;
+
+      toast({
+        title: "Información guardada",
+        description: "Redirigiendo a la entrevista por voz...",
+      });
+
+      // 3. Redirigir a voice diagnosis
+      setTimeout(() => {
+        navigate('/voice-diagnosis');
+      }, 500);
+
+    } catch (error) {
+      console.error('Error al guardar información:', error);
+      toast({
+        title: "Error",
+        description: "No se pudo guardar la información. Intenta de nuevo.",
+        variant: "destructive",
+      });
+    } finally {
+      setSending(false);
+    }
+  };
+
   const startChat = () => {
     if (!tempName || !tempIndustry || !tempProjectName) {
       toast({
@@ -538,13 +628,7 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
     };
     
     setCompanyInfo(info);
-    setStep('chat');
-
-    // Mensaje inicial del asistente
-    setMessages([{
-      role: 'assistant',
-      content: `¡Perfecto! Vamos a trabajar en **${info.projectName}** para **${info.name}** en el sector de **${info.industry}**. \n\nPara crear un diagnóstico completo y un plan de acción personalizado, necesito conocer más sobre tu negocio. Voy a hacerte algunas preguntas sobre diferentes áreas clave.\n\nComencemos con la **estrategia**: ¿Cuál es la visión principal de tu empresa y qué objetivos buscan alcanzar?`
-    }]);
+    setStep('method-selection');
   };
 
   const sendMessage = async () => {
@@ -846,9 +930,100 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
               </div>
 
               <Button onClick={startChat} className="w-full" size="lg">
-                Comenzar Conversación
+                Continuar
               </Button>
             </div>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
+  if (step === 'method-selection') {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <Card variant="content" className="w-full max-w-2xl">
+          <div className="space-y-6">
+            <div className="text-center space-y-2">
+              <h1 className="text-3xl font-bold text-foreground">¿Cómo quieres realizar el diagnóstico?</h1>
+              <p className="text-muted-foreground">
+                Elige el método que prefieras para completar el diagnóstico de tu empresa
+              </p>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-6">
+              {/* Opción: Chat con IA */}
+              <div onClick={() => {
+                setStep('chat');
+                const initialMessage = getInitialMessage(companyInfo?.projectName || 'tu proyecto', 'diagnosis');
+                setMessages([{
+                  role: 'assistant',
+                  content: initialMessage
+                }]);
+              }}>
+              <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer group h-full">
+                <div className="space-y-4">
+                  <div className="p-4 bg-primary/10 rounded-lg w-fit group-hover:bg-primary/20 transition-colors">
+                    <MessageSquare className="w-8 h-8 text-primary" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-semibold mb-2">Chat con IA</h3>
+                    <p className="text-muted-foreground text-sm mb-4">
+                      Conversa por escrito con nuestro asistente de IA. Ideal si prefieres tomarte tu tiempo para responder.
+                    </p>
+                    <ul className="text-sm text-muted-foreground space-y-1">
+                      <li>✓ Más control sobre tus respuestas</li>
+                      <li>✓ Puedes editar antes de enviar</li>
+                      <li>✓ Historial visible de la conversación</li>
+                    </ul>
+                  </div>
+                  <Button className="w-full" variant="default">
+                    Continuar con Chat
+                  </Button>
+                </div>
+              </Card>
+              </div>
+
+              {/* Opción: Entrevista por Voz */}
+              <div onClick={saveAndRedirectToVoice}>
+              <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer group h-full">
+                <div className="space-y-4">
+                  <div className="p-4 bg-primary/10 rounded-lg w-fit group-hover:bg-primary/20 transition-colors">
+                    <Mic className="w-8 h-8 text-primary" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-semibold mb-2">Entrevista por Voz</h3>
+                    <p className="text-muted-foreground text-sm mb-4">
+                      Habla directamente con el asistente de IA. Una experiencia más natural y conversacional.
+                    </p>
+                    <ul className="text-sm text-muted-foreground space-y-1">
+                      <li>✓ Más rápido y fluido</li>
+                      <li>✓ Experiencia conversacional natural</li>
+                      <li>✓ No necesitas escribir</li>
+                    </ul>
+                  </div>
+                  <Button className="w-full" variant="default" disabled={sending}>
+                    {sending ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Guardando...
+                      </>
+                    ) : (
+                      'Iniciar Entrevista por Voz'
+                    )}
+                  </Button>
+                </div>
+              </Card>
+              </div>
+            </div>
+
+            <Button
+              variant="ghost"
+              onClick={() => setStep('company-info')}
+              className="w-full"
+            >
+              ← Volver a editar información
+            </Button>
           </div>
         </Card>
       </div>

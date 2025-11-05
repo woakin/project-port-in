@@ -38,7 +38,10 @@ export default function VoiceDiagnosis() {
     const loadCompanyData = async () => {
       try {
         const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
+        if (!user) {
+          navigate('/auth');
+          return;
+        }
 
         const { data: profile } = await supabase
           .from('profiles')
@@ -46,7 +49,14 @@ export default function VoiceDiagnosis() {
           .eq('id', user.id)
           .single();
 
-        if (!profile?.companies) return;
+        if (!profile?.companies) {
+          toast({
+            title: "Configuración requerida",
+            description: "Redirigiendo para completar la información...",
+          });
+          setTimeout(() => navigate('/chat-diagnosis'), 1500);
+          return;
+        }
 
         const { data: project } = await supabase
           .from('projects')
