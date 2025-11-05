@@ -99,8 +99,9 @@ export default function VoiceDiagnosis() {
         description: "La entrevista por voz está lista",
       });
     },
-    onDisconnect: () => {
+    onDisconnect: (event) => {
       console.log("❌ Disconnected from ElevenLabs");
+      console.log("Disconnect event:", event);
       setIsLoading(false);
       
       // Solo mostrar toast si hay áreas completadas (desconexión normal)
@@ -113,17 +114,18 @@ export default function VoiceDiagnosis() {
       } else {
         toast({
           title: "Desconexión inesperada",
-          description: "La conversación se desconectó. Intenta de nuevo.",
+          description: `La conversación se desconectó. ${event ? 'Evento: ' + JSON.stringify(event) : 'Intenta de nuevo.'}`,
           variant: "destructive",
         });
       }
     },
     onError: (error: any) => {
       console.error("❌ Conversation error:", error);
+      console.error("Error details:", JSON.stringify(error, null, 2));
       setIsLoading(false);
       toast({
         title: "Error de conexión",
-        description: error instanceof Error ? error.message : "Hubo un problema con la conexión de voz",
+        description: error instanceof Error ? error.message : `Hubo un problema: ${JSON.stringify(error)}`,
         variant: "destructive",
       });
     },
