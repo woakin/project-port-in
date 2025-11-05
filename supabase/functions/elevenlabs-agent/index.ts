@@ -24,14 +24,42 @@ serve(async (req) => {
       agent_id: "agent_9801k98jdzhse9ea40vs7gws9d1c",
     });
 
-    // Add variables to query params
-    if (variables) {
-      Object.keys(variables).forEach(key => {
-        queryParams.append(`variables[${key}]`, variables[key]);
-      });
-    }
+    // Add variables to query params with aliases and safe defaults
+    const requiredKeys = [
+      'COMPANY_NAME',
+      'COMPANY_INDUSTRY',
+      'COMPANY_STAGE',
+      'PROJECT_NAME',
+      'PROJECT_DESCRIPTION',
+    ];
 
-    console.log('Variables being sent to ElevenLabs:', variables);
+    const addVar = (key: string, value: unknown, aliases: string[] = []) => {
+      const v = (value ?? '').toString().trim() || 'N/A';
+      const keys = [key, ...aliases];
+      keys.forEach((k) => queryParams.append(`variables[${k}]`, v));
+    };
+
+    const v = variables || {};
+
+    // Map core vars + common aliases/casing variants
+    addVar('COMPANY_NAME', v.COMPANY_NAME ?? v.company_name ?? v.CompanyName, ['company_name', 'CompanyName', 'COMPANY', 'company']);
+    addVar('COMPANY_INDUSTRY', v.COMPANY_INDUSTRY ?? v.company_industry ?? v.CompanyIndustry ?? v.INDUSTRY, ['company_industry', 'CompanyIndustry', 'INDUSTRY', 'industry']);
+    addVar('COMPANY_STAGE', v.COMPANY_STAGE ?? v.company_stage ?? v.CompanyStage ?? v.STAGE, ['company_stage', 'CompanyStage', 'STAGE', 'stage']);
+    addVar('PROJECT_NAME', v.PROJECT_NAME ?? v.project_name ?? v.ProjectName ?? v.PROJECT, ['project_name', 'ProjectName', 'PROJECT', 'project']);
+    addVar('PROJECT_DESCRIPTION', v.PROJECT_DESCRIPTION ?? v.project_description ?? v.ProjectDescription ?? v.PROJECT_DESC, ['project_description', 'ProjectDescription', 'PROJECT_DESC', 'project_desc']);
+
+    // Pass through any additional variables that might be configured in the agent
+    Object.keys(v).forEach((key) => {
+      if (!requiredKeys.includes(key)) {
+        try {
+          queryParams.append(`variables[${key}]`, (v[key] ?? '').toString());
+        } catch (_) {
+          // ignore non-serializable values
+        }
+      }
+    });
+
+    console.log('Variables being sent to ElevenLabs:', v);
     console.log('Full query string:', queryParams.toString());
 
     // Generate signed URL for agent with variables
