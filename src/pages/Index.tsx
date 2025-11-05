@@ -595,7 +595,7 @@ const Index = () => {
               </p>
             </div>
             <Button onClick={() => navigate('/chat-diagnosis')} size="lg" className="gap-2">
-              <FolderOpen className="h-5 w-5" />
+              <Sparkles className="h-5 w-5" />
               Crear Primer Proyecto
             </Button>
           </div>
