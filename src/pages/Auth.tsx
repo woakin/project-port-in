@@ -46,7 +46,7 @@ export default function Auth() {
       if (profile?.company_id) {
         navigate('/');
       } else {
-        navigate('/onboarding');
+        navigate('/chat-diagnosis');
       }
     }
     
@@ -60,8 +60,8 @@ export default function Auth() {
     const { error } = await signUp(signupEmail, signupPassword, signupFullName);
     
     if (!error) {
-      // New users always go to onboarding
-      navigate('/onboarding');
+      // New users go directly to chat diagnosis
+      navigate('/chat-diagnosis');
     }
     
     setSignupLoading(false);
