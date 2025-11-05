@@ -32,6 +32,8 @@ export default function VoiceDiagnosis() {
   const [responses, setResponses] = useState<DiagnosisResponses>({});
   const [completedAreas, setCompletedAreas] = useState<string[]>([]);
   const [companyData, setCompanyData] = useState<CompanyData | null>(null);
+  const [currentArea, setCurrentArea] = useState<string | null>(null);
+  const [userMessages, setUserMessages] = useState<Record<string, string[]>>({});
   
   // Load company data on mount
   useEffect(() => {
@@ -141,30 +143,65 @@ export default function VoiceDiagnosis() {
     },
     onMessage: (message) => {
       console.log("📨 Message received:", message);
+      
+      // Si es mensaje del usuario y hay un área activa, guardarlo
+      if (message.source === "user" && currentArea) {
+        console.log(`📝 Capturing user message for area: ${currentArea}`);
+        setUserMessages(prev => ({
+          ...prev,
+          [currentArea]: [...(prev[currentArea] || []), message.message]
+        }));
+      }
     },
     clientTools: {
-      // Tool para guardar respuesta de cada área
-      saveAreaResponse: async (parameters: any) => {
+      // Tool para establecer el área actual que se está discutiendo
+      setCurrentArea: async (parameters: any) => {
         try {
-          console.log(`🔍 saveAreaResponse called with parameters:`, parameters);
-          
-          const { area, response } = parameters || {};
+          const { area } = parameters || {};
+          console.log(`🎯 Setting current area to: ${area}`);
           
           if (!area) {
             console.error('❌ Area parameter is missing');
             return 'Error: area parameter is required';
           }
           
-          if (!response) {
-            console.error(`❌ Response parameter is missing for area: ${area}`);
-            return `Error: response parameter is required for ${area}`;
+          setCurrentArea(area);
+          return `Área ${area} establecida como actual`;
+        } catch (error) {
+          console.error(`❌ Error setting area:`, error);
+          return `Error al establecer área`;
+        }
+      },
+      
+      // Tool para guardar respuesta de cada área (usa mensajes capturados)
+      saveAreaResponse: async (parameters: any) => {
+        try {
+          console.log(`🔍 saveAreaResponse called with parameters:`, parameters);
+          
+          const { area } = parameters || {};
+          
+          if (!area) {
+            console.error('❌ Area parameter is missing');
+            return 'Error: area parameter is required';
           }
           
-          console.log(`💾 Saving ${area} response:`, response.substring(0, 100) + '...');
+          // Obtener todos los mensajes del usuario para esta área
+          const areaMessages = userMessages[area] || [];
+          
+          if (areaMessages.length === 0) {
+            console.error(`❌ No user messages captured for area: ${area}`);
+            return `Error: No se capturaron respuestas para ${area}`;
+          }
+          
+          // Combinar todos los mensajes en una respuesta consolidada
+          const consolidatedResponse = areaMessages.join('\n\n');
+          
+          console.log(`💾 Saving ${area} with ${areaMessages.length} message(s)`);
+          console.log(`📝 Consolidated response preview:`, consolidatedResponse.substring(0, 100) + '...');
           
           setResponses(prev => ({
             ...prev,
-            [area]: response
+            [area]: consolidatedResponse
           }));
           
           setCompletedAreas(prev => {
@@ -176,7 +213,10 @@ export default function VoiceDiagnosis() {
             return prev;
           });
           
-          return `Respuesta de ${area} guardada exitosamente`;
+          // Limpiar el área actual para la siguiente
+          setCurrentArea(null);
+          
+          return `Respuesta de ${area} guardada exitosamente con ${areaMessages.length} mensaje(s)`;
         } catch (error) {
           console.error(`❌ Error saving response:`, error);
           return `Error al guardar respuesta`;
