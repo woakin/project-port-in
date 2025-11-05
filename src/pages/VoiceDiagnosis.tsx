@@ -235,27 +235,40 @@ export default function VoiceDiagnosis() {
       return;
     }
 
+    // Validación preflight: verificar que todas las variables estén presentes
+    const requiredFields = {
+      COMPANY_NAME: companyData.companyName,
+      COMPANY_INDUSTRY: companyData.companyIndustry,
+      COMPANY_STAGE: companyData.companyStage,
+      PROJECT_NAME: companyData.projectName,
+      PROJECT_DESCRIPTION: companyData.projectDescription,
+    };
+
+    const emptyFields = Object.entries(requiredFields)
+      .filter(([_, value]) => !value || value.trim() === '')
+      .map(([key, _]) => key);
+
+    if (emptyFields.length > 0) {
+      toast({
+        title: "Faltan datos requeridos",
+        description: `Por favor completa: ${emptyFields.join(', ')}`,
+        variant: "destructive",
+      });
+      console.error('Missing fields:', emptyFields);
+      return;
+    }
+
     setIsLoading(true);
     try {
       // Primero solicitar permisos de micrófono
       await navigator.mediaDevices.getUserMedia({ audio: true });
 
+      console.log('🚀 Starting conversation with variables:', requiredFields);
+
       // Obtener signed URL del edge function con variables
       const { data, error } = await supabase.functions.invoke('elevenlabs-agent', {
         body: {
-          variables: {
-            COMPANY_NAME: companyData.companyName,
-            COMPANY_INDUSTRY: companyData.companyIndustry,
-            COMPANY_STAGE: companyData.companyStage,
-            PROJECT_NAME: companyData.projectName,
-            PROJECT_DESCRIPTION: companyData.projectDescription,
-            // Duplicados por si el agente espera otros nombres
-            company_name: companyData.companyName,
-            company_industry: companyData.companyIndustry,
-            company_stage: companyData.companyStage,
-            project_name: companyData.projectName,
-            project_description: companyData.projectDescription,
-          }
+          variables: requiredFields
         }
       });
       

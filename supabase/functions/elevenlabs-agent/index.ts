@@ -19,44 +19,51 @@ serve(async (req) => {
     // Get variables from request body
     const { variables } = await req.json();
 
-    // Build query params with agent_id
-    const queryParams = new URLSearchParams({
-      agent_id: "agent_9801k98jdzhse9ea40vs7gws9d1c",
-    });
+    // Normalize and validate the 5 required variables
+    const requiredVars: Record<string, string> = {
+      'COMPANY_NAME': (variables?.COMPANY_NAME || variables?.company_name || variables?.companyName || '').trim(),
+      'COMPANY_INDUSTRY': (variables?.COMPANY_INDUSTRY || variables?.company_industry || variables?.companyIndustry || '').trim(),
+      'COMPANY_STAGE': (variables?.COMPANY_STAGE || variables?.company_stage || variables?.companyStage || '').trim(),
+      'PROJECT_NAME': (variables?.PROJECT_NAME || variables?.project_name || variables?.projectName || '').trim(),
+      'PROJECT_DESCRIPTION': (variables?.PROJECT_DESCRIPTION || variables?.project_description || variables?.projectDescription || '').trim(),
+    };
 
-    // Add ONLY the exact 5 variables that the template expects (no duplicates, no aliases)
-    if (variables) {
-      const requiredVars: Record<string, string> = {
-        'COMPANY_NAME': variables.COMPANY_NAME || variables.company_name || '',
-        'COMPANY_INDUSTRY': variables.COMPANY_INDUSTRY || variables.company_industry || '',
-        'COMPANY_STAGE': variables.COMPANY_STAGE || variables.company_stage || '',
-        'PROJECT_NAME': variables.PROJECT_NAME || variables.project_name || '',
-        'PROJECT_DESCRIPTION': variables.PROJECT_DESCRIPTION || variables.project_description || '',
-      };
+    // Validate that all variables are present
+    const missingVars = Object.entries(requiredVars)
+      .filter(([_, value]) => !value)
+      .map(([key, _]) => key);
 
-      // Add each variable exactly once with the exact key the template uses
-      Object.entries(requiredVars).forEach(([key, value]) => {
-        if (value !== undefined && value !== null) {
-          const v = String(value);
-          // Standard variables (agent-level)
-          queryParams.append(`variables[${key}]`, v);
-          // Also pass as first_message_variables to satisfy agents requiring it
-          queryParams.append(`first_message_variables[${key}]`, v);
+    if (missingVars.length > 0) {
+      console.error('Missing required variables:', missingVars);
+      return new Response(
+        JSON.stringify({ 
+          error: "Missing required variables", 
+          missing: missingVars,
+          received: Object.keys(variables || {})
+        }), 
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
         }
-      });
+      );
     }
 
-    console.log('Variables being sent to ElevenLabs:', variables);
-    console.log('Full query string:', queryParams.toString());
+    console.log('Variables being sent to ElevenLabs:', requiredVars);
 
-    // Generate signed URL for agent with variables using GET
+    // Generate signed URL for agent with variables using POST
     const response = await fetch(
-      `https://api.elevenlabs.io/v1/convai/conversation/get_signed_url?${queryParams.toString()}`,
+      "https://api.elevenlabs.io/v1/convai/conversation/get_signed_url",
       {
-        method: "GET",
+        method: "POST",
         headers: {
           "xi-api-key": ELEVENLABS_API_KEY,
+          "Content-Type": "application/json",
         },
+        body: JSON.stringify({
+          agent_id: "agent_9801k98jdzhse9ea40vs7gws9d1c",
+          variables: requiredVars,
+          first_message_variables: requiredVars,
+        }),
       },
     );
 
