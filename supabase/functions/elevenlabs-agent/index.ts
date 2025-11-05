@@ -19,47 +19,28 @@ serve(async (req) => {
     // Get variables from request body
     const { variables } = await req.json();
     
-    // Build query params with agent_id and variables
+    // Build query params with agent_id
     const queryParams = new URLSearchParams({
       agent_id: "agent_9801k98jdzhse9ea40vs7gws9d1c",
     });
 
-    // Add variables to query params with aliases and safe defaults
-    const requiredKeys = [
-      'COMPANY_NAME',
-      'COMPANY_INDUSTRY',
-      'COMPANY_STAGE',
-      'PROJECT_NAME',
-      'PROJECT_DESCRIPTION',
-    ];
+    // Add ONLY the exact variables that the agent expects (matching template exactly)
+    if (variables) {
+      const requiredVars = {
+        'COMPANY_NAME': variables.COMPANY_NAME || variables.company_name || 'tu empresa',
+        'COMPANY_INDUSTRY': variables.COMPANY_INDUSTRY || variables.company_industry || 'tu industria',
+        'COMPANY_STAGE': variables.COMPANY_STAGE || variables.company_stage || 'startup',
+        'PROJECT_NAME': variables.PROJECT_NAME || variables.project_name || 'tu proyecto',
+        'PROJECT_DESCRIPTION': variables.PROJECT_DESCRIPTION || variables.project_description || 'este proyecto',
+      };
 
-    const addVar = (key: string, value: unknown, aliases: string[] = []) => {
-      const v = (value ?? '').toString().trim() || 'N/A';
-      const keys = [key, ...aliases];
-      keys.forEach((k) => queryParams.append(`variables[${k}]`, v));
-    };
+      // Add each variable EXACTLY once with the exact key the template uses
+      Object.entries(requiredVars).forEach(([key, value]) => {
+        queryParams.append(`variables[${key}]`, value);
+      });
+    }
 
-    const v = variables || {};
-
-    // Map core vars + common aliases/casing variants
-    addVar('COMPANY_NAME', v.COMPANY_NAME ?? v.company_name ?? v.CompanyName, ['company_name', 'CompanyName', 'COMPANY', 'company']);
-    addVar('COMPANY_INDUSTRY', v.COMPANY_INDUSTRY ?? v.company_industry ?? v.CompanyIndustry ?? v.INDUSTRY, ['company_industry', 'CompanyIndustry', 'INDUSTRY', 'industry']);
-    addVar('COMPANY_STAGE', v.COMPANY_STAGE ?? v.company_stage ?? v.CompanyStage ?? v.STAGE, ['company_stage', 'CompanyStage', 'STAGE', 'stage']);
-    addVar('PROJECT_NAME', v.PROJECT_NAME ?? v.project_name ?? v.ProjectName ?? v.PROJECT, ['project_name', 'ProjectName', 'PROJECT', 'project']);
-    addVar('PROJECT_DESCRIPTION', v.PROJECT_DESCRIPTION ?? v.project_description ?? v.ProjectDescription ?? v.PROJECT_DESC, ['project_description', 'ProjectDescription', 'PROJECT_DESC', 'project_desc']);
-
-    // Pass through any additional variables that might be configured in the agent
-    Object.keys(v).forEach((key) => {
-      if (!requiredKeys.includes(key)) {
-        try {
-          queryParams.append(`variables[${key}]`, (v[key] ?? '').toString());
-        } catch (_) {
-          // ignore non-serializable values
-        }
-      }
-    });
-
-    console.log('Variables being sent to ElevenLabs:', v);
+    console.log('Variables being sent to ElevenLabs:', variables);
     console.log('Full query string:', queryParams.toString());
 
     // Generate signed URL for agent with variables
