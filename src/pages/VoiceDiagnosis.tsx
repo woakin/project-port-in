@@ -62,8 +62,10 @@ export default function VoiceDiagnosis() {
           .from('projects')
           .select('name, description')
           .eq('company_id', profile.company_id)
-          .eq('is_default', true)
-          .single();
+          .order('is_default', { ascending: false })
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
 
         const data: CompanyData = {
           companyName: profile.companies.name,

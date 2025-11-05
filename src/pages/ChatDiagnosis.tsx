@@ -523,7 +523,47 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
 
   // Función para guardar datos y redirigir a Voice Diagnosis
   const saveAndRedirectToVoice = async () => {
+    // Early return: Si ya existe currentProject, navegar directo sin crear nada
+    if (currentProject) {
+      navigate('/voice-diagnosis');
+      return;
+    }
+
     if (!user) return;
+
+    // Validación estricta de datos
+    const name = tempName?.trim();
+    const industry = tempIndustry?.trim();
+    const stage = tempStage;
+    const projectName = tempProjectName?.trim();
+    const projectDescription = tempProjectDescription?.trim();
+
+    if (!name || name.length === 0 || name.length > 100) {
+      toast({
+        title: 'Error de validación',
+        description: 'El nombre de la empresa es inválido (máx. 100 caracteres)',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    if (!industry || industry.length === 0 || industry.length > 100) {
+      toast({
+        title: 'Error de validación',
+        description: 'La industria es inválida (máx. 100 caracteres)',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    if (!projectName || projectName.length === 0 || projectName.length > 100) {
+      toast({
+        title: 'Error de validación',
+        description: 'El nombre del proyecto es inválido (máx. 100 caracteres)',
+        variant: 'destructive'
+      });
+      return;
+    }
     
     setSending(true);
     try {
@@ -537,13 +577,13 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
         .single();
 
       if (existingProfile?.company_id) {
-        // Actualizar empresa existente
+        // Actualizar empresa existente solo con valores validados
         await supabase
           .from('companies')
           .update({
-            name: tempName,
-            industry: tempIndustry,
-            size: tempStage,
+            name,
+            industry,
+            size: stage,
           })
           .eq('id', existingProfile.company_id);
         
@@ -553,9 +593,9 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
         const { data: newCompany, error: companyError } = await supabase
           .from('companies')
           .insert({
-            name: tempName,
-            industry: tempIndustry,
-            size: tempStage,
+            name,
+            industry,
+            size: stage,
             created_by: user.id,
           })
           .select()
@@ -571,13 +611,19 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
           .eq('id', user.id);
       }
 
-      // 2. Crear proyecto
+      // 2. Antes de crear proyecto, setear is_default = false en todos los proyectos existentes
+      await supabase
+        .from('projects')
+        .update({ is_default: false })
+        .eq('company_id', companyId);
+
+      // 3. Crear proyecto
       const { error: projectError } = await supabase
         .from('projects')
         .insert({
           company_id: companyId,
-          name: tempProjectName,
-          description: tempProjectDescription,
+          name: projectName,
+          description: projectDescription || null,
           is_default: true,
           status: 'active',
         });
@@ -589,7 +635,7 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
         description: "Redirigiendo a la entrevista por voz...",
       });
 
-      // 3. Redirigir a voice diagnosis
+      // 4. Redirigir a voice diagnosis
       setTimeout(() => {
         navigate('/voice-diagnosis');
       }, 500);
