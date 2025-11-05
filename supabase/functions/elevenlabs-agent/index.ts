@@ -50,22 +50,25 @@ serve(async (req) => {
 
     console.log('Variables being sent to ElevenLabs:', requiredVars);
 
-    // Generate signed URL for agent with variables using POST
-    const response = await fetch(
-      "https://api.elevenlabs.io/v1/convai/conversation/get_signed_url",
-      {
-        method: "POST",
-        headers: {
-          "xi-api-key": ELEVENLABS_API_KEY,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          agent_id: "agent_9801k98jdzhse9ea40vs7gws9d1c",
-          variables: requiredVars,
-          first_message_variables: requiredVars,
-        }),
+    // Build query parameters for GET request
+    const params = new URLSearchParams();
+    params.append('agent_id', 'agent_9801k98jdzhse9ea40vs7gws9d1c');
+    
+    // Add variables as query parameters in the format ElevenLabs expects
+    Object.entries(requiredVars).forEach(([key, value]) => {
+      params.append(key, value);
+    });
+
+    // Generate signed URL for agent with variables using GET
+    const url = `https://api.elevenlabs.io/v1/convai/conversation/get_signed_url?${params.toString()}`;
+    console.log('Requesting signed URL from:', url);
+    
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        "xi-api-key": ELEVENLABS_API_KEY,
       },
-    );
+    });
 
     if (!response.ok) {
       const errorText = await response.text();
