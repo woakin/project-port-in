@@ -249,6 +249,12 @@ export default function VoiceDiagnosis() {
             COMPANY_STAGE: companyData.companyStage,
             PROJECT_NAME: companyData.projectName,
             PROJECT_DESCRIPTION: companyData.projectDescription,
+            // Duplicados por si el agente espera otros nombres
+            company_name: companyData.companyName,
+            company_industry: companyData.companyIndustry,
+            company_stage: companyData.companyStage,
+            project_name: companyData.projectName,
+            project_description: companyData.projectDescription,
           }
         }
       });
@@ -262,8 +268,20 @@ export default function VoiceDiagnosis() {
       console.log('🚀 Starting conversation with variables:', companyData);
       console.log('🔗 Signed URL obtained:', data.signed_url?.substring(0, 50) + '...');
 
-      // Iniciar conversación con ElevenLabs usando signedUrl (API @11labs/react v0.2)
-      await conversation.startSession({ signedUrl: data.signed_url });
+      // Construir primer mensaje con variables resueltas (evita placeholders sin resolver)
+      const firstMessage = `Hola, mucho gusto. Soy tu consultor de Alasha AI para ${companyData.companyName}. Hoy vamos a realizar un diagnóstico del proyecto ${companyData.projectName}, que se enfoca en ${companyData.projectDescription}.
+
+El proceso es sencillo: conversaremos sobre seis áreas clave de tu negocio en el sector ${companyData.companyIndustry}. Te haré preguntas una a la vez, y puedes responder con total libertad. ¿Listo para comenzar?`;
+
+      // Iniciar conversación forzando firstMessage por override para evitar error de variables faltantes
+      await (conversation as any).startSession({ 
+        signedUrl: data.signed_url,
+        overrides: {
+          agent: {
+            firstMessage,
+          },
+        },
+      });
       
       console.log('✅ Session started successfully');
 
