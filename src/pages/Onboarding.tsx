@@ -169,8 +169,26 @@ export default function Onboarding() {
           {step === 1 && (
             <div className="space-y-6">
               <div>
-                <h2 className="text-2xl font-bold text-foreground mb-2">Información de tu empresa</h2>
-                <p className="text-muted-foreground">Cuéntanos sobre tu negocio</p>
+                <h2 className="text-2xl font-bold text-foreground mb-2">¡Bienvenido a Alasha AI! 🚀</h2>
+                <p className="text-muted-foreground mb-4">
+                  En los próximos minutos, vamos a analizar tu negocio con inteligencia artificial 
+                  para darte un plan de acción personalizado y recomendaciones específicas.
+                </p>
+                <div className="bg-primary/10 border border-primary/20 rounded-lg p-4">
+                  <p className="text-sm text-foreground">
+                    ✨ Esto solo te tomará <strong>10 minutos</strong> y obtendrás:
+                  </p>
+                  <ul className="text-sm text-muted-foreground mt-2 ml-4 space-y-1">
+                    <li>• Diagnóstico completo de tu negocio</li>
+                    <li>• Plan de acción personalizado</li>
+                    <li>• KPIs y métricas para seguimiento</li>
+                    <li>• Recomendaciones específicas por área</li>
+                  </ul>
+                </div>
+              </div>
+              
+              <div>
+                <h3 className="text-lg font-semibold text-foreground mb-4">Información de tu empresa</h3>
               </div>
 
               <div className="space-y-4">

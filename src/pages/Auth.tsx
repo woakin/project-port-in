@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -35,7 +36,18 @@ export default function Auth() {
     const { error } = await signIn(loginEmail, loginPassword);
     
     if (!error) {
-      navigate('/');
+      // Check if user has company_id to decide redirect
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('company_id')
+        .eq('id', user?.id || '')
+        .single();
+      
+      if (profile?.company_id) {
+        navigate('/');
+      } else {
+        navigate('/onboarding');
+      }
     }
     
     setLoginLoading(false);
@@ -48,7 +60,8 @@ export default function Auth() {
     const { error } = await signUp(signupEmail, signupPassword, signupFullName);
     
     if (!error) {
-      navigate('/');
+      // New users always go to onboarding
+      navigate('/onboarding');
     }
     
     setSignupLoading(false);

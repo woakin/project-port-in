@@ -34,7 +34,9 @@ import {
   Brain,
   Globe,
   Building2,
-  Zap
+  Zap,
+  MessageSquare,
+  Mic
 } from "lucide-react";
 import { IconCircle } from "@/components/shared/IconCircle";
 import { useEffect, useState } from "react";
@@ -647,27 +649,65 @@ const Index = () => {
           </div>
         ) : (
           <div className="mb-comfortable">
-            <Card variant="content" className="border-2 border-dashed">
-              <div className="text-center py-12">
-                <div className="flex justify-center mb-4">
-                  <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-                    <Activity className="h-8 w-8 text-primary" />
+            <Card variant="content" className="bg-gradient-to-br from-primary/5 via-secondary/5 to-primary/10 border-2 border-primary/20">
+              <div className="text-center py-16 px-8">
+                <div className="flex justify-center mb-6">
+                  <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center">
+                    <Sparkles className="h-10 w-10 text-primary" />
                   </div>
                 </div>
-                <h3 className="text-xl font-semibold text-foreground mb-2">
-                  Comienza con un diagnóstico
-                </h3>
-                <p className="text-muted-foreground mb-6 max-w-2xl mx-auto">
-                  Descubre el estado actual de tu negocio y recibe un plan de acción personalizado en minutos
+                <h2 className="text-3xl font-bold text-foreground mb-4">
+                  Descubre el potencial de tu negocio
+                </h2>
+                <p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto">
+                  Completa tu diagnóstico en 10 minutos y obtén insights personalizados con IA
                 </p>
-                <Button 
-                  onClick={() => navigate('/chat-diagnosis')}
-                  size="lg"
-                  variant="gradient"
-                >
-                  Iniciar Diagnóstico
-                  <ArrowRight className="ml-2 h-5 w-5" />
-                </Button>
+                
+                {/* Preview de lo que obtendrán */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10 max-w-3xl mx-auto">
+                  <div className="flex flex-col items-center p-4 bg-background/50 rounded-lg">
+                    <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-3">
+                      <Activity className="h-6 w-6 text-primary" />
+                    </div>
+                    <p className="text-sm font-medium text-foreground">Diagnóstico completo</p>
+                    <p className="text-xs text-muted-foreground mt-1">Análisis de 6 áreas clave</p>
+                  </div>
+                  <div className="flex flex-col items-center p-4 bg-background/50 rounded-lg">
+                    <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-3">
+                      <Target className="h-6 w-6 text-primary" />
+                    </div>
+                    <p className="text-sm font-medium text-foreground">Plan personalizado</p>
+                    <p className="text-xs text-muted-foreground mt-1">Con tareas y objetivos</p>
+                  </div>
+                  <div className="flex flex-col items-center p-4 bg-background/50 rounded-lg">
+                    <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-3">
+                      <TrendingUp className="h-6 w-6 text-primary" />
+                    </div>
+                    <p className="text-sm font-medium text-foreground">KPIs y métricas</p>
+                    <p className="text-xs text-muted-foreground mt-1">Seguimiento en tiempo real</p>
+                  </div>
+                </div>
+
+                {/* CTAs prominentes */}
+                <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                  <Button 
+                    onClick={() => navigate('/chat-diagnosis')}
+                    size="lg"
+                    className="text-lg px-8 py-6 h-auto"
+                  >
+                    <MessageSquare className="mr-3 h-6 w-6" />
+                    Diagnóstico por Chat
+                  </Button>
+                  <Button 
+                    onClick={() => navigate('/voice-diagnosis')}
+                    size="lg"
+                    variant="outline"
+                    className="text-lg px-8 py-6 h-auto border-2"
+                  >
+                    <Mic className="mr-3 h-6 w-6" />
+                    Diagnóstico por Voz
+                  </Button>
+                </div>
               </div>
             </Card>
           </div>
