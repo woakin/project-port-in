@@ -106,25 +106,22 @@ export default function ChatDiagnosis() {
         if (data) {
           setDiagnosisVersion(data.version);
           setHasPreviousDiagnosis(true);
+          // Si hay diagnóstico previo, ir directo al chat
+          setStep('chat');
+          const initialMessage = getInitialMessage(currentProject.name, 'diagnosis');
+          setMessages([{
+            role: 'assistant',
+            content: initialMessage
+          }]);
+        } else {
+          // Si NO hay diagnóstico previo, ir a selección de método
+          setStep('method-selection');
         }
       };
 
       fetchPreviousDiagnosis();
-      
-      // Ir a selección de método si no hay diagnóstico previo
-      // Si ya hay diagnóstico, ir directo al chat
-      if (hasPreviousDiagnosis) {
-        setStep('chat');
-        const initialMessage = getInitialMessage(currentProject.name, 'diagnosis');
-        setMessages([{
-          role: 'assistant',
-          content: initialMessage
-        }]);
-      } else {
-        setStep('method-selection');
-      }
     }
-  }, [user, authLoading, currentProject, projectLoading, step, navigate, hasPreviousDiagnosis]);
+  }, [user, authLoading, currentProject, projectLoading, step, navigate]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
