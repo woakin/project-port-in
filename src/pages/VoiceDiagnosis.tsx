@@ -92,50 +92,81 @@ export default function VoiceDiagnosis() {
 
   const conversation = useConversation({
     onConnect: () => {
-      console.log("Connected to ElevenLabs");
+      console.log("✅ Connected to ElevenLabs");
+      setIsLoading(false);
       toast({
         title: "Conectado",
         description: "La entrevista por voz está lista",
       });
     },
     onDisconnect: () => {
-      console.log("Disconnected from ElevenLabs");
+      console.log("❌ Disconnected from ElevenLabs");
+      setIsLoading(false);
+      
+      // Solo mostrar toast si hay áreas completadas (desconexión normal)
+      // Si no hay áreas completadas, probablemente fue un error de conexión
+      if (completedAreas.length > 0) {
+        toast({
+          title: "Desconectado",
+          description: "La conversación ha finalizado",
+        });
+      } else {
+        toast({
+          title: "Desconexión inesperada",
+          description: "La conversación se desconectó. Intenta de nuevo.",
+          variant: "destructive",
+        });
+      }
     },
-    onError: (error) => {
-      console.error("Conversation error:", error);
+    onError: (error: any) => {
+      console.error("❌ Conversation error:", error);
+      setIsLoading(false);
       toast({
-        title: "Error",
-        description: "Hubo un problema con la conexión de voz",
+        title: "Error de conexión",
+        description: error instanceof Error ? error.message : "Hubo un problema con la conexión de voz",
         variant: "destructive",
       });
+    },
+    onMessage: (message) => {
+      console.log("📨 Message received:", message);
     },
     clientTools: {
       // Tool para guardar respuesta de cada área
       saveAreaResponse: async ({ area, response }: { area: string; response: string }) => {
-        console.log(`Saving ${area} response:`, response);
-        
-        setResponses(prev => ({
-          ...prev,
-          [area]: response
-        }));
-        
-        setCompletedAreas(prev => {
-          if (!prev.includes(area)) {
-            return [...prev, area];
-          }
-          return prev;
-        });
-        
-        return `Respuesta de ${area} guardada exitosamente`;
+        try {
+          console.log(`💾 Saving ${area} response:`, response.substring(0, 100) + '...');
+          
+          setResponses(prev => ({
+            ...prev,
+            [area]: response
+          }));
+          
+          setCompletedAreas(prev => {
+            if (!prev.includes(area)) {
+              const updated = [...prev, area];
+              console.log(`✅ Area ${area} completada. Total: ${updated.length}/6`);
+              return updated;
+            }
+            return prev;
+          });
+          
+          return `Respuesta de ${area} guardada exitosamente`;
+        } catch (error) {
+          console.error(`❌ Error saving ${area} response:`, error);
+          return `Error al guardar respuesta de ${area}`;
+        }
       },
       
       // Tool para finalizar diagnóstico
       finalizeDiagnosis: async () => {
-        console.log("Finalizing diagnosis with responses:", responses);
-        
         try {
+          console.log("🏁 Finalizing diagnosis with responses:", Object.keys(responses));
+          
           const { data: { user } } = await supabase.auth.getUser();
-          if (!user) throw new Error("No user found");
+          if (!user) {
+            console.error("❌ No user found");
+            throw new Error("No user found");
+          }
 
           const { data: profile } = await supabase
             .from('profiles')
@@ -143,8 +174,13 @@ export default function VoiceDiagnosis() {
             .eq('id', user.id)
             .single();
 
-          if (!profile?.company_id) throw new Error("No company found");
+          if (!profile?.company_id) {
+            console.error("❌ No company found for user");
+            throw new Error("No company found");
+          }
 
+          console.log("📤 Invoking diagnose-company function...");
+          
           // Llamar a la función de diagnóstico
           const { data, error } = await supabase.functions.invoke('diagnose-company', {
             body: {
@@ -156,7 +192,12 @@ export default function VoiceDiagnosis() {
             }
           });
 
-          if (error) throw error;
+          if (error) {
+            console.error("❌ Error from diagnose-company:", error);
+            throw error;
+          }
+
+          console.log("✅ Diagnosis created:", data.diagnosis_id);
 
           toast({
             title: "Diagnóstico completado",
@@ -170,13 +211,13 @@ export default function VoiceDiagnosis() {
 
           return "Diagnóstico completado y guardado. Redirigiendo a resultados...";
         } catch (error) {
-          console.error("Error finalizing diagnosis:", error);
+          console.error("❌ Error finalizing diagnosis:", error);
           toast({
             title: "Error",
-            description: "No se pudo completar el diagnóstico",
+            description: error instanceof Error ? error.message : "No se pudo completar el diagnóstico",
             variant: "destructive",
           });
-          return "Error al guardar el diagnóstico";
+          return `Error al guardar el diagnóstico: ${error instanceof Error ? error.message : 'Unknown error'}`;
         }
       }
     },
@@ -212,12 +253,15 @@ export default function VoiceDiagnosis() {
       
       if (error) throw error;
 
-      console.log('Starting conversation with variables:', companyData);
+      console.log('🚀 Starting conversation with variables:', companyData);
+      console.log('🔗 Signed URL obtained:', data.signed_url?.substring(0, 50) + '...');
 
       // Iniciar conversación con ElevenLabs
       await conversation.startSession({ 
         signedUrl: data.signed_url 
       });
+      
+      console.log('✅ Session started successfully');
 
     } catch (error) {
       console.error('Error starting conversation:', error);

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -41,15 +41,15 @@ export function AIAssistantProvider({ children }: { children: ReactNode }) {
     projectName: null,
   });
 
-  const open = () => setIsOpen(true);
-  const close = () => setIsOpen(false);
-  const toggle = () => setIsOpen((prev) => !prev);
+  const open = useCallback(() => setIsOpen(true), []);
+  const close = useCallback(() => setIsOpen(false), []);
+  const toggle = useCallback(() => setIsOpen((prev) => !prev), []);
 
-  const updateContext = (newContext: Partial<AIContext>) => {
+  const updateContext = useCallback((newContext: Partial<AIContext>) => {
     setContext((prev) => ({ ...prev, ...newContext }));
-  };
+  }, []);
 
-  const addMessage = (message: Message) => {
+  const addMessage = useCallback((message: Message) => {
     setMessages((prev) => {
       // If this is an assistant message and the last message is also assistant, replace it
       if (message.role === 'assistant' && prev.length > 0 && prev[prev.length - 1].role === 'assistant') {
@@ -57,11 +57,11 @@ export function AIAssistantProvider({ children }: { children: ReactNode }) {
       }
       return [...prev, message];
     });
-  };
+  }, []);
 
-  const clearMessages = () => {
+  const clearMessages = useCallback(() => {
     setMessages([]);
-  };
+  }, []);
 
   return (
     <AIAssistantContext.Provider
