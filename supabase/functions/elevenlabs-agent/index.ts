@@ -16,9 +16,27 @@ serve(async (req) => {
       throw new Error("ELEVENLABS_API_KEY is not configured");
     }
 
-    // Generate signed URL for agent
+    // Get variables from request body
+    const { variables } = await req.json();
+    
+    // Build query params with agent_id and variables
+    const queryParams = new URLSearchParams({
+      agent_id: "agent_9801k98jdzhse9ea40vs7gws9d1c",
+    });
+
+    // Add variables to query params
+    if (variables) {
+      Object.keys(variables).forEach(key => {
+        queryParams.append(`variables[${key}]`, variables[key]);
+      });
+    }
+
+    console.log('Variables being sent to ElevenLabs:', variables);
+    console.log('Full query string:', queryParams.toString());
+
+    // Generate signed URL for agent with variables
     const response = await fetch(
-      "https://api.elevenlabs.io/v1/convai/conversation/get_signed_url?agent_id=agent_9801k98jdzhse9ea40vs7gws9d1c",
+      `https://api.elevenlabs.io/v1/convai/conversation/get_signed_url?${queryParams.toString()}`,
       {
         method: "GET",
         headers: {

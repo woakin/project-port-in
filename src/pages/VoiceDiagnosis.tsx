@@ -17,13 +17,67 @@ interface DiagnosisResponses {
   technology?: string;
 }
 
+interface CompanyData {
+  companyName: string;
+  companyIndustry: string;
+  companyStage: string;
+  projectName: string;
+  projectDescription: string;
+}
+
 export default function VoiceDiagnosis() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [responses, setResponses] = useState<DiagnosisResponses>({});
   const [completedAreas, setCompletedAreas] = useState<string[]>([]);
+  const [companyData, setCompanyData] = useState<CompanyData | null>(null);
   
+  // Load company data on mount
+  useEffect(() => {
+    const loadCompanyData = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('company_id, companies(name, industry, size)')
+          .eq('id', user.id)
+          .single();
+
+        if (!profile?.companies) return;
+
+        const { data: project } = await supabase
+          .from('projects')
+          .select('name, description')
+          .eq('company_id', profile.company_id)
+          .eq('is_default', true)
+          .single();
+
+        const data: CompanyData = {
+          companyName: profile.companies.name,
+          companyIndustry: profile.companies.industry || 'General',
+          companyStage: profile.companies.size || 'startup',
+          projectName: project?.name || 'Proyecto Principal',
+          projectDescription: project?.description || '',
+        };
+
+        setCompanyData(data);
+        console.log('Company data loaded:', data);
+      } catch (error) {
+        console.error('Error loading company data:', error);
+        toast({
+          title: "Error",
+          description: "No se pudo cargar la información de la empresa",
+          variant: "destructive",
+        });
+      }
+    };
+
+    loadCompanyData();
+  }, [toast]);
+
   const conversation = useConversation({
     onConnect: () => {
       console.log("Connected to ElevenLabs");
@@ -117,15 +171,36 @@ export default function VoiceDiagnosis() {
   });
 
   const startConversation = async () => {
+    if (!companyData) {
+      toast({
+        title: "Error",
+        description: "Cargando información de la empresa...",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsLoading(true);
     try {
       // Primero solicitar permisos de micrófono
       await navigator.mediaDevices.getUserMedia({ audio: true });
 
-      // Obtener signed URL del edge function
-      const { data, error } = await supabase.functions.invoke('elevenlabs-agent');
+      // Obtener signed URL del edge function con variables
+      const { data, error } = await supabase.functions.invoke('elevenlabs-agent', {
+        body: {
+          variables: {
+            COMPANY_NAME: companyData.companyName,
+            COMPANY_INDUSTRY: companyData.companyIndustry,
+            COMPANY_STAGE: companyData.companyStage,
+            PROJECT_NAME: companyData.projectName,
+            PROJECT_DESCRIPTION: companyData.projectDescription,
+          }
+        }
+      });
       
       if (error) throw error;
+
+      console.log('Starting conversation with variables:', companyData);
 
       // Iniciar conversación con ElevenLabs
       await conversation.startSession({ 
