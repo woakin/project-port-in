@@ -102,21 +102,31 @@ export default function VoiceDiagnosis() {
     onDisconnect: (event) => {
       console.log("❌ Disconnected from ElevenLabs");
       console.log("Disconnect event:", event);
+      
       setIsLoading(false);
       
       // Solo mostrar toast si hay áreas completadas (desconexión normal)
-      // Si no hay áreas completadas, probablemente fue un error de conexión
       if (completedAreas.length > 0) {
         toast({
           title: "Desconectado",
           description: "La conversación ha finalizado",
         });
       } else {
+        // Detectar si es error de variables mirando el reason como string
+        const eventStr = JSON.stringify(event);
+        const isVariablesError = eventStr.includes('Missing required dynamic variables');
+        
         toast({
           title: "Desconexión inesperada",
-          description: `La conversación se desconectó. ${event ? 'Evento: ' + JSON.stringify(event) : 'Intenta de nuevo.'}`,
+          description: isVariablesError 
+            ? "Error de variables. Variables enviadas: " + JSON.stringify(companyData)
+            : "La conversación se desconectó. Intenta de nuevo.",
           variant: "destructive",
         });
+        
+        if (isVariablesError) {
+          console.error('❌ Variables issue - sent from client:', companyData);
+        }
       }
     },
     onError: (error: any) => {
@@ -278,11 +288,20 @@ export default function VoiceDiagnosis() {
         throw new Error("No se obtuvo la URL firmada del servidor");
       }
 
-      console.log('🚀 Starting conversation with variables:', companyData);
       console.log('🔗 Signed URL obtained:', data.signed_url?.substring(0, 50) + '...');
+      console.log('📋 Dynamic variables to send:', requiredFields);
 
-      // Iniciar conversación con ElevenLabs - las variables ya están en el signed URL
-      await conversation.startSession({ signedUrl: data.signed_url });
+      // Iniciar conversación con ElevenLabs pasando las variables dinámicas
+      await conversation.startSession({ 
+        signedUrl: data.signed_url,
+        dynamicVariables: {
+          COMPANY_NAME: requiredFields.COMPANY_NAME,
+          COMPANY_INDUSTRY: requiredFields.COMPANY_INDUSTRY,
+          COMPANY_STAGE: requiredFields.COMPANY_STAGE,
+          PROJECT_NAME: requiredFields.PROJECT_NAME,
+          PROJECT_DESCRIPTION: requiredFields.PROJECT_DESCRIPTION,
+        }
+      });
       
       console.log('✅ Session started successfully');
 
