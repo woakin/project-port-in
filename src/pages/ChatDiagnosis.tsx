@@ -309,20 +309,35 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
 
   // Función para saltar área actual
   const handleSkipArea = () => {
-    const nextIndex = areaProgress.currentIndex + 1;
+    const currentIndex = areaProgress.currentIndex;
+    const nextIndex = currentIndex + 1;
     
+    // Si es la última área, marcarla como skipped y terminar
     if (nextIndex >= AREAS.length) {
+      setAreaProgress(prev => ({
+        ...prev,
+        areas: prev.areas.map((area, idx) => 
+          idx === currentIndex ? { ...area, status: 'skipped' } : area
+        )
+      }));
+      
+      setMessages(prev => [...prev, {
+        role: 'assistant' as const,
+        content: `⏭️ **Área saltada**\n\nHas revisado todas las áreas. Ya puedes generar el diagnóstico.`
+      }]);
+      
       toast({
-        title: 'Última área',
-        description: 'Ya estás en la última área'
+        title: 'Última área saltada',
+        description: 'Ya puedes generar el diagnóstico'
       });
       return;
     }
     
+    // Marcar área actual como skipped y avanzar a la siguiente
     setAreaProgress(prev => ({
       currentIndex: nextIndex,
       areas: prev.areas.map((area, idx) => {
-        if (idx === prev.currentIndex) {
+        if (idx === currentIndex) {
           return { ...area, status: 'skipped' };
         }
         if (idx === nextIndex) {
