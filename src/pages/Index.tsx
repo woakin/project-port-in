@@ -132,10 +132,10 @@ const Index = () => {
               </div>
             </div>
             <div className="flex gap-3">
-              <Button variant="ghost" onClick={() => navigate('/auth')}>
+              <Button variant="ghost" onClick={() => navigate('/auth?tab=login')}>
                 Iniciar Sesión
               </Button>
-              <Button variant="default" onClick={() => navigate('/auth')} className="bg-secondary hover:bg-secondary-light">
+              <Button variant="default" onClick={() => navigate('/auth?tab=signup')} className="bg-secondary hover:bg-secondary-light">
                 Comenzar Ahora
               </Button>
             </div>
