@@ -738,11 +738,11 @@ Extrae operaciones estructuradas del mensaje del usuario. Si no detectas ninguna
 
     // Handle non-contextual modes with AI streaming
     let systemPrompt = '';
-    const companyName = companyInfo.name || 'tu empresa';
-    const industry = companyInfo.industry || 'tu industria';
-    const stage = companyInfo.stage || 'tu etapa';
-    const projectName = companyInfo.projectName || 'tu proyecto';
-    const projectDesc = companyInfo.projectDescription || '';
+    const companyName = companyInfo?.name || 'tu empresa';
+    const industry = companyInfo?.industry || 'tu industria';
+    const stage = companyInfo?.stage || 'tu etapa';
+    const projectName = companyInfo?.projectName || 'tu proyecto';
+    const projectDesc = companyInfo?.projectDescription || '';
 
     switch(mode) {
       case 'diagnosis':
