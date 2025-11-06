@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useProjectContext } from '@/contexts/ProjectContext';
@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card } from '@/components/shared/Card';
 import { toast } from '@/hooks/use-toast';
-import { Send, Loader2, CheckCircle, Home, Info, ArrowLeft, ArrowRight, MessageSquare, Mic } from 'lucide-react';
+import { Send, Loader2, CheckCircle, Home, Info, ArrowLeft, ArrowRight, MessageSquare, Mic, SkipForward } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { supabase } from '@/integrations/supabase/client';
 import ReactMarkdown from 'react-markdown';
@@ -19,6 +19,7 @@ import KPIsSheet from '@/components/chat/sheets/KPIsSheet';
 import TasksSheet from '@/components/chat/sheets/TasksSheet';
 import DocumentsSheet from '@/components/chat/sheets/DocumentsSheet';
 import DiagnosesSheet from '@/components/chat/sheets/DiagnosesSheet';
+import { AreaProgressBar } from '@/components/chat/AreaProgressBar';
 
 type ChatMode = 'diagnosis' | 'strategic' | 'follow_up' | 'document';
 
@@ -34,6 +35,15 @@ type CompanyInfo = {
   projectName: string;
   projectDescription?: string;
 };
+
+const AREAS = [
+  { id: 'strategy', name: 'Estrategia', icon: 'Target' },
+  { id: 'operations', name: 'Operaciones', icon: 'Cog' },
+  { id: 'finance', name: 'Finanzas', icon: 'DollarSign' },
+  { id: 'marketing', name: 'Marketing', icon: 'TrendingUp' },
+  { id: 'legal', name: 'Legal', icon: 'Scale' },
+  { id: 'technology', name: 'Tecnología', icon: 'Laptop' }
+] as const;
 
 export default function ChatDiagnosis() {
   const { user, loading: authLoading } = useAuth();
@@ -60,8 +70,20 @@ export default function ChatDiagnosis() {
   const [showModeInfo, setShowModeInfo] = useState(false);
   const [openSheet, setOpenSheet] = useState<SheetType>(null);
   
-  // Estados para seguimiento de progreso por área (FASE 1)
+  // Estados para seguimiento de progreso por área (NUEVO SISTEMA)
   const [currentSection, setCurrentSection] = useState<'strategy'|'operations'|'finance'|'marketing'|'legal'|'technology'>('strategy');
+  const [areaProgress, setAreaProgress] = useState({
+    currentIndex: 0,
+    areas: AREAS.map(area => ({
+      id: area.id,
+      name: area.name,
+      icon: area.icon,
+      status: 'pending' as 'pending' | 'in_progress' | 'completed' | 'skipped',
+      messageCount: 0,
+      responses: ''
+    }))
+  });
+  
   const [sectionAnswers, setSectionAnswers] = useState<Record<string, string>>({
     strategy: '',
     operations: '',
@@ -69,10 +91,9 @@ export default function ChatDiagnosis() {
     marketing: '',
     legal: '',
     technology: '',
-    consolidated: '' // Campo único que acumula TODAS las respuestas
+    consolidated: ''
   });
   
-  // FASE 3: Estado para diálogo de resumen
   const [showSummary, setShowSummary] = useState(false);
 
   useEffect(() => {
@@ -127,6 +148,18 @@ export default function ChatDiagnosis() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  // Inicializar primera área como in_progress
+  useEffect(() => {
+    if (step === 'chat' && chatMode === 'diagnosis' && areaProgress.areas[0].status === 'pending') {
+      setAreaProgress(prev => ({
+        ...prev,
+        areas: prev.areas.map((area, idx) => 
+          idx === 0 ? { ...area, status: 'in_progress' } : area
+        )
+      }));
+    }
+  }, [step, chatMode]);
 
   const getInitialMessage = (projectName: string, mode: ChatMode) => {
     const messages = {
@@ -220,6 +253,122 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
       technology: 'Tecnología'
     };
     return names[section];
+  };
+
+  // Función para avanzar al siguiente área
+  const handleNextArea = () => {
+    const currentArea = areaProgress.areas[areaProgress.currentIndex];
+    
+    // Validar que tenga al menos 2 mensajes antes de avanzar
+    if (currentArea.messageCount < 2) {
+      toast({
+        title: 'Información insuficiente',
+        description: 'Por favor proporciona al menos 2 respuestas antes de avanzar al siguiente área',
+        variant: 'destructive'
+      });
+      return;
+    }
+    
+    // Marcar área actual como completada
+    const nextIndex = areaProgress.currentIndex + 1;
+    
+    if (nextIndex >= AREAS.length) {
+      toast({
+        title: 'Última área',
+        description: 'Ya completaste todas las áreas del diagnóstico'
+      });
+      return;
+    }
+    
+    setAreaProgress(prev => ({
+      currentIndex: nextIndex,
+      areas: prev.areas.map((area, idx) => {
+        if (idx === prev.currentIndex) {
+          return { ...area, status: 'completed' };
+        }
+        if (idx === nextIndex) {
+          return { ...area, status: 'in_progress' };
+        }
+        return area;
+      })
+    }));
+    
+    setCurrentSection(AREAS[nextIndex].id as typeof currentSection);
+    
+    // Mensaje del sistema
+    setMessages(prev => [...prev, {
+      role: 'assistant' as const,
+      content: `🔄 **Avanzando a: ${AREAS[nextIndex].name}**\n\nPerfecto, ahora exploremos el área de ${AREAS[nextIndex].name}.`
+    }]);
+    
+    toast({
+      title: 'Área cambiada',
+      description: `Ahora estamos en: ${AREAS[nextIndex].name}`
+    });
+  };
+
+  // Función para saltar área actual
+  const handleSkipArea = () => {
+    const nextIndex = areaProgress.currentIndex + 1;
+    
+    if (nextIndex >= AREAS.length) {
+      toast({
+        title: 'Última área',
+        description: 'Ya estás en la última área'
+      });
+      return;
+    }
+    
+    setAreaProgress(prev => ({
+      currentIndex: nextIndex,
+      areas: prev.areas.map((area, idx) => {
+        if (idx === prev.currentIndex) {
+          return { ...area, status: 'skipped' };
+        }
+        if (idx === nextIndex) {
+          return { ...area, status: 'in_progress' };
+        }
+        return area;
+      })
+    }));
+    
+    setCurrentSection(AREAS[nextIndex].id as typeof currentSection);
+    
+    setMessages(prev => [...prev, {
+      role: 'assistant' as const,
+      content: `⏭️ **Área saltada**\n\nEntendido, continuemos con ${AREAS[nextIndex].name}.`
+    }]);
+    
+    toast({
+      title: 'Área saltada',
+      description: `Ahora estamos en: ${AREAS[nextIndex].name}`
+    });
+  };
+
+  // Función para regresar a un área anterior
+  const handleGoToArea = (areaIndex: number) => {
+    if (areaIndex > areaProgress.currentIndex) return;
+    
+    setAreaProgress(prev => ({
+      currentIndex: areaIndex,
+      areas: prev.areas.map((area, idx) =>
+        idx === areaIndex
+          ? { ...area, status: 'in_progress' }
+          : area
+      )
+    }));
+    
+    setCurrentSection(AREAS[areaIndex].id as typeof currentSection);
+    
+    setMessages(prev => [...prev, {
+      role: 'assistant' as const,
+      content: `🔄 **Regresando a: ${AREAS[areaIndex].name}**\n\nVolvamos a revisar el área de ${AREAS[areaIndex].name}.`
+    }]);
+    
+    toast({
+      title: 'Área cambiada',
+      description: `Regresaste a: ${AREAS[areaIndex].name}`
+    });
   };
 
   // FASE 3: Función para cambiar de área manualmente con coherencia total
@@ -692,18 +841,37 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
     const newMessages = [...messages, userMessage];
     setMessages(newMessages);
     
-    // FASE 1: Guardar TODAS las respuestas en un solo campo consolidado en modo diagnóstico
+    // Guardar respuestas en el área correcta
     if (chatMode === 'diagnosis') {
-      setSectionAnswers(prev => {
-        const updated = {
-          ...prev,
-          consolidated: prev.consolidated
-            ? prev.consolidated + '\n\n' + input.trim()
-            : input.trim()
-        };
-        console.log('💾 Respuesta guardada. Total acumulado:', updated.consolidated.length, 'caracteres');
-        return updated;
-      });
+      const currentAreaId = AREAS[areaProgress.currentIndex].id;
+      
+      setSectionAnswers(prev => ({
+        ...prev,
+        [currentAreaId]: prev[currentAreaId]
+          ? prev[currentAreaId] + '\n\n' + input.trim()
+          : input.trim(),
+        consolidated: prev.consolidated
+          ? prev.consolidated + '\n\n' + input.trim()
+          : input.trim()
+      }));
+      
+      // Actualizar contador de mensajes del área
+      setAreaProgress(prev => ({
+        ...prev,
+        areas: prev.areas.map((area, idx) =>
+          idx === prev.currentIndex
+            ? { 
+                ...area, 
+                messageCount: area.messageCount + 1,
+                responses: area.responses 
+                  ? area.responses + '\n\n' + input.trim()
+                  : input.trim()
+              }
+            : area
+        )
+      }));
+      
+      console.log('💾 Respuesta guardada en área:', currentAreaId, 'Total:', areaProgress.areas[areaProgress.currentIndex].messageCount + 1, 'mensajes');
     }
     
     setInput('');
@@ -737,7 +905,16 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
             messages: newMessages,
             companyInfo,
             isComplete: false,
-            mode: chatMode
+            mode: chatMode,
+            currentArea: chatMode === 'diagnosis' ? AREAS[areaProgress.currentIndex].id : undefined,
+            areaProgress: chatMode === 'diagnosis' ? {
+              currentIndex: areaProgress.currentIndex,
+              areas: areaProgress.areas.map(a => ({
+                id: a.id,
+                status: a.status,
+                messageCount: a.messageCount
+              }))
+            } : undefined
           }),
         }
       );
@@ -804,19 +981,19 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
     
     console.log('🎯 Iniciando generación de diagnóstico...');
     
-    // Validar que haya respuestas consolidadas suficientes
-    const consolidatedResponses = sectionAnswers.consolidated || '';
+    // Validar que al menos un área esté completada
+    const completedAreas = areaProgress.areas.filter(a => a.status === 'completed');
     
-    console.log('📊 Respuestas consolidadas:', consolidatedResponses.length, 'caracteres');
-    
-    if (consolidatedResponses.trim().length < 100) {
+    if (completedAreas.length === 0) {
       toast({
         title: 'Información insuficiente',
-        description: 'Por favor proporciona más información en la conversación antes de generar el diagnóstico',
+        description: 'Debes completar al menos un área para generar el diagnóstico',
         variant: 'destructive'
       });
       return;
     }
+    
+    console.log('📊 Áreas completadas:', completedAreas.map(a => a.name).join(', '));
     
     setGeneratingDiagnosis(true);
 
@@ -826,14 +1003,14 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
         throw new Error('No hay sesión activa');
       }
 
-      // Consolidar todas las respuestas en un objeto estructurado
+      // Consolidar todas las respuestas por área
       const formResponses = {
-        strategy: sectionAnswers.consolidated || '',
-        operations: sectionAnswers.consolidated || '',
-        finance: sectionAnswers.consolidated || '',
-        marketing: sectionAnswers.consolidated || '',
-        legal: sectionAnswers.consolidated || '',
-        technology: sectionAnswers.consolidated || ''
+        strategy: sectionAnswers.strategy || '',
+        operations: sectionAnswers.operations || '',
+        finance: sectionAnswers.finance || '',
+        marketing: sectionAnswers.marketing || '',
+        legal: sectionAnswers.legal || '',
+        technology: sectionAnswers.technology || ''
       };
       
       console.log('📤 Enviando a diagnose-company:', {
@@ -841,7 +1018,7 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
         companyId: currentProject.company_id,
         userId: user.id,
         projectId: currentProject.id,
-        responsesLength: consolidatedResponses.length
+        completedAreas: completedAreas.map(a => a.name).join(', ')
       });
 
       // Llamar a diagnose-company
@@ -1222,36 +1399,26 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
           </DialogHeader>
           
           <div className="space-y-4 mt-4">
-            <div className="border rounded-lg p-4 bg-muted/30">
-              <div className="flex items-center justify-between mb-2">
-                <h4 className="font-semibold text-base">
-                  Resumen de la Conversación
-                </h4>
-                {sectionAnswers.consolidated && sectionAnswers.consolidated.length > 0 ? (
-                  <CheckCircle className="h-4 w-4 text-green-500" />
-                ) : (
-                  <div className="text-xs text-muted-foreground">Sin respuestas</div>
-                )}
-              </div>
-              {sectionAnswers.consolidated && sectionAnswers.consolidated.length > 0 ? (
-                <>
-                  <p className="text-sm text-foreground whitespace-pre-wrap mb-2">
-                    {sectionAnswers.consolidated.length > 500 
-                      ? `${sectionAnswers.consolidated.substring(0, 500)}...` 
-                      : sectionAnswers.consolidated}
-                  </p>
-                  <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <span>{sectionAnswers.consolidated.length} caracteres</span>
-                    {sectionAnswers.consolidated.length < 100 && (
-                      <span className="text-amber-500">⚠️ Necesita más información</span>
-                    )}
+            {/* Resumen de áreas */}
+            <div className="grid gap-3">
+              {areaProgress.areas.map((area, idx) => (
+                <div key={area.id} className={`border rounded-lg p-3 ${
+                  area.status === 'completed' ? 'bg-green-50 border-green-200' :
+                  area.status === 'skipped' ? 'bg-gray-50 border-gray-200' :
+                  'bg-muted/30'
+                }`}>
+                  <div className="flex items-center justify-between mb-1">
+                    <h4 className="font-medium text-sm">{area.name}</h4>
+                    {area.status === 'completed' && <CheckCircle className="h-4 w-4 text-green-500" />}
+                    {area.status === 'skipped' && <span className="text-xs text-muted-foreground">Saltada</span>}
                   </div>
-                </>
-              ) : (
-                <p className="text-sm text-muted-foreground italic">
-                  No se ha recopilado información todavía
-                </p>
-              )}
+                  {area.status === 'completed' && area.responses && (
+                    <p className="text-xs text-muted-foreground">
+                      {area.messageCount} respuestas • {area.responses.length} caracteres
+                    </p>
+                  )}
+                </div>
+              ))}
             </div>
           </div>
           
@@ -1283,23 +1450,13 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
         </DialogContent>
       </Dialog>
 
-      {/* Indicador de progreso simplificado en modo diagnóstico */}
+      {/* Barra de progreso por áreas en modo diagnóstico */}
       {chatMode === 'diagnosis' && (
-        <div className="border-b border-border bg-muted/50 px-6 py-3">
-          <div className="flex items-center justify-between text-sm gap-4">
-            <span className="font-medium">
-              Modo Diagnóstico - Conversación activa
-            </span>
-            <div className="flex items-center gap-2">
-              {sectionAnswers.consolidated && sectionAnswers.consolidated.length > 0 && (
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <CheckCircle className="h-4 w-4 text-green-500" />
-                  <span>{sectionAnswers.consolidated.length} caracteres recopilados</span>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
+        <AreaProgressBar
+          areas={areaProgress.areas}
+          currentIndex={areaProgress.currentIndex}
+          onGoToArea={handleGoToArea}
+        />
       )}
 
       <div className="flex-1 overflow-y-auto p-4">
@@ -1339,28 +1496,68 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
 
       <div className="border-t border-border bg-card">
         <div className="max-w-4xl mx-auto p-4 space-y-3">
-          {messages.length > 6 && chatMode === 'diagnosis' && (
-            <div className="flex justify-center">
+          {/* Botones de navegación de áreas en modo diagnóstico */}
+          {chatMode === 'diagnosis' && areaProgress.currentIndex < AREAS.length && (
+            <div className="flex gap-2 justify-center">
               <Button
-                onClick={() => setShowSummary(true)}
-                disabled={generatingDiagnosis}
-                size="lg"
-                className="gap-2 w-full max-w-md"
+                variant="outline"
+                size="sm"
+                onClick={handleSkipArea}
+                disabled={sending || generatingDiagnosis}
+                className="gap-2"
               >
-                {generatingDiagnosis ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    {hasPreviousDiagnosis ? 'Actualizando diagnóstico...' : 'Generando diagnóstico...'}
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle className="h-4 w-4" />
-                    {hasPreviousDiagnosis ? `Actualizar Diagnóstico (v${diagnosisVersion + 1})` : 'Generar Diagnóstico y Plan'}
-                  </>
-                )}
+                <SkipForward className="h-4 w-4" />
+                Saltar esta área
               </Button>
+              
+              {areaProgress.areas[areaProgress.currentIndex].messageCount >= 2 && (
+                <Button
+                  size="sm"
+                  onClick={handleNextArea}
+                  disabled={sending || generatingDiagnosis}
+                  className="gap-2"
+                >
+                  <ArrowRight className="h-4 w-4" />
+                  Avanzar a siguiente área
+                </Button>
+              )}
             </div>
           )}
+
+          {/* Botón generar diagnóstico cuando todas las áreas están revisadas */}
+          {chatMode === 'diagnosis' && (() => {
+            const completedAreas = areaProgress.areas.filter(a => a.status === 'completed');
+            const allAreasReviewed = areaProgress.areas.every(
+              a => a.status !== 'pending' && a.status !== 'in_progress'
+            );
+            const canGenerate = completedAreas.length >= 1 && allAreasReviewed;
+            const skippedCount = areaProgress.areas.filter(a => a.status === 'skipped').length;
+            
+            return canGenerate && (
+              <div className="p-4 bg-muted/50 border border-border rounded-lg">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium">
+                      Diagnóstico listo para generar
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {completedAreas.length} áreas completadas{skippedCount > 0 && `, ${skippedCount} saltadas`}
+                    </p>
+                  </div>
+                  <Button onClick={() => setShowSummary(true)} disabled={generatingDiagnosis}>
+                    {generatingDiagnosis ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        Generando...
+                      </>
+                    ) : (
+                      'Generar Diagnóstico y Plan'
+                    )}
+                  </Button>
+                </div>
+              </div>
+            );
+          })()}
           <div className="flex gap-2 items-end">
             <div className="relative flex-1">
               <Textarea

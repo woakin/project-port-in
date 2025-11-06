@@ -66,6 +66,15 @@ const requestSchema = z.object({
   companyInfo: companyInfoSchema.optional(),
   isComplete: z.boolean().optional(),
   mode: z.enum(['diagnosis', 'strategic', 'follow_up', 'document', 'contextual']).optional(),
+  currentArea: z.string().optional(),
+  areaProgress: z.object({
+    currentIndex: z.number(),
+    areas: z.array(z.object({
+      id: z.string(),
+      status: z.enum(['pending', 'in_progress', 'completed', 'skipped']),
+      messageCount: z.number()
+    }))
+  }).optional(),
   context: z.object({
     currentPage: z.string().optional(),
     project: z.object({
@@ -138,7 +147,7 @@ serve(async (req) => {
       );
     }
 
-    const { messages, companyInfo, isComplete, mode = 'diagnosis', context: requestContext } = validationResult.data;
+    const { messages, companyInfo, isComplete, mode = 'diagnosis', currentArea, areaProgress, context: requestContext } = validationResult.data;
     
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
@@ -746,19 +755,46 @@ Extrae operaciones estructuradas del mensaje del usuario. Si no detectas ninguna
 
     switch(mode) {
       case 'diagnosis':
+        const areaNames: Record<string, string> = {
+          strategy: 'Estrategia',
+          operations: 'Operaciones',
+          finance: 'Finanzas',
+          marketing: 'Marketing',
+          legal: 'Legal',
+          technology: 'Tecnología'
+        };
+        
+        const currentAreaName = currentArea ? areaNames[currentArea] || currentArea : 'general';
+        const areaInfo = areaProgress?.areas.find(a => a.id === currentArea);
+        const messageCount = areaInfo?.messageCount || 0;
+        
         systemPrompt = `Eres un consultor empresarial experto de Alasha AI realizando un diagnóstico para ${companyName}, empresa del sector ${industry} en etapa ${stage}.
 
 Estás evaluando el proyecto: ${projectName}${projectDesc ? ` - ${projectDesc}` : ''}
 
-Tu objetivo es hacer preguntas exploratorias profundas sobre 6 áreas clave:
-1. Estrategia - visión, objetivos, diferenciación
-2. Operaciones - procesos, eficiencia, calidad
-3. Finanzas - rentabilidad, flujo de caja, control
-4. Marketing - posicionamiento, adquisición, retención
-5. Legal - compliance, contratos, propiedad intelectual
-6. Tecnología - infraestructura, digitalización, seguridad
+ÁREA ACTUAL: ${currentAreaName.toUpperCase()}
+Estado del área: ${areaInfo?.status || 'in_progress'}
+Mensajes del usuario en esta área: ${messageCount}
 
-IMPORTANTE:
+INSTRUCCIONES ESPECÍFICAS PARA ${currentAreaName.toUpperCase()}:
+1. Enfócate EXCLUSIVAMENTE en el área de "${currentAreaName}"
+2. Haz preguntas profundas y específicas sobre esta área
+3. Contexto de progreso:
+   ${messageCount === 0 ? '- Es la primera pregunta de esta área, presenta el tema de forma amigable' : ''}
+   ${messageCount >= 1 && messageCount < 3 ? '- Ya has recopilado alguna información, profundiza más' : ''}
+   ${messageCount >= 3 ? '- Ya tienes varias respuestas. Puedes sugerir: "Creo que tengo una buena comprensión de esta área. ¿Hay algo más que quieras agregar sobre ' + currentAreaName + '?"' : ''}
+4. NO menciones otras áreas del diagnóstico
+5. Si el usuario dice "ya no tengo más información" o similar, responde brevemente validando y pregunta si quiere continuar
+
+ÁREAS DE ENFOQUE POR TIPO:
+${currentArea === 'strategy' ? '- Visión, misión, objetivos estratégicos\n- Propuesta de valor y diferenciación\n- Modelo de negocio y posicionamiento' : ''}
+${currentArea === 'operations' ? '- Procesos operativos y workflows\n- Eficiencia y productividad\n- Calidad y mejora continua' : ''}
+${currentArea === 'finance' ? '- Modelo de ingresos y estructura de costos\n- Rentabilidad y márgenes\n- Flujo de caja y gestión financiera' : ''}
+${currentArea === 'marketing' ? '- Estrategia de adquisición de clientes\n- Canales de marketing y comunicación\n- Retención y fidelización' : ''}
+${currentArea === 'legal' ? '- Estructura legal y compliance\n- Contratos y acuerdos clave\n- Propiedad intelectual y protección' : ''}
+${currentArea === 'technology' ? '- Infraestructura tecnológica\n- Herramientas y sistemas\n- Digitalización y automatización' : ''}
+
+ESTILO:
 - Haz UNA pregunta a la vez
 - Adapta tu lenguaje a la etapa "${stage}"
 - Sé conversacional y empático
