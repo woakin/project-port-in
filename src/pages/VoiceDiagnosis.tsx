@@ -4,7 +4,7 @@ import { useConversation } from "@11labs/react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Mic, MicOff, Loader2, CheckCircle2 } from "lucide-react";
+import { Mic, MicOff, Loader2, CheckCircle2, ArrowLeft, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -23,6 +23,7 @@ interface CompanyData {
   companyStage: string;
   projectName: string;
   projectDescription: string;
+  projectId: string | null;
 }
 
 export default function VoiceDiagnosis() {
@@ -62,7 +63,7 @@ export default function VoiceDiagnosis() {
 
         const { data: project } = await supabase
           .from('projects')
-          .select('name, description')
+          .select('id, name, description')
           .eq('company_id', profile.company_id)
           .order('is_default', { ascending: false })
           .order('created_at', { ascending: false })
@@ -75,6 +76,7 @@ export default function VoiceDiagnosis() {
           companyStage: profile.companies.size || 'startup',
           projectName: project?.name || 'Proyecto Principal',
           projectDescription: project?.description || '',
+          projectId: project?.id || null,
         };
 
         setCompanyData(data);
@@ -144,6 +146,30 @@ export default function VoiceDiagnosis() {
     onMessage: (message) => {
       console.log("📨 Message received:", message);
       
+      // Autodetección de área cuando el agente habla
+      if (message.source === "ai") {
+        const text = (message.message || "").toLowerCase();
+        if (text.includes("estrategia")) {
+          console.log("🎯 Área autodetectada: strategy");
+          setCurrentArea("strategy");
+        } else if (text.includes("operac")) {
+          console.log("🎯 Área autodetectada: operations");
+          setCurrentArea("operations");
+        } else if (text.includes("finanz")) {
+          console.log("🎯 Área autodetectada: finance");
+          setCurrentArea("finance");
+        } else if (text.includes("marketing")) {
+          console.log("🎯 Área autodetectada: marketing");
+          setCurrentArea("marketing");
+        } else if (text.includes("legal")) {
+          console.log("🎯 Área autodetectada: legal");
+          setCurrentArea("legal");
+        } else if (text.includes("tecnolog")) {
+          console.log("🎯 Área autodetectada: technology");
+          setCurrentArea("technology");
+        }
+      }
+      
       // Si es mensaje del usuario y hay un área activa, guardarlo
       if (message.source === "user" && currentArea) {
         console.log(`📝 Capturing user message for area: ${currentArea}`);
@@ -182,6 +208,11 @@ export default function VoiceDiagnosis() {
           
           if (!area) {
             console.error('❌ Area parameter is missing');
+            toast({
+              title: "Error",
+              description: "Parámetro 'area' no recibido",
+              variant: "destructive",
+            });
             return 'Error: area parameter is required';
           }
           
@@ -190,6 +221,11 @@ export default function VoiceDiagnosis() {
           
           if (areaMessages.length === 0) {
             console.error(`❌ No user messages captured for area: ${area}`);
+            toast({
+              title: "Sin respuestas",
+              description: `No se capturaron respuestas para ${area}`,
+              variant: "destructive",
+            });
             return `Error: No se capturaron respuestas para ${area}`;
           }
           
@@ -197,7 +233,10 @@ export default function VoiceDiagnosis() {
           const consolidatedResponse = areaMessages.join('\n\n');
           
           console.log(`💾 Saving ${area} with ${areaMessages.length} message(s)`);
-          console.log(`📝 Consolidated response preview:`, consolidatedResponse.substring(0, 100) + '...');
+          const preview = consolidatedResponse.length > 100 
+            ? consolidatedResponse.substring(0, 100) + '...' 
+            : consolidatedResponse;
+          console.log(`📝 Consolidated response preview:`, preview);
           
           setResponses(prev => ({
             ...prev,
@@ -208,6 +247,10 @@ export default function VoiceDiagnosis() {
             if (!prev.includes(area)) {
               const updated = [...prev, area];
               console.log(`✅ Area ${area} completada. Total: ${updated.length}/6`);
+              toast({
+                title: "Área guardada",
+                description: `${area} guardada con ${areaMessages.length} respuesta(s)`,
+              });
               return updated;
             }
             return prev;
@@ -218,7 +261,13 @@ export default function VoiceDiagnosis() {
           
           return `Respuesta de ${area} guardada exitosamente con ${areaMessages.length} mensaje(s)`;
         } catch (error) {
-          console.error(`❌ Error saving response:`, error);
+          const areaName = parameters?.area || 'unknown';
+          console.error(`❌ Error saving ${areaName} response:`, error);
+          toast({
+            title: "Error",
+            description: `Error al guardar respuesta de ${areaName}`,
+            variant: "destructive",
+          });
           return `Error al guardar respuesta`;
         }
       },
@@ -228,16 +277,25 @@ export default function VoiceDiagnosis() {
         try {
           console.log("🏁 Finalizing diagnosis with responses:", Object.keys(responses));
           
-          // Validar que tenemos respuestas
-          const responseKeys = Object.keys(responses);
-          if (responseKeys.length === 0) {
-            console.error("❌ No responses collected");
+          // Cerrar la sesión de voz primero
+          try {
+            await conversation.endSession();
+            console.log('🔌 Voice session ended');
+          } catch (e) {
+            console.log('Voice session already ended or error:', e);
+          }
+          
+          const requiredAreas = ['strategy', 'operations', 'finance', 'marketing', 'legal', 'technology'];
+          const missingAreas = requiredAreas.filter(area => !responses[area]);
+          
+          if (missingAreas.length > 0) {
+            console.error('❌ Missing responses for areas:', missingAreas);
             toast({
-              title: "Error",
-              description: "No se guardaron respuestas durante la conversación. Por favor intenta nuevamente.",
+              title: "Información incompleta",
+              description: `Faltan respuestas para: ${missingAreas.join(', ')}. Presiona "Generar diagnóstico" cuando estés listo.`,
               variant: "destructive",
             });
-            return "Error: No se recopilaron respuestas";
+            return `Error: Faltan respuestas para las siguientes áreas: ${missingAreas.join(', ')}`;
           }
           
           const { data: { user } } = await supabase.auth.getUser();
@@ -257,16 +315,46 @@ export default function VoiceDiagnosis() {
             throw new Error("No company found");
           }
 
+          // Determinar projectId: usar el cargado o crear uno nuevo
+          let validProjectId = companyData?.projectId;
+          
+          if (!validProjectId) {
+            console.log('📦 No project found, creating default project...');
+            const { data: newProj, error: newProjErr } = await supabase
+              .from('projects')
+              .insert({
+                company_id: profile.company_id,
+                name: 'Proyecto Principal',
+                description: 'Proyecto creado automáticamente durante diagnóstico',
+                is_default: true
+              })
+              .select('id')
+              .single();
+
+            if (newProjErr || !newProj) {
+              console.error('❌ Error creating project:', newProjErr);
+              toast({
+                title: "Error",
+                description: "No se pudo crear el proyecto",
+                variant: "destructive",
+              });
+              return 'Error: No se pudo crear el proyecto';
+            }
+            
+            validProjectId = newProj.id;
+            console.log('✅ Project created:', validProjectId);
+          }
+
           console.log("📤 Invoking diagnose-company function...");
           
-          // Llamar a la función de diagnóstico
+          // Llamar a la función de diagnóstico con camelCase
           const { data, error } = await supabase.functions.invoke('diagnose-company', {
             body: {
-              form_responses: responses,
-              maturity_level: 'startup',
-              company_id: profile.company_id,
-              user_id: user.id,
-              project_id: null,
+              formResponses: responses,
+              maturityLevel: companyData?.companyStage || 'startup',
+              companyId: profile.company_id,
+              userId: user.id,
+              projectId: validProjectId,
             }
           });
 
@@ -384,7 +472,119 @@ export default function VoiceDiagnosis() {
   };
 
   const endConversation = async () => {
-    await conversation.endSession();
+    try {
+      await conversation.endSession();
+      toast({
+        title: "Entrevista finalizada",
+        description: "La conversación ha terminado",
+      });
+    } catch (error) {
+      console.error('Error ending conversation:', error);
+      toast({
+        title: "Error",
+        description: "Error al finalizar la conversación",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleManualDiagnosis = async () => {
+    const requiredAreas = ['strategy', 'operations', 'finance', 'marketing', 'legal', 'technology'];
+    const missingAreas = requiredAreas.filter(area => !responses[area]);
+    
+    if (missingAreas.length > 0) {
+      toast({
+        title: "Información incompleta",
+        description: `Faltan respuestas para: ${missingAreas.join(', ')}`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast({
+          title: "Error de autenticación",
+          description: "Debes iniciar sesión",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('company_id')
+        .eq('id', user.id)
+        .single();
+
+      if (!profile?.company_id) {
+        toast({
+          title: "Error",
+          description: "No se pudo obtener la información de la empresa",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      let validProjectId = companyData?.projectId;
+      
+      if (!validProjectId) {
+        const { data: newProj, error: newProjErr } = await supabase
+          .from('projects')
+          .insert({
+            company_id: profile.company_id,
+            name: 'Proyecto Principal',
+            description: 'Proyecto creado automáticamente durante diagnóstico',
+            is_default: true
+          })
+          .select('id')
+          .single();
+
+        if (newProjErr || !newProj) {
+          toast({
+            title: "Error",
+            description: "No se pudo crear el proyecto",
+            variant: "destructive",
+          });
+          return;
+        }
+        
+        validProjectId = newProj.id;
+      }
+
+      const { data, error } = await supabase.functions.invoke('diagnose-company', {
+        body: {
+          formResponses: responses,
+          maturityLevel: companyData?.companyStage || 'startup',
+          companyId: profile.company_id,
+          userId: user.id,
+          projectId: validProjectId,
+        }
+      });
+
+      if (error) {
+        toast({
+          title: "Error al generar diagnóstico",
+          description: error.message || "Error desconocido",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({
+        title: "¡Diagnóstico completado!",
+        description: "Tu diagnóstico ha sido generado exitosamente",
+      });
+
+      navigate(`/diagnosis-results/${data.diagnosis_id}`);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Error al finalizar el diagnóstico",
+        variant: "destructive",
+      });
+    }
   };
 
   const areas = [
@@ -465,26 +665,40 @@ export default function VoiceDiagnosis() {
         </Card>
 
         {/* Control Buttons */}
-        <div className="flex gap-4 justify-center">
+        <div className="flex flex-wrap gap-4 justify-center">
           {conversation.status === "disconnected" ? (
-            <Button
-              size="lg"
-              onClick={startConversation}
-              disabled={isLoading}
-              className="min-w-[200px]"
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                  Conectando...
-                </>
-              ) : (
-                <>
-                  <Mic className="w-5 h-5 mr-2" />
-                  Iniciar Entrevista
-                </>
+            <>
+              <Button
+                size="lg"
+                onClick={startConversation}
+                disabled={isLoading}
+                className="min-w-[200px]"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                    Conectando...
+                  </>
+                ) : (
+                  <>
+                    <Mic className="w-5 h-5 mr-2" />
+                    Iniciar Entrevista
+                  </>
+                )}
+              </Button>
+              
+              {Object.keys(responses).length > 0 && (
+                <Button
+                  size="lg"
+                  onClick={handleManualDiagnosis}
+                  variant="default"
+                  className="min-w-[200px]"
+                >
+                  <CheckCircle2 className="w-5 h-5 mr-2" />
+                  Generar Diagnóstico
+                </Button>
               )}
-            </Button>
+            </>
           ) : (
             <Button
               size="lg"
@@ -502,6 +716,7 @@ export default function VoiceDiagnosis() {
             variant="outline"
             onClick={() => navigate('/diagnosticos')}
           >
+            <ArrowLeft className="w-5 h-5 mr-2" />
             Volver
           </Button>
         </div>
