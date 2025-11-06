@@ -736,17 +736,149 @@ Extrae operaciones estructuradas del mensaje del usuario. Si no detectas ninguna
       });
     }
 
-    // Handle other modes or standard chat modes
-    // For simplicity, just echo back the last user message in this example
-    // You can implement other modes as needed
+    // Handle non-contextual modes with AI streaming
+    let systemPrompt = '';
+    const companyName = companyInfo.name || 'tu empresa';
+    const industry = companyInfo.industry || 'tu industria';
+    const stage = companyInfo.stage || 'tu etapa';
+    const projectName = companyInfo.projectName || 'tu proyecto';
+    const projectDesc = companyInfo.projectDescription || '';
 
-    // Example: simple echo response for non-contextual modes
-    const lastMessage = messages[messages.length - 1]?.content || '';
-    const responseText = `Echo: ${lastMessage}`;
+    switch(mode) {
+      case 'diagnosis':
+        systemPrompt = `Eres un consultor empresarial experto de Alasha AI realizando un diagnóstico para ${companyName}, empresa del sector ${industry} en etapa ${stage}.
 
-    return new Response(JSON.stringify({ reply: responseText }), {
-      status: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+Estás evaluando el proyecto: ${projectName}${projectDesc ? ` - ${projectDesc}` : ''}
+
+Tu objetivo es hacer preguntas exploratorias profundas sobre 6 áreas clave:
+1. Estrategia - visión, objetivos, diferenciación
+2. Operaciones - procesos, eficiencia, calidad
+3. Finanzas - rentabilidad, flujo de caja, control
+4. Marketing - posicionamiento, adquisición, retención
+5. Legal - compliance, contratos, propiedad intelectual
+6. Tecnología - infraestructura, digitalización, seguridad
+
+IMPORTANTE:
+- Haz UNA pregunta a la vez
+- Adapta tu lenguaje a la etapa "${stage}"
+- Sé conversacional y empático
+- Profundiza en respuestas vagas
+- Valida con frases cortas
+- Relaciona con el sector ${industry}
+
+No menciones que eres IA, actúa como un consultor humano experimentado.`;
+        break;
+
+      case 'strategic':
+        systemPrompt = `Eres un mentor estratégico senior de Alasha AI trabajando con ${companyName}, empresa del sector ${industry} en etapa ${stage}.
+
+Proyecto: ${projectName}${projectDesc ? ` - ${projectDesc}` : ''}
+
+Te especializas en:
+- Visión de largo plazo y decisiones estratégicas
+- Análisis de competencia y posicionamiento
+- Modelos de negocio y expansión
+- Frameworks: SWOT, Porter, Blue Ocean, Business Model Canvas
+
+Adapta tu enfoque según etapa:
+- idea/startup: validación, product-market fit, pivots
+- pyme: escalabilidad, profesionalización, delegación
+- corporate: eficiencia, innovación, transformación
+
+Sé directo, estratégico y orientado a resultados medibles.`;
+        break;
+
+      case 'follow_up':
+        systemPrompt = `Eres un coach operativo de Alasha AI para ${companyName}, empresa del sector ${industry} en etapa ${stage}.
+
+Proyecto: ${projectName}${projectDesc ? ` - ${projectDesc}` : ''}
+
+Tu enfoque es táctico y orientado a la acción:
+- Ejecutar el plan, desbloquear tareas
+- Optimizar prioridades y recursos
+- Alcanzar objetivos medibles
+- Gestionar progreso y accountability
+
+Preguntas clave:
+- ¿Qué está bloqueando el avance?
+- ¿Las prioridades están claras?
+- ¿Los recursos están bien asignados?
+- ¿Cómo medimos el éxito?
+
+Sé pragmático, orientado a soluciones rápidas y resultados inmediatos.`;
+        break;
+
+      case 'document':
+        systemPrompt = `Eres un analista de datos senior de Alasha AI para ${companyName}, empresa del sector ${industry} en etapa ${stage}.
+
+Proyecto: ${projectName}${projectDesc ? ` - ${projectDesc}` : ''}
+
+Especialidades:
+- Análisis de documentos y extracción de insights
+- Identificación de tendencias y patrones
+- Análisis financiero, operativo, de marketing y tecnológico
+- Conexión de datos con estrategia
+
+Enfoque analítico:
+- Datos concretos sobre intuiciones
+- Identificar correlaciones y causas
+- Proponer métricas accionables
+- Visualizar insights complejos de forma clara
+
+Sé preciso, basado en datos, y conecta los números con decisiones estratégicas.`;
+        break;
+
+      default:
+        systemPrompt = 'Eres un asistente útil de Alasha AI especializado en consultoría empresarial.';
+    }
+
+    // Call Lovable AI Gateway with streaming
+    const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'google/gemini-2.5-flash',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          ...messages
+        ],
+        stream: true,
+      }),
+    });
+
+    // Handle AI Gateway errors
+    if (!aiResponse.ok) {
+      if (aiResponse.status === 429) {
+        return new Response(
+          JSON.stringify({ error: 'Rate limit exceeded. Please try again later.' }),
+          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      if (aiResponse.status === 402) {
+        return new Response(
+          JSON.stringify({ error: 'AI credits exhausted. Please add credits to your workspace.' }),
+          { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      const errorText = await aiResponse.text();
+      console.error('AI Gateway error:', aiResponse.status, errorText);
+      return new Response(
+        JSON.stringify({ error: 'AI service error' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Return SSE stream
+    return new Response(aiResponse.body, {
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+      }
     });
 
   } catch (error: any) {
