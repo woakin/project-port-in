@@ -68,7 +68,8 @@ export default function ChatDiagnosis() {
     finance: '',
     marketing: '',
     legal: '',
-    technology: ''
+    technology: '',
+    consolidated: '' // Campo único que acumula TODAS las respuestas
   });
   
   // FASE 3: Estado para diálogo de resumen
@@ -691,14 +692,18 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
     const newMessages = [...messages, userMessage];
     setMessages(newMessages);
     
-    // FASE 1: Guardar respuesta por área en modo diagnóstico
+    // FASE 1: Guardar TODAS las respuestas en un solo campo consolidado en modo diagnóstico
     if (chatMode === 'diagnosis') {
-      setSectionAnswers(prev => ({
-        ...prev,
-        [currentSection]: prev[currentSection]
-          ? prev[currentSection] + '\n' + input.trim()
-          : input.trim()
-      }));
+      setSectionAnswers(prev => {
+        const updated = {
+          ...prev,
+          consolidated: prev.consolidated
+            ? prev.consolidated + '\n\n' + input.trim()
+            : input.trim()
+        };
+        console.log('💾 Respuesta guardada. Total acumulado:', updated.consolidated.length, 'caracteres');
+        return updated;
+      });
     }
     
     setInput('');
@@ -797,15 +802,17 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
   const generateDiagnosis = async () => {
     if (!companyInfo || !currentProject) return;
     
-    // FASE 1: Validar que todas las áreas tengan respuestas
-    const emptyAreas = Object.entries(sectionAnswers)
-      .filter(([_, answer]) => !answer || answer.trim().length < 20)
-      .map(([area, _]) => getSectionName(area as typeof currentSection));
+    console.log('🎯 Iniciando generación de diagnóstico...');
     
-    if (emptyAreas.length > 0) {
+    // Validar que haya respuestas consolidadas suficientes
+    const consolidatedResponses = sectionAnswers.consolidated || '';
+    
+    console.log('📊 Respuestas consolidadas:', consolidatedResponses.length, 'caracteres');
+    
+    if (consolidatedResponses.trim().length < 100) {
       toast({
-        title: 'Áreas incompletas',
-        description: `Por favor completa las siguientes áreas: ${emptyAreas.join(', ')}`,
+        title: 'Información insuficiente',
+        description: 'Por favor proporciona más información en la conversación antes de generar el diagnóstico',
         variant: 'destructive'
       });
       return;
@@ -819,7 +826,25 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
         throw new Error('No hay sesión activa');
       }
 
-      // FASE 1: Llamar a diagnose-company en lugar de chat-diagnosis
+      // Consolidar todas las respuestas en un objeto estructurado
+      const formResponses = {
+        strategy: sectionAnswers.consolidated || '',
+        operations: sectionAnswers.consolidated || '',
+        finance: sectionAnswers.consolidated || '',
+        marketing: sectionAnswers.consolidated || '',
+        legal: sectionAnswers.consolidated || '',
+        technology: sectionAnswers.consolidated || ''
+      };
+      
+      console.log('📤 Enviando a diagnose-company:', {
+        maturityLevel: companyInfo.stage,
+        companyId: currentProject.company_id,
+        userId: user.id,
+        projectId: currentProject.id,
+        responsesLength: consolidatedResponses.length
+      });
+
+      // Llamar a diagnose-company
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/diagnose-company`,
         {
@@ -829,7 +854,7 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
             'Authorization': `Bearer ${session.access_token}`,
           },
           body: JSON.stringify({
-            formResponses: sectionAnswers,
+            formResponses: formResponses,
             maturityLevel: companyInfo.stage,
             companyId: currentProject.company_id,
             userId: user.id,
@@ -838,14 +863,17 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
         }
       );
 
+      console.log('📥 Respuesta de diagnose-company:', response.status, response.statusText);
+
       if (!response.ok) {
         const errorData = await response.json();
+        console.error('❌ Error de diagnose-company:', errorData);
         throw new Error(errorData.error || 'Error al generar diagnóstico');
       }
 
       const data = await response.json();
       
-      console.log('Diagnóstico generado:', data);
+      console.log('✅ Diagnóstico generado:', data);
 
       if (!data.diagnosis_id) {
         throw new Error('No se recibió el ID del diagnóstico');
@@ -861,7 +889,7 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
       }, 500);
 
     } catch (error) {
-      console.error('Error generating diagnosis:', error);
+      console.error('💥 Error generating diagnosis:', error);
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "No se pudo generar el diagnóstico. Por favor intenta nuevamente.",
@@ -1194,37 +1222,37 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
           </DialogHeader>
           
           <div className="space-y-4 mt-4">
-            {Object.entries(sectionAnswers).map(([section, answer]) => (
-              <div key={section} className="border rounded-lg p-4 bg-muted/30">
-                <div className="flex items-center justify-between mb-2">
-                  <h4 className="font-semibold text-base">
-                    {getSectionName(section as typeof currentSection)}
-                  </h4>
-                  {answer.length > 0 ? (
-                    <CheckCircle className="h-4 w-4 text-green-500" />
-                  ) : (
-                    <div className="text-xs text-muted-foreground">Sin respuestas</div>
-                  )}
-                </div>
-                {answer.length > 0 ? (
-                  <>
-                    <p className="text-sm text-foreground whitespace-pre-wrap mb-2">
-                      {answer.length > 300 ? `${answer.substring(0, 300)}...` : answer}
-                    </p>
-                    <div className="flex items-center justify-between text-xs text-muted-foreground">
-                      <span>{answer.length} caracteres</span>
-                      {answer.length < 20 && (
-                        <span className="text-amber-500">⚠️ Muy corta</span>
-                      )}
-                    </div>
-                  </>
+            <div className="border rounded-lg p-4 bg-muted/30">
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="font-semibold text-base">
+                  Resumen de la Conversación
+                </h4>
+                {sectionAnswers.consolidated && sectionAnswers.consolidated.length > 0 ? (
+                  <CheckCircle className="h-4 w-4 text-green-500" />
                 ) : (
-                  <p className="text-sm text-muted-foreground italic">
-                    No se recopiló información para esta área
-                  </p>
+                  <div className="text-xs text-muted-foreground">Sin respuestas</div>
                 )}
               </div>
-            ))}
+              {sectionAnswers.consolidated && sectionAnswers.consolidated.length > 0 ? (
+                <>
+                  <p className="text-sm text-foreground whitespace-pre-wrap mb-2">
+                    {sectionAnswers.consolidated.length > 500 
+                      ? `${sectionAnswers.consolidated.substring(0, 500)}...` 
+                      : sectionAnswers.consolidated}
+                  </p>
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <span>{sectionAnswers.consolidated.length} caracteres</span>
+                    {sectionAnswers.consolidated.length < 100 && (
+                      <span className="text-amber-500">⚠️ Necesita más información</span>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <p className="text-sm text-muted-foreground italic">
+                  No se ha recopilado información todavía
+                </p>
+              )}
+            </div>
           </div>
           
           <DialogFooter className="gap-2">
@@ -1255,56 +1283,20 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
         </DialogContent>
       </Dialog>
 
-      {/* FASE 1 & 3: Indicador de progreso en modo diagnóstico */}
+      {/* Indicador de progreso simplificado en modo diagnóstico */}
       {chatMode === 'diagnosis' && (
         <div className="border-b border-border bg-muted/50 px-6 py-3">
           <div className="flex items-center justify-between text-sm gap-4">
             <span className="font-medium">
-              Área actual: {getSectionName(currentSection)} ({getSectionNumber(currentSection)}/6)
+              Modo Diagnóstico - Conversación activa
             </span>
             <div className="flex items-center gap-2">
-              <div className="flex gap-1">
-                {(['strategy', 'operations', 'finance', 'marketing', 'legal', 'technology'] as const).map((section) => (
-                  <div
-                    key={section}
-                    className={`h-2 w-8 rounded-full transition-colors ${
-                      sectionAnswers[section]?.length > 0
-                        ? 'bg-green-500'
-                        : section === currentSection
-                        ? 'bg-blue-500'
-                        : 'bg-gray-300'
-                    }`}
-                    title={getSectionName(section)}
-                  />
-                ))}
-              </div>
-              {/* FASE 3: Botones para navegar entre áreas */}
-              <div className="flex gap-2">
-                {getSectionNumber(currentSection) > 1 && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={moveToPreviousSection}
-                    className="text-xs"
-                    disabled={sending}
-                  >
-                    <ArrowLeft className="w-3 h-3 mr-1" />
-                    Área anterior
-                  </Button>
-                )}
-                {getSectionNumber(currentSection) < 6 && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={moveToNextSection}
-                    className="text-xs"
-                    disabled={sending}
-                  >
-                    Siguiente área
-                    <ArrowRight className="w-3 h-3 ml-1" />
-                  </Button>
-                )}
-              </div>
+              {sectionAnswers.consolidated && sectionAnswers.consolidated.length > 0 && (
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  <span>{sectionAnswers.consolidated.length} caracteres recopilados</span>
+                </div>
+              )}
             </div>
           </div>
         </div>
