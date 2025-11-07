@@ -189,7 +189,7 @@ export default function ChatDiagnosis() {
           setDiagnosisVersion(data.version);
           setHasPreviousDiagnosis(true);
           setStep('chat');
-          const initialMessage = getInitialMessage(currentProject.name, 'diagnosis');
+          const initialMessage = getInitialMessage(currentProject.name, 'diagnosis', true);
           setMessages([{ role: 'assistant', content: initialMessage }]);
         } else {
           setStep('method-selection');
@@ -223,9 +223,27 @@ export default function ChatDiagnosis() {
     }
   }, [step, chatMode]);
 
-  const getInitialMessage = (projectName: string, mode: ChatMode) => {
+  const getInitialMessage = (projectName: string, mode: ChatMode, isFollowUp: boolean = false) => {
     const messages = {
-      diagnosis: `¡Hola! Soy Alasha AI en modo **Diagnóstico** para **${projectName}**. 
+      diagnosis: isFollowUp 
+        ? `¡Hola de nuevo! Soy Alasha AI 👋
+
+Ya tengo contexto de tu diagnóstico anterior y el estado actual de **${projectName}**. 
+
+En este diagnóstico de seguimiento voy a:
+- ✅ Evaluar el progreso en las áreas críticas identificadas
+- 📊 Revisar si los KPIs han mejorado
+- 🎯 Identificar nuevos desafíos y oportunidades  
+- 🚀 Ajustar el plan de acción según tu evolución
+
+Las preguntas serán más específicas basándome en lo que ya sé de tu proyecto.
+
+💡 **Tip**: También puedo ejecutar comandos como:
+- "Crear tarea: [descripción]"
+- "Actualizar KPI [nombre] a [valor]"
+
+¿Comenzamos?`
+        : `¡Hola! Soy Alasha AI en modo **Diagnóstico** para **${projectName}**. 
 
 Voy a ayudarte a crear un diagnóstico completo y un plan de acción estratégico. Te haré preguntas sobre 6 áreas clave de tu negocio: Estrategia, Operaciones, Finanzas, Marketing, Legal y Tecnología.
 
@@ -1187,6 +1205,12 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
                 status: a.status,
                 messageCount: a.messageCount
               }))
+            } : undefined,
+            context: currentProject ? {
+              project: {
+                id: currentProject.id,
+                name: currentProject.name
+              }
             } : undefined
           }),
         }

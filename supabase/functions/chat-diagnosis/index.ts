@@ -124,6 +124,87 @@ const kpiDataSchema = z.object({
   message: 'La fecha de fin debe ser igual o posterior a la fecha de inicio'
 });
 
+// Helper function to get historical context
+async function getHistoricalContext(
+  admin: any,
+  companyId: string,
+  projectId: string | null
+) {
+  if (!projectId) return { hasPreviousDiagnosis: false };
+
+  try {
+    // A. Get most recent diagnosis
+    const { data: previousDiagnosis } = await admin
+      .from('diagnoses')
+      .select('version, created_at, form_responses, insights, strategy_score, operations_score, finance_score, marketing_score, legal_score, technology_score, maturity_level')
+      .eq('company_id', companyId)
+      .eq('project_id', projectId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    // B. Get KPIs summary
+    const { data: kpis } = await admin
+      .from('kpis')
+      .select('name, area, value, target_value, unit, period_start, period_end')
+      .eq('company_id', companyId)
+      .order('created_at', { ascending: false })
+      .limit(20);
+
+    // C. Get tasks summary with proper JOIN
+    const { data: tasksRaw } = await admin
+      .from('tasks')
+      .select(`
+        title, 
+        status, 
+        priority, 
+        due_date,
+        plan_objectives!inner(
+          plan_areas!inner(
+            action_plans!inner(
+              company_id
+            )
+          )
+        )
+      `)
+      .order('created_at', { ascending: false })
+      .limit(50);
+
+    // Filter tasks by company_id
+    const tasks = tasksRaw?.filter((t: any) => {
+      try {
+        return t.plan_objectives?.plan_areas?.action_plans?.company_id === companyId;
+      } catch {
+        return false;
+      }
+    }).slice(0, 20).map((t: any) => ({
+      title: t.title,
+      status: t.status,
+      priority: t.priority,
+      due_date: t.due_date
+    })) || [];
+
+    // D. Get analyzed documents
+    const { data: documents } = await admin
+      .from('documents')
+      .select('file_name, category, analysis_status')
+      .eq('company_id', companyId)
+      .eq('analysis_status', 'completed')
+      .limit(10);
+
+    return {
+      previousDiagnosis,
+      kpis: kpis || [],
+      tasks: tasks,
+      documents: documents || [],
+      hasPreviousDiagnosis: !!previousDiagnosis
+    };
+  } catch (error) {
+    console.error('Error fetching historical context:', error);
+    return { hasPreviousDiagnosis: false };
+  }
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -755,6 +836,45 @@ Eres Alasha AI, un asistente empresarial experto que ayuda al usuario en la pág
     const projectName = companyInfo?.projectName || 'tu proyecto';
     const projectDesc = companyInfo?.projectDescription || '';
 
+    // Get historical context if authenticated and in diagnosis mode
+    let historicalContext: any = null;
+    if (mode === 'diagnosis') {
+      const authHeader = req.headers.get('Authorization');
+      if (authHeader) {
+        try {
+          const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+          const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+          const admin = createClient(supabaseUrl, supabaseServiceKey);
+          
+          const token = authHeader.replace('Bearer ', '');
+          const { data: { user } } = await admin.auth.getUser(token);
+          
+          if (user && requestContext?.project?.id) {
+            const { data: profile } = await admin
+              .from('profiles')
+              .select('company_id')
+              .eq('id', user.id)
+              .maybeSingle();
+            
+            if (profile?.company_id) {
+              historicalContext = await getHistoricalContext(
+                admin,
+                profile.company_id,
+                requestContext.project.id
+              );
+              console.log('📊 Historical context loaded:', {
+                hasPreviousDiagnosis: historicalContext.hasPreviousDiagnosis,
+                kpisCount: historicalContext.kpis?.length || 0,
+                tasksCount: historicalContext.tasks?.length || 0
+              });
+            }
+          }
+        } catch (error) {
+          console.error('Error loading historical context:', error);
+        }
+      }
+    }
+
     switch(mode) {
       case 'diagnosis':
         const areaNames: Record<string, string> = {
@@ -777,12 +897,65 @@ Eres Alasha AI, un asistente empresarial experto que ayuda al usuario en la pág
         } else if (messageCount >= 3 && messageCount < 4) {
           depthGuidance = '\n\n**IMPORTANTE**: Necesitas obtener más información. Pide ejemplos específicos, datos cuantitativos si es posible, y profundiza en los puntos mencionados.';
         }
+
+        // Build context section based on historical data
+        let contextSection = '';
+        if (historicalContext?.hasPreviousDiagnosis) {
+          const prev = historicalContext.previousDiagnosis;
+          const criticalAreas = prev.insights?.critical_areas || [];
+          const insights = prev.insights?.insights || [];
+          
+          contextSection = `
+
+📊 CONTEXTO DEL DIAGNÓSTICO ANTERIOR (versión ${prev.version}, ${new Date(prev.created_at).toLocaleDateString('es-MX')}):
+
+Scores previos:
+- Estrategia: ${prev.strategy_score}/100
+- Operaciones: ${prev.operations_score}/100
+- Finanzas: ${prev.finance_score}/100
+- Marketing: ${prev.marketing_score}/100
+- Legal: ${prev.legal_score}/100
+- Tecnología: ${prev.technology_score}/100
+- Nivel de madurez: ${prev.maturity_level}
+
+Áreas críticas identificadas: ${criticalAreas.length > 0 ? criticalAreas.join(', ') : 'N/A'}
+
+Insights clave del diagnóstico anterior:
+${insights.length > 0 ? insights.map((i: string) => `- ${i}`).join('\n') : '- N/A'}
+
+📈 ESTADO ACTUAL DEL PROYECTO:
+- KPIs registrados: ${historicalContext.kpis.length} en áreas: ${[...new Set(historicalContext.kpis.map((k: any) => k.area))].join(', ')}
+- Tareas: ${historicalContext.tasks.length} (${historicalContext.tasks.filter((t: any) => t.status === 'completed').length} completadas, ${historicalContext.tasks.filter((t: any) => t.status === 'in_progress').length} en progreso)
+- Documentos analizados: ${historicalContext.documents.length}
+
+⚠️ INSTRUCCIONES ESPECIALES PARA DIAGNÓSTICO DE SEGUIMIENTO:
+1. Este es un diagnóstico de seguimiento (versión ${(prev.version || 0) + 1})
+2. Haz preguntas que evalúen el PROGRESO desde el diagnóstico anterior
+3. Pregunta específicamente sobre las áreas críticas identificadas: ${criticalAreas.length > 0 ? criticalAreas.join(', ') : 'todas las áreas'}
+4. Indaga si las recomendaciones o insights previos fueron implementados
+5. Evalúa si los KPIs han mejorado y qué acciones tomaron
+6. Identifica nuevos desafíos que hayan surgido desde entonces
+7. Sé más específico y profundo en las preguntas, considerando la madurez del proyecto
+8. Relaciona las respuestas actuales con los datos históricos cuando sea relevante
+
+`;
+        } else {
+          contextSection = `
+
+ℹ️ ESTE ES EL PRIMER DIAGNÓSTICO:
+- No hay información previa del proyecto
+- Enfócate en entender el estado actual y fundamentos
+- Haz preguntas exploratorias para establecer la línea base
+
+`;
+        }
         
         systemPrompt = `IMPORTANTE: Usa español de México en todas tus respuestas. Sé profesional, directo y cercano.
 
 Eres un consultor empresarial experto de Alasha AI realizando un diagnóstico para ${companyName}, empresa del sector ${industry} en etapa ${stage}.
 
 Estás evaluando el proyecto: ${projectName}${projectDesc ? ` - ${projectDesc}` : ''}
+${contextSection}
 
 ÁREA ACTUAL: ${currentAreaName.toUpperCase()}
 Estado del área: ${areaInfo?.status || 'in_progress'}
