@@ -28,10 +28,11 @@ export function AreaProgressBar({ areas, currentIndex, onGoToArea }: AreaProgres
   return (
     <div className="w-full bg-muted/50 border-b border-border py-2 px-4">
       <div className="flex items-center justify-between max-w-4xl mx-auto gap-4">
-        <div className="flex items-center gap-2 flex-1">
-          <span className="text-xs font-medium text-muted-foreground">Progreso:</span>
-          <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2 flex-wrap flex-1">
+          <span className="text-xs font-medium text-muted-foreground shrink-0">Progreso:</span>
+          <div className="flex items-center gap-1.5">
             {areas.map((area, idx) => {
+              const Icon = iconMap[area.icon] || Target;
               const isClickable = idx <= currentIndex;
               
               return (
@@ -41,20 +42,25 @@ export function AreaProgressBar({ areas, currentIndex, onGoToArea }: AreaProgres
                   disabled={!isClickable}
                   title={area.name}
                   className={cn(
-                    "w-2 h-2 rounded-full transition-all",
-                    area.status === 'completed' && "bg-green-500",
-                    area.status === 'in_progress' && "bg-primary animate-pulse",
-                    area.status === 'skipped' && "bg-muted-foreground/50",
-                    area.status === 'pending' && "bg-muted",
-                    isClickable && "cursor-pointer hover:scale-125",
+                    "w-8 h-8 rounded-full transition-all flex items-center justify-center relative",
+                    area.status === 'completed' && "bg-green-500 text-white",
+                    area.status === 'in_progress' && "bg-primary text-white animate-pulse",
+                    area.status === 'skipped' && "bg-muted-foreground/30 text-muted-foreground",
+                    area.status === 'pending' && "bg-muted text-muted-foreground/50",
+                    isClickable && "cursor-pointer hover:scale-110 hover:shadow-md",
                     !isClickable && "opacity-40 cursor-not-allowed"
                   )}
-                />
+                >
+                  <Icon className="h-4 w-4" />
+                  {area.status === 'completed' && (
+                    <Check className="h-3 w-3 absolute -top-0.5 -right-0.5 bg-white text-green-600 rounded-full p-0.5" />
+                  )}
+                </button>
               );
             })}
           </div>
-          <span className="text-xs text-muted-foreground">
-            {percentage}% ({completedCount}/{areas.length} áreas)
+          <span className="text-xs text-muted-foreground shrink-0">
+            {percentage}% ({completedCount}/{areas.length})
           </span>
         </div>
       </div>
