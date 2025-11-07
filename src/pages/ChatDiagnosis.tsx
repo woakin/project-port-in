@@ -47,7 +47,7 @@ const AREAS = [
 
 export default function ChatDiagnosis() {
   const { user, loading: authLoading } = useAuth();
-  const { currentProject, loading: projectLoading } = useProjectContext();
+  const { currentProject, loading: projectLoading, setCurrentProject, refreshProjects } = useProjectContext();
   const navigate = useNavigate();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -1018,7 +1018,7 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
     }
   };
 
-  const startChat = () => {
+  const startChat = async () => {
     if (!tempName || !tempIndustry || !tempProjectName) {
       toast({
         title: 'Campos requeridos',
@@ -1028,16 +1028,100 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
       return;
     }
 
-    const info: CompanyInfo = {
-      name: tempName,
-      industry: tempIndustry,
-      stage: tempStage,
-      projectName: tempProjectName,
-      projectDescription: tempProjectDescription
-    };
+    if (!user) {
+      toast({
+        title: 'Error',
+        description: 'No hay sesión de usuario activa',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    setSending(true);
     
-    setCompanyInfo(info);
-    setStep('method-selection');
+    try {
+      // 1. Verificar si el usuario ya tiene una empresa
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('company_id')
+        .eq('id', user.id)
+        .single();
+
+      let companyId = profile?.company_id;
+
+      // 2. Si no tiene empresa, crearla
+      if (!companyId) {
+        const { data: newCompany, error: companyError } = await supabase
+          .from('companies')
+          .insert({
+            name: tempName,
+            industry: tempIndustry,
+            size: tempStage,
+            created_by: user.id
+          })
+          .select()
+          .single();
+
+        if (companyError) throw companyError;
+        
+        companyId = newCompany.id;
+
+        // 3. Actualizar el perfil del usuario con la empresa
+        await supabase
+          .from('profiles')
+          .update({ company_id: companyId })
+          .eq('id', user.id);
+      }
+
+      // 4. Crear el proyecto
+      const { data: newProject, error: projectError } = await supabase
+        .from('projects')
+        .insert({
+          company_id: companyId,
+          name: tempProjectName,
+          description: tempProjectDescription || null,
+          status: 'active'
+        })
+        .select()
+        .single();
+
+      if (projectError) throw projectError;
+
+      // 5. Establecer como proyecto actual en el contexto
+      setCurrentProject(newProject as any);
+
+      // 6. Guardar info en estado para uso posterior
+      const info: CompanyInfo = {
+        name: tempName,
+        industry: tempIndustry,
+        stage: tempStage,
+        projectName: tempProjectName,
+        projectDescription: tempProjectDescription
+      };
+      
+      setCompanyInfo(info);
+
+      toast({
+        title: '✅ Información guardada',
+        description: `Proyecto "${tempProjectName}" creado exitosamente`
+      });
+
+      // 7. Avanzar a selección de método
+      setStep('method-selection');
+      
+      // 8. Refrescar lista de proyectos en el contexto
+      await refreshProjects();
+
+    } catch (error) {
+      console.error('Error al guardar información:', error);
+      toast({
+        title: 'Error',
+        description: 'No se pudo guardar la información. Intenta nuevamente.',
+        variant: 'destructive'
+      });
+    } finally {
+      setSending(false);
+    }
   };
 
   const sendMessage = async () => {
