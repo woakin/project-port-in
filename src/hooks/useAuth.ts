@@ -123,64 +123,39 @@ export function useAuth() {
 
   const signOut = async () => {
     try {
-      const { error } = await supabase.auth.signOut();
-
-      // If session doesn't exist, force local logout to clear browser tokens
-      if (error && (error.message?.includes('session_not_found') || error.message?.includes('Auth session missing'))) {
-        // Force local sign out to clear tokens from browser
-        await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
-        
-        // Manually clean up state
-        setSession(null);
-        setUser(null);
-        setRoles([]);
-        localStorage.removeItem('current_project_id');
-
-        toast({
-          title: 'Sesión cerrada',
-          description: 'Has cerrado sesión correctamente.',
-        });
-        
-        // Force hard navigation to remount app in clean state
-        window.location.assign('/auth');
-        return;
-      }
-
-      if (error) throw error;
-
+      // Caso base: limpiar SIEMPRE la sesión local primero
+      await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
+      
+      // Limpieza manual de estado y storage de la app
+      setSession(null);
+      setUser(null);
+      setRoles([]);
+      localStorage.removeItem('current_project_id');
+      
+      // Revocación remota best-effort (no bloqueante)
+      supabase.auth.signOut().catch(() => {});
+      
       toast({
         title: 'Sesión cerrada',
         description: 'Has cerrado sesión correctamente.',
       });
       
-      // Force hard navigation to ensure clean state
-      window.location.assign('/auth');
+      // Redirección dura para remontar la app en estado no autenticado
+      window.location.replace('/auth');
     } catch (error: any) {
-      // Only show error for real problems, not for "session already gone"
-      if (!error?.message?.includes('session_not_found') && !error?.message?.includes('Auth session missing')) {
-        toast({
-          title: 'Error',
-          description: error?.message ?? 'Ocurrió un error al cerrar sesión.',
-          variant: 'destructive',
-        });
-      } else {
-        // Last fallback: force local cleanup and remount
-        await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
-        setSession(null);
-        setUser(null);
-        setRoles([]);
-        localStorage.removeItem('current_project_id');
-        
-        toast({
-          title: 'Sesión cerrada',
-          description: 'Has cerrado sesión correctamente.',
-        });
-        
-        window.location.assign('/auth');
-      }
+      // Aún ante errores, forzar salida del estado autenticado
+      setSession(null);
+      setUser(null);
+      setRoles([]);
+      localStorage.removeItem('current_project_id');
+      
+      toast({
+        title: 'Sesión cerrada',
+        description: 'Has cerrado sesión correctamente.',
+      });
+      window.location.replace('/auth');
     }
   };
-
   const resetPassword = async (email: string) => {
     try {
       const redirectUrl = `${window.location.origin}/auth/reset-password`;
