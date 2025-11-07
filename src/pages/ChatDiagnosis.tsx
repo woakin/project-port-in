@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card } from '@/components/shared/Card';
 import { toast } from '@/hooks/use-toast';
-import { Send, Loader2, CheckCircle, Home, Info, ArrowLeft, ArrowRight, MessageSquare, Mic, SkipForward } from 'lucide-react';
+import { Send, Loader2, CheckCircle, Home, Info, ArrowLeft, ArrowRight, MessageSquare, Mic, SkipForward, HelpCircle } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { supabase } from '@/integrations/supabase/client';
 import ReactMarkdown from 'react-markdown';
@@ -1630,7 +1630,7 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
 
   return (
     <div className="h-screen bg-background flex flex-col overflow-hidden">
-      <header className="flex-shrink-0 border-b border-border p-4 bg-card">
+      <header className="flex-shrink-0 border-b border-border py-2 px-4 bg-card">
         <div className="max-w-4xl mx-auto flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <Button
@@ -1651,13 +1651,19 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground">Modo: {getModeLabel(chatMode)}</span>
+            <QuickActions 
+              projectId={currentProject?.id}
+              onActionClick={handleQuickAction}
+              onOpenSheet={setOpenSheet}
+            />
             <Button
               variant="ghost"
-              size="icon"
+              size="sm"
               onClick={() => setShowModeInfo(!showModeInfo)}
+              className="gap-2"
             >
-              <Info className="h-4 w-4" />
+              <HelpCircle className="h-4 w-4" />
+              <span className="hidden sm:inline">Ayuda</span>
             </Button>
           </div>
         </div>
@@ -1682,12 +1688,6 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
           currentMode={chatMode} 
           onModeChange={handleModeChange}
           disabled={sending || generatingDiagnosis}
-        />
-
-        <QuickActions 
-          projectId={currentProject?.id}
-          onActionClick={handleQuickAction}
-          onOpenSheet={setOpenSheet}
         />
 
         {chatMode === 'diagnosis' && (

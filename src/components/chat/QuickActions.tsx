@@ -1,5 +1,11 @@
 import { Button } from '@/components/ui/button';
-import { BarChart3, ListTodo, FileText, History } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { BarChart3, ListTodo, FileText, History, Zap } from 'lucide-react';
 
 export type SheetType = 'kpis' | 'tasks' | 'documents' | 'diagnoses' | null;
 
@@ -38,27 +44,32 @@ export default function QuickActions({ projectId, onActionClick, onOpenSheet }: 
   ];
 
   const handleActionClick = (action: typeof actions[0]) => {
-    // Solo abrimos el panel, sin enviar mensaje al chat
     onOpenSheet?.(action.id);
   };
 
   return (
-    <div className="flex gap-2 p-3 bg-muted/50 border-y border-border overflow-x-auto">
-      {actions.map((action) => {
-        const Icon = action.icon;
-        return (
-          <Button
-            key={action.id}
-            variant="outline"
-            size="sm"
-            onClick={() => handleActionClick(action)}
-            className="flex items-center gap-2 whitespace-nowrap"
-          >
-            <Icon className="h-4 w-4" />
-            {action.label}
-          </Button>
-        );
-      })}
-    </div>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="outline" size="sm" className="gap-2">
+          <Zap className="h-4 w-4" />
+          <span className="hidden sm:inline">Acciones</span>
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-48">
+        {actions.map((action) => {
+          const Icon = action.icon;
+          return (
+            <DropdownMenuItem
+              key={action.id}
+              onClick={() => handleActionClick(action)}
+              className="flex items-center gap-2 cursor-pointer"
+            >
+              <Icon className="h-4 w-4" />
+              {action.label}
+            </DropdownMenuItem>
+          );
+        })}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

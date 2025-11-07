@@ -41,7 +41,7 @@ const modes = [
 
 export default function ModeSelector({ currentMode, onModeChange, disabled }: ModeSelectorProps) {
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 p-4 bg-card border-b border-border">
+    <div className="flex items-center gap-1 px-4 py-2 bg-card border-b border-border overflow-x-auto">
       {modes.map((mode) => {
         const Icon = mode.icon;
         const isActive = currentMode === mode.id;
@@ -52,20 +52,18 @@ export default function ModeSelector({ currentMode, onModeChange, disabled }: Mo
             onClick={() => onModeChange(mode.id)}
             disabled={disabled}
             className={`
-              p-3 rounded-lg border-2 transition-all
+              relative flex items-center gap-2 px-4 py-2 rounded-md transition-all whitespace-nowrap
               ${isActive 
-                ? 'border-primary bg-primary/10' 
-                : 'border-border hover:border-primary/50 bg-background'}
+                ? 'text-primary font-medium' 
+                : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'}
               ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
             `}
           >
-            <div className="flex flex-col items-center text-center gap-2">
-              <Icon className={`h-5 w-5 ${isActive ? 'text-primary' : mode.color}`} />
-              <div>
-                <p className="text-sm font-semibold text-foreground">{mode.label}</p>
-                <p className="text-xs text-muted-foreground">{mode.description}</p>
-              </div>
-            </div>
+            <Icon className="h-4 w-4 flex-shrink-0" />
+            <span className="text-sm">{mode.label}</span>
+            {isActive && (
+              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+            )}
           </button>
         );
       })}
