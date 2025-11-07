@@ -259,7 +259,7 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
   const calculateAreaQuality = (area: typeof areaProgress.areas[0]): 'low' | 'medium' | 'high' => {
     if (area.status !== 'completed') return 'low';
     
-    const totalChars = area.responses.reduce((sum, r) => sum + r.length, 0);
+    const totalChars = area.responses.length;
     const messageCount = area.messageCount;
     
     if (messageCount >= 4 && totalChars >= 300) return 'high';
@@ -282,7 +282,7 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
     }
     
     // Advertencia si las respuestas son muy cortas
-    const totalChars = currentArea.responses.reduce((sum, r) => sum + r.length, 0);
+    const totalChars = currentArea.responses.length;
     if (currentArea.messageCount < 3 || totalChars < 100) {
       toast({
         title: '⚠️ Información limitada',
@@ -1474,7 +1474,7 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
                     {area.status === 'completed' && area.responses && (
                       <div className="space-y-1">
                         <p className="text-xs text-muted-foreground">
-                          {area.messageCount} respuestas • {area.responses.reduce((sum, r) => sum + r.length, 0)} caracteres
+                          {area.messageCount} respuestas • {area.responses.length} caracteres
                         </p>
                         <p className={`text-xs font-medium ${config.color}`}>
                           {config.emoji} Calidad: {config.label}
