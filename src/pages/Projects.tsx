@@ -31,7 +31,7 @@ interface ProjectMetrics {
 export default function Projects() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { projects, loading, setCurrentProject, deleteProject } = useProjectContext();
+  const { projects, loading, setCurrentProject, deleteProject, refreshProjects } = useProjectContext();
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [projectMetrics, setProjectMetrics] = useState<Record<string, ProjectMetrics>>({});
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -119,18 +119,27 @@ export default function Projects() {
 
     const success = await deleteProject(projectToDelete, project.company_id);
     if (success) {
-      // Refresh metrics after deletion
-      await fetchProjectMetrics();
+      // Refresh the entire project context (updates dropdown and list)
+      await refreshProjects();
     }
     setDeleteDialogOpen(false);
     setProjectToDelete(null);
   };
 
-  useEffect(() => {
-    if (!user) {
-      navigate('/auth');
-    }
-  }, [user, navigate]);
+  if (!user) {
+    return (
+      <MainLayout>
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="text-center">
+            <p className="text-muted-foreground">Debes iniciar sesión para ver tus proyectos</p>
+            <Button onClick={() => navigate('/auth')} className="mt-4">
+              Iniciar Sesión
+            </Button>
+          </div>
+        </div>
+      </MainLayout>
+    );
+  }
 
   if (loading) {
     return (
