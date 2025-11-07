@@ -10,6 +10,7 @@ interface ProjectContextType {
   setCurrentProject: (project: Project) => void;
   createProject: (name: string, description: string, companyId: string) => Promise<any>;
   updateProject: (projectId: string, updates: Partial<Project>) => Promise<boolean>;
+  deleteProject: (projectId: string, companyId: string) => Promise<boolean>;
   refreshProjects: () => Promise<void>;
 }
 

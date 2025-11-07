@@ -131,6 +131,40 @@ export function useProject() {
     }
   };
 
+  const deleteProject = async (projectId: string, companyId: string) => {
+    try {
+      const { error } = await supabase
+        .from('projects')
+        .delete()
+        .eq('id', projectId);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Proyecto eliminado',
+        description: 'El proyecto ha sido eliminado exitosamente'
+      });
+
+      // If we deleted the current project, clear it
+      if (currentProject?.id === projectId) {
+        setCurrentProjectState(null);
+        localStorage.removeItem(CURRENT_PROJECT_KEY);
+      }
+
+      // Refresh projects list
+      await fetchProjects(companyId);
+      return true;
+    } catch (error) {
+      console.error('Error deleting project:', error);
+      toast({
+        title: 'Error',
+        description: 'No se pudo eliminar el proyecto',
+        variant: 'destructive'
+      });
+      return false;
+    }
+  };
+
   return {
     projects,
     currentProject,
@@ -138,6 +172,7 @@ export function useProject() {
     fetchProjects,
     setCurrentProject,
     createProject,
-    updateProject
+    updateProject,
+    deleteProject
   };
 }

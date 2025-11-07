@@ -4,11 +4,21 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { FolderOpen, Plus, Calendar, BarChart3, CheckCircle, ListTodo, FileText, TrendingUp } from 'lucide-react';
+import { FolderOpen, Plus, Calendar, BarChart3, CheckCircle, ListTodo, FileText, TrendingUp, Trash2 } from 'lucide-react';
 import { useProjectContext } from '@/contexts/ProjectContext';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { CreateProjectDialog } from '@/components/projects/CreateProjectDialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 interface ProjectMetrics {
   diagnoses: number;
@@ -21,9 +31,11 @@ interface ProjectMetrics {
 export default function Projects() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { projects, loading, setCurrentProject } = useProjectContext();
+  const { projects, loading, setCurrentProject, deleteProject } = useProjectContext();
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [projectMetrics, setProjectMetrics] = useState<Record<string, ProjectMetrics>>({});
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [projectToDelete, setProjectToDelete] = useState<string | null>(null);
 
   useEffect(() => {
     if (projects.length > 0) {
@@ -91,6 +103,23 @@ export default function Projects() {
   const handleSelectProject = (project: any) => {
     setCurrentProject(project);
     navigate('/');
+  };
+
+  const handleDeleteClick = (e: React.MouseEvent, projectId: string) => {
+    e.stopPropagation();
+    setProjectToDelete(projectId);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!projectToDelete || !user) return;
+    
+    const project = projects.find(p => p.id === projectToDelete);
+    if (!project) return;
+
+    await deleteProject(projectToDelete, project.company_id);
+    setDeleteDialogOpen(false);
+    setProjectToDelete(null);
   };
 
   if (!user) {
@@ -162,21 +191,31 @@ export default function Projects() {
                           {project.name}
                         </h3>
                       </div>
-                      <Badge
-                        variant={
-                          project.status === 'active'
-                            ? 'default'
+                      <div className="flex items-center gap-2">
+                        <Badge
+                          variant={
+                            project.status === 'active'
+                              ? 'default'
+                              : project.status === 'completed'
+                              ? 'secondary'
+                              : 'outline'
+                          }
+                        >
+                          {project.status === 'active'
+                            ? 'Activo'
                             : project.status === 'completed'
-                            ? 'secondary'
-                            : 'outline'
-                        }
-                      >
-                        {project.status === 'active'
-                          ? 'Activo'
-                          : project.status === 'completed'
-                          ? 'Completado'
-                          : 'Archivado'}
-                      </Badge>
+                            ? 'Completado'
+                            : 'Archivado'}
+                        </Badge>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                          onClick={(e) => handleDeleteClick(e, project.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
 
                     {project.description && (
@@ -285,6 +324,26 @@ export default function Projects() {
         open={createDialogOpen}
         onOpenChange={setCreateDialogOpen}
       />
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar proyecto?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción no se puede deshacer. El proyecto y todos sus datos asociados serán eliminados permanentemente.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </MainLayout>
   );
 }
