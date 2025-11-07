@@ -38,16 +38,24 @@ export default function Auth() {
     const { error } = await signIn(loginEmail, loginPassword);
     
     if (!error) {
-      // Check if user has company_id to decide redirect
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('company_id')
-        .eq('id', user?.id || '')
-        .single();
+      // Get current session to access user ID immediately
+      const { data: { session } } = await supabase.auth.getSession();
       
-      if (profile?.company_id) {
-        navigate('/');
+      if (session?.user) {
+        // Now query with the correct user ID
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('company_id')
+          .eq('id', session.user.id)
+          .single();
+        
+        if (profile?.company_id) {
+          navigate('/');
+        } else {
+          navigate('/chat-diagnosis');
+        }
       } else {
+        // Fallback if no session for some reason
         navigate('/chat-diagnosis');
       }
     }
