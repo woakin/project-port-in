@@ -125,24 +125,36 @@ export function useAuth() {
     try {
       const { error } = await supabase.auth.signOut();
 
-      // If session doesn't exist, logout is effectively complete - don't show error
+      // If session doesn't exist, force local logout to clear browser tokens
       if (error && (error.message?.includes('session_not_found') || error.message?.includes('Auth session missing'))) {
+        // Force local sign out to clear tokens from browser
+        await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
+        
+        // Manually clean up state
+        setSession(null);
+        setUser(null);
+        setRoles([]);
+        localStorage.removeItem('current_project_id');
+
         toast({
           title: 'Sesión cerrada',
           description: 'Has cerrado sesión correctamente.',
         });
+        
+        // Force hard navigation to remount app in clean state
+        window.location.assign('/auth');
         return;
       }
 
       if (error) throw error;
 
-      // Note: localStorage cleanup now happens in onAuthStateChange
-      // to avoid interfering with the logout process
-
       toast({
         title: 'Sesión cerrada',
         description: 'Has cerrado sesión correctamente.',
       });
+      
+      // Force hard navigation to ensure clean state
+      window.location.assign('/auth');
     } catch (error: any) {
       // Only show error for real problems, not for "session already gone"
       if (!error?.message?.includes('session_not_found') && !error?.message?.includes('Auth session missing')) {
@@ -152,10 +164,19 @@ export function useAuth() {
           variant: 'destructive',
         });
       } else {
+        // Last fallback: force local cleanup and remount
+        await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
+        setSession(null);
+        setUser(null);
+        setRoles([]);
+        localStorage.removeItem('current_project_id');
+        
         toast({
           title: 'Sesión cerrada',
           description: 'Has cerrado sesión correctamente.',
         });
+        
+        window.location.assign('/auth');
       }
     }
   };
