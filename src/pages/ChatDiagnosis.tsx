@@ -98,6 +98,42 @@ export default function ChatDiagnosis() {
   const [showSummary, setShowSummary] = useState(false);
   const [hasInitialized, setHasInitialized] = useState(false);
 
+  // Funciones de persistencia en localStorage
+  const saveDiagnosisState = () => {
+    if (!currentProject?.id || step !== 'chat') return;
+    
+    const state = {
+      projectId: currentProject.id,
+      messages,
+      areaProgress,
+      sectionAnswers,
+      currentSection,
+      companyInfo,
+      chatMode,
+      timestamp: Date.now()
+    };
+    
+    localStorage.setItem(`diagnosis_state_${currentProject.id}`, JSON.stringify(state));
+  };
+
+  const loadDiagnosisState = (projectId: string) => {
+    const saved = localStorage.getItem(`diagnosis_state_${projectId}`);
+    if (!saved) return null;
+    
+    try {
+      const state = JSON.parse(saved);
+      // Validar que no sea muy antiguo (24 horas)
+      const maxAge = 24 * 60 * 60 * 1000;
+      if (Date.now() - state.timestamp > maxAge) {
+        localStorage.removeItem(`diagnosis_state_${projectId}`);
+        return null;
+      }
+      return state;
+    } catch {
+      return null;
+    }
+  };
+
   useEffect(() => {
     if (hasInitialized) return;
     if (authLoading || projectLoading) return;
@@ -110,6 +146,24 @@ export default function ChatDiagnosis() {
     // Solo ejecutar una vez cuando hay proyecto y NO se ha inicializado
     if (currentProject && !hasInitialized) {
       setHasInitialized(true);
+      
+      // INTENTAR RESTAURAR ESTADO GUARDADO PRIMERO
+      const savedState = loadDiagnosisState(currentProject.id);
+      if (savedState) {
+        setMessages(savedState.messages);
+        setAreaProgress(savedState.areaProgress);
+        setSectionAnswers(savedState.sectionAnswers);
+        setCurrentSection(savedState.currentSection);
+        setCompanyInfo(savedState.companyInfo);
+        setChatMode(savedState.chatMode);
+        setStep('chat');
+        
+        toast({
+          title: '✅ Diagnóstico restaurado',
+          description: 'Continuando donde lo dejaste'
+        });
+        return;
+      }
       
       const info: CompanyInfo = {
         name: currentProject.name,
@@ -149,6 +203,13 @@ export default function ChatDiagnosis() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  // Auto-guardado cuando cambien estados críticos
+  useEffect(() => {
+    if (step === 'chat' && currentProject) {
+      saveDiagnosisState();
+    }
+  }, [messages, areaProgress, sectionAnswers, currentSection, step, currentProject]);
 
   // Inicializar primera área como in_progress
   useEffect(() => {
@@ -1344,6 +1405,11 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
         description: 'Redirigiendo a los resultados...'
       });
 
+      // Limpiar estado guardado al completar exitosamente
+      if (currentProject?.id) {
+        localStorage.removeItem(`diagnosis_state_${currentProject.id}`);
+      }
+
       setTimeout(() => {
         navigate(`/diagnosis/${data.diagnosis_id}`);
       }, 500);
@@ -1563,8 +1629,8 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <header className="border-b border-border p-4 bg-card">
+    <div className="h-screen bg-background flex flex-col overflow-hidden">
+      <header className="flex-shrink-0 border-b border-border p-4 bg-card">
         <div className="max-w-4xl mx-auto flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <Button
@@ -1598,7 +1664,7 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
       </header>
 
       {showModeInfo && (
-        <div className="bg-muted/50 p-4 border-b border-border">
+        <div className="flex-shrink-0 bg-muted/50 p-4 border-b border-border">
           <div className="max-w-4xl mx-auto">
             <p className="text-sm text-muted-foreground">
               <strong>Modo {getModeLabel(chatMode)}:</strong>{' '}
@@ -1611,17 +1677,27 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
         </div>
       )}
 
-      <ModeSelector 
-        currentMode={chatMode} 
-        onModeChange={handleModeChange}
-        disabled={sending || generatingDiagnosis}
-      />
+      <div className="flex-shrink-0">
+        <ModeSelector 
+          currentMode={chatMode} 
+          onModeChange={handleModeChange}
+          disabled={sending || generatingDiagnosis}
+        />
 
-      <QuickActions 
-        projectId={currentProject?.id}
-        onActionClick={handleQuickAction}
-        onOpenSheet={setOpenSheet}
-      />
+        <QuickActions 
+          projectId={currentProject?.id}
+          onActionClick={handleQuickAction}
+          onOpenSheet={setOpenSheet}
+        />
+
+        {chatMode === 'diagnosis' && (
+          <AreaProgressBar
+            areas={areaProgress.areas}
+            currentIndex={areaProgress.currentIndex}
+            onGoToArea={handleGoToArea}
+          />
+        )}
+      </div>
 
       {/* Side Sheets */}
       <Sheet open={openSheet === 'kpis'} onOpenChange={(open) => !open && setOpenSheet(null)}>
@@ -1767,16 +1843,7 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
         </DialogContent>
       </Dialog>
 
-      {/* Barra de progreso por áreas en modo diagnóstico */}
-      {chatMode === 'diagnosis' && (
-        <AreaProgressBar
-          areas={areaProgress.areas}
-          currentIndex={areaProgress.currentIndex}
-          onGoToArea={handleGoToArea}
-        />
-      )}
-
-      <div className="flex-1 overflow-y-auto p-4">
+      <div className="flex-1 overflow-y-auto p-4 min-h-0">
         <div className="max-w-4xl mx-auto space-y-4">
           {messages.map((message, idx) => (
             <div
@@ -1811,7 +1878,7 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
         </div>
       </div>
 
-      <div className="border-t border-border bg-card">
+      <div className="flex-shrink-0 border-t border-border bg-card">
         <div className="max-w-4xl mx-auto p-4 space-y-3">
           {/* Botones de navegación de áreas en modo diagnóstico */}
           {chatMode === 'diagnosis' && areaProgress.currentIndex < AREAS.length && (
@@ -1841,14 +1908,13 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
             </div>
           )}
 
-          {/* Botón generar diagnóstico cuando todas las áreas están revisadas */}
+          {/* Botón generar diagnóstico cuando al menos 3 áreas están completadas */}
           {chatMode === 'diagnosis' && (() => {
             const completedAreas = areaProgress.areas.filter(a => a.status === 'completed');
-            const allAreasReviewed = areaProgress.areas.every(
-              a => a.status !== 'pending' && a.status !== 'in_progress'
-            );
-            const canGenerate = completedAreas.length >= 1 && allAreasReviewed;
             const skippedCount = areaProgress.areas.filter(a => a.status === 'skipped').length;
+            
+            // Permitir generar con al menos 3 áreas completadas
+            const canGenerate = completedAreas.length >= 3;
             
             return canGenerate && (
               <div className="p-4 bg-muted/50 border border-border rounded-lg">
