@@ -1695,6 +1695,12 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
             areas={areaProgress.areas}
             currentIndex={areaProgress.currentIndex}
             onGoToArea={handleGoToArea}
+            onSkipArea={handleSkipArea}
+            onNextArea={handleNextArea}
+            onGenerateDiagnosis={() => setShowSummary(true)}
+            canAdvance={areaProgress.areas[areaProgress.currentIndex]?.messageCount >= 2}
+            canGenerate={areaProgress.areas.filter(a => a.status === 'completed').length >= 3}
+            isLoading={sending || generatingDiagnosis}
           />
         )}
       </div>
@@ -1879,68 +1885,7 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
       </div>
 
       <div className="flex-shrink-0 border-t border-border bg-card">
-        <div className="max-w-4xl mx-auto p-4 space-y-3">
-          {/* Botones de navegación de áreas en modo diagnóstico */}
-          {chatMode === 'diagnosis' && areaProgress.currentIndex < AREAS.length && (
-            <div className="flex gap-2 justify-center">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleSkipArea}
-                disabled={sending || generatingDiagnosis}
-                className="gap-2"
-              >
-                <SkipForward className="h-4 w-4" />
-                Saltar esta área
-              </Button>
-              
-              {areaProgress.areas[areaProgress.currentIndex].messageCount >= 2 && (
-                <Button
-                  size="sm"
-                  onClick={handleNextArea}
-                  disabled={sending || generatingDiagnosis}
-                  className="gap-2"
-                >
-                  <ArrowRight className="h-4 w-4" />
-                  Avanzar a siguiente área
-                </Button>
-              )}
-            </div>
-          )}
-
-          {/* Botón generar diagnóstico cuando al menos 3 áreas están completadas */}
-          {chatMode === 'diagnosis' && (() => {
-            const completedAreas = areaProgress.areas.filter(a => a.status === 'completed');
-            const skippedCount = areaProgress.areas.filter(a => a.status === 'skipped').length;
-            
-            // Permitir generar con al menos 3 áreas completadas
-            const canGenerate = completedAreas.length >= 3;
-            
-            return canGenerate && (
-              <div className="p-4 bg-muted/50 border border-border rounded-lg">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium">
-                      Diagnóstico listo para generar
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {completedAreas.length} áreas completadas{skippedCount > 0 && `, ${skippedCount} saltadas`}
-                    </p>
-                  </div>
-                  <Button onClick={() => setShowSummary(true)} disabled={generatingDiagnosis}>
-                    {generatingDiagnosis ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                        Generando...
-                      </>
-                    ) : (
-                      'Generar Diagnóstico y Plan'
-                    )}
-                  </Button>
-                </div>
-              </div>
-            );
-          })()}
+        <div className="max-w-4xl mx-auto p-4">
           <div className="flex gap-2 items-end">
             <div className="relative flex-1">
               <Textarea

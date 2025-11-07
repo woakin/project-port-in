@@ -1,5 +1,6 @@
-import { Check, Target, Cog, DollarSign, TrendingUp, Scale, Laptop } from 'lucide-react';
+import { Check, Target, Cog, DollarSign, TrendingUp, Scale, Laptop, SkipForward, ArrowRight, CheckCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
 
 interface AreaProgressBarProps {
   areas: Array<{
@@ -10,6 +11,12 @@ interface AreaProgressBarProps {
   }>;
   currentIndex: number;
   onGoToArea: (index: number) => void;
+  onSkipArea?: () => void;
+  onNextArea?: () => void;
+  onGenerateDiagnosis?: () => void;
+  canAdvance?: boolean;
+  canGenerate?: boolean;
+  isLoading?: boolean;
 }
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -21,13 +28,24 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   Laptop
 };
 
-export function AreaProgressBar({ areas, currentIndex, onGoToArea }: AreaProgressBarProps) {
+export function AreaProgressBar({ 
+  areas, 
+  currentIndex, 
+  onGoToArea,
+  onSkipArea,
+  onNextArea,
+  onGenerateDiagnosis,
+  canAdvance,
+  canGenerate,
+  isLoading
+}: AreaProgressBarProps) {
   const completedCount = areas.filter(a => a.status === 'completed').length;
   const percentage = Math.round((completedCount / areas.length) * 100);
   
   return (
     <div className="w-full bg-muted/50 border-b border-border py-2 px-4">
       <div className="flex items-center justify-between max-w-4xl mx-auto gap-4">
+        {/* Progreso (izquierda) */}
         <div className="flex items-center gap-2 flex-wrap flex-1">
           <span className="text-xs font-medium text-muted-foreground shrink-0">Progreso:</span>
           <div className="flex items-center gap-1.5">
@@ -62,6 +80,50 @@ export function AreaProgressBar({ areas, currentIndex, onGoToArea }: AreaProgres
           <span className="text-xs text-muted-foreground shrink-0">
             {percentage}% ({completedCount}/{areas.length})
           </span>
+        </div>
+
+        {/* Botones de acción (derecha) */}
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {/* Botón Saltar */}
+          {onSkipArea && currentIndex < areas.length && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onSkipArea}
+              disabled={isLoading}
+              className="gap-1.5"
+            >
+              <SkipForward className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Saltar área</span>
+            </Button>
+          )}
+
+          {/* Botón Avanzar */}
+          {onNextArea && canAdvance && (
+            <Button
+              size="sm"
+              onClick={onNextArea}
+              disabled={isLoading}
+              className="gap-1.5"
+            >
+              <ArrowRight className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Siguiente área</span>
+            </Button>
+          )}
+
+          {/* Botón Generar Diagnóstico */}
+          {onGenerateDiagnosis && canGenerate && (
+            <Button
+              size="sm"
+              onClick={onGenerateDiagnosis}
+              disabled={isLoading}
+              className="gap-1.5 bg-green-600 hover:bg-green-700"
+            >
+              <CheckCircle className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Generar</span>
+              <span className="inline sm:hidden">✓</span>
+            </Button>
+          )}
         </div>
       </div>
     </div>
