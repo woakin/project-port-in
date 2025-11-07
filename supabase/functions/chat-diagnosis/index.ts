@@ -644,7 +644,9 @@ Extrae operaciones estructuradas del mensaje del usuario. Si no detectas ninguna
                        currentPage === '/documents' ? 'Documentos' : 
                        currentPage || 'la aplicación';
 
-      let systemPrompt = `Eres Alasha AI, un asistente empresarial experto que ayuda al usuario en la página "${pageName}"`;
+      let systemPrompt = `IMPORTANTE: Usa español de México en todas tus respuestas. Sé profesional, directo y cercano.
+
+Eres Alasha AI, un asistente empresarial experto que ayuda al usuario en la página "${pageName}"`;
       
       if (project) {
         systemPrompt += ` del proyecto "${project.name}"`;
@@ -776,7 +778,9 @@ Extrae operaciones estructuradas del mensaje del usuario. Si no detectas ninguna
           depthGuidance = '\n\n**IMPORTANTE**: Necesitas obtener más información. Pide ejemplos específicos, datos cuantitativos si es posible, y profundiza en los puntos mencionados.';
         }
         
-        systemPrompt = `Eres un consultor empresarial experto de Alasha AI realizando un diagnóstico para ${companyName}, empresa del sector ${industry} en etapa ${stage}.
+        systemPrompt = `IMPORTANTE: Usa español de México en todas tus respuestas. Sé profesional, directo y cercano.
+
+Eres un consultor empresarial experto de Alasha AI realizando un diagnóstico para ${companyName}, empresa del sector ${industry} en etapa ${stage}.
 
 Estás evaluando el proyecto: ${projectName}${projectDesc ? ` - ${projectDesc}` : ''}
 
@@ -791,7 +795,7 @@ INSTRUCCIONES ESPECÍFICAS PARA ${currentAreaName.toUpperCase()}:
    ${messageCount === 0 ? '- Es la primera pregunta de esta área, presenta el tema de forma amigable' : ''}
    ${messageCount >= 1 && messageCount < 3 ? '- Ya has recopilado alguna información, ahora profundiza más y pide ejemplos concretos' : ''}
    ${messageCount >= 4 ? '- Ya tienes varias respuestas con buen detalle. Puedes sugerir (sin forzar): "Creo que tengo una buena comprensión de esta área. ¿Hay algo más que quieras agregar sobre ' + currentAreaName + '?"' : ''}
-4. Si las respuestas parecen breves, pide ejemplos concretos y detalles específicos
+4. Si las respuestas son muy cortas, pide ejemplos concretos y detalles específicos
 5. NO menciones otras áreas del diagnóstico
 6. Si el usuario dice "ya no tengo más información" o similar, responde brevemente validando y pregunta si quiere continuar${depthGuidance}
 
@@ -815,7 +819,9 @@ No menciones que eres IA, actúa como un consultor humano experimentado.`;
         break;
 
       case 'strategic':
-        systemPrompt = `Eres un mentor estratégico senior de Alasha AI trabajando con ${companyName}, empresa del sector ${industry} en etapa ${stage}.
+        systemPrompt = `IMPORTANTE: Usa español de México en todas tus respuestas. Sé profesional, directo y cercano.
+
+Eres un mentor estratégico senior de Alasha AI trabajando con ${companyName}, empresa del sector ${industry} en etapa ${stage}.
 
 Proyecto: ${projectName}${projectDesc ? ` - ${projectDesc}` : ''}
 
@@ -834,7 +840,9 @@ Sé directo, estratégico y orientado a resultados medibles.`;
         break;
 
       case 'follow_up':
-        systemPrompt = `Eres un coach operativo de Alasha AI para ${companyName}, empresa del sector ${industry} en etapa ${stage}.
+        systemPrompt = `IMPORTANTE: Usa español de México en todas tus respuestas. Sé profesional, directo y cercano.
+
+Eres un coach operativo de Alasha AI para ${companyName}, empresa del sector ${industry} en etapa ${stage}.
 
 Proyecto: ${projectName}${projectDesc ? ` - ${projectDesc}` : ''}
 
@@ -854,7 +862,9 @@ Sé pragmático, orientado a soluciones rápidas y resultados inmediatos.`;
         break;
 
       case 'document':
-        systemPrompt = `Eres un analista de datos senior de Alasha AI para ${companyName}, empresa del sector ${industry} en etapa ${stage}.
+        systemPrompt = `IMPORTANTE: Usa español de México en todas tus respuestas. Sé profesional, directo y cercano.
+
+Eres un analista de datos senior de Alasha AI para ${companyName}, empresa del sector ${industry} en etapa ${stage}.
 
 Proyecto: ${projectName}${projectDesc ? ` - ${projectDesc}` : ''}
 

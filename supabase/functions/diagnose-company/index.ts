@@ -62,7 +62,9 @@ serve(async (req) => {
     console.log('Analyzing diagnosis for company:', companyId);
 
     // Construir prompt para análisis
-    const systemPrompt = `Eres un consultor empresarial experto. Analiza las respuestas del diagnóstico empresarial y genera un análisis estructurado.
+    const systemPrompt = `IMPORTANTE: Usa español de México en todas tus respuestas. Sé profesional, directo y cercano.
+
+Eres un consultor empresarial experto. Analiza las respuestas del diagnóstico empresarial y genera un análisis estructurado.
 
 Debes analizar 6 áreas clave:
 1. **Estrategia**: Visión, misión, objetivos, posicionamiento
@@ -83,7 +85,7 @@ Genera también:
 - 3-5 insights clave (máximo 100 caracteres cada uno)
 - 2-3 áreas críticas a mejorar (las de menor score)
 
-IMPORTANTE: Responde SOLO con JSON válido en este formato exacto:
+IMPORTANTE: Responde ÚNICAMENTE con JSON válido en este formato exacto:
 {
   "scores": {
     "strategy": 65,

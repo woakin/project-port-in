@@ -62,7 +62,9 @@ serve(async (req) => {
     console.log("Diagnosis found:", diagnosis.companies?.name);
 
     // Construir prompt para el LLM
-    const systemPrompt = `Eres un consultor estratégico experto. Genera un plan de acción empresarial estructurado.
+    const systemPrompt = `IMPORTANTE: Usa español de México en todas tus respuestas. Sé profesional, directo y cercano.
+
+Eres un consultor estratégico experto. Genera un plan de acción empresarial estructurado.
 
 CONTEXTO:
 - Empresa: ${diagnosis.companies?.name || "Sin nombre"}
