@@ -40,6 +40,27 @@ export function useKPIs() {
   useEffect(() => {
     if (!user) return;
     fetchKPIs();
+
+    // Set up Realtime listener for automatic updates
+    const channel = supabase
+      .channel('kpis-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // Listen to INSERT, UPDATE, DELETE
+          schema: 'public',
+          table: 'kpis'
+        },
+        (payload) => {
+          console.log('KPI realtime change detected:', payload);
+          fetchKPIs(); // Automatically refresh
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user, fetchKPIs]);
 
   const getKPIsByArea = (area: string) => {
