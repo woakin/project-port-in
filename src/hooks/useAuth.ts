@@ -18,6 +18,13 @@ export function useAuth() {
         setSession(session);
         setUser(session?.user ?? null);
         
+        // Clean localStorage when user logs out (after Supabase completes logout)
+        if (event === 'SIGNED_OUT' || (!session && event !== 'INITIAL_SESSION')) {
+          // Only clear app-specific keys to avoid interference with Supabase
+          const currentProjectKey = 'current_project_id';
+          localStorage.removeItem(currentProjectKey);
+        }
+        
         // Fetch roles after auth state changes
         if (session?.user) {
           setTimeout(() => {
@@ -119,8 +126,8 @@ export function useAuth() {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
       
-      // CRITICAL: Clear all localStorage to prevent data leakage between sessions
-      localStorage.clear();
+      // Note: localStorage cleanup now happens in onAuthStateChange
+      // to avoid interfering with Supabase's logout process
       
       toast({
         title: 'Sesión cerrada',
