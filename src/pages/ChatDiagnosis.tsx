@@ -12,6 +12,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { supabase } from '@/integrations/supabase/client';
 import ReactMarkdown from 'react-markdown';
 import ModeSelector from '@/components/chat/ModeSelector';
+import { ensureProjectExists } from '@/lib/projectHelpers';
 import QuickActions, { SheetType } from '@/components/chat/QuickActions';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -95,16 +96,21 @@ export default function ChatDiagnosis() {
   });
   
   const [showSummary, setShowSummary] = useState(false);
+  const [hasInitialized, setHasInitialized] = useState(false);
 
   useEffect(() => {
+    if (hasInitialized) return;
     if (authLoading || projectLoading) return;
+    
     if (!user) {
       navigate('/auth');
       return;
     }
 
-    // Si hay proyecto activo, saltarse el formulario e ir a selección de método
-    if (currentProject && step === 'company-info') {
+    // Solo ejecutar una vez cuando hay proyecto y NO se ha inicializado
+    if (currentProject && !hasInitialized) {
+      setHasInitialized(true);
+      
       const info: CompanyInfo = {
         name: currentProject.name,
         industry: 'General',
@@ -115,7 +121,7 @@ export default function ChatDiagnosis() {
       
       setCompanyInfo(info);
       
-      // Buscar diagnóstico previo
+      // Verificar diagnóstico previo
       const fetchPreviousDiagnosis = async () => {
         const { data } = await supabase
           .from('diagnoses')
@@ -128,22 +134,17 @@ export default function ChatDiagnosis() {
         if (data) {
           setDiagnosisVersion(data.version);
           setHasPreviousDiagnosis(true);
-          // Si hay diagnóstico previo, ir directo al chat
           setStep('chat');
           const initialMessage = getInitialMessage(currentProject.name, 'diagnosis');
-          setMessages([{
-            role: 'assistant',
-            content: initialMessage
-          }]);
+          setMessages([{ role: 'assistant', content: initialMessage }]);
         } else {
-          // Si NO hay diagnóstico previo, ir a selección de método
           setStep('method-selection');
         }
       };
 
       fetchPreviousDiagnosis();
     }
-  }, [user, authLoading, currentProject, projectLoading, step, navigate]);
+  }, [user, authLoading, currentProject, projectLoading, hasInitialized, navigate]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -933,75 +934,27 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
     
     setSending(true);
     try {
-      // 1. Crear o actualizar empresa
-      let companyId: string;
-      
-      const { data: existingProfile } = await supabase
-        .from('profiles')
-        .select('company_id')
-        .eq('id', user.id)
-        .single();
-
-      if (existingProfile?.company_id) {
-        // Actualizar empresa existente solo con valores validados
-        await supabase
-          .from('companies')
-          .update({
-            name,
-            industry,
-            size: stage,
-          })
-          .eq('id', existingProfile.company_id);
-        
-        companyId = existingProfile.company_id;
-      } else {
-        // Crear nueva empresa
-        const { data: newCompany, error: companyError } = await supabase
-          .from('companies')
-          .insert({
-            name,
-            industry,
-            size: stage,
-            created_by: user.id,
-          })
-          .select()
-          .single();
-
-        if (companyError) throw companyError;
-        companyId = newCompany.id;
-
-        // Actualizar perfil con company_id
-        await supabase
-          .from('profiles')
-          .update({ company_id: companyId })
-          .eq('id', user.id);
-      }
-
-      // 2. Antes de crear proyecto, setear is_default = false en todos los proyectos existentes
-      await supabase
-        .from('projects')
-        .update({ is_default: false })
-        .eq('company_id', companyId);
-
-      // 3. Crear proyecto
-      const { error: projectError } = await supabase
-        .from('projects')
-        .insert({
-          company_id: companyId,
+      // Usar helper consolidado
+      await ensureProjectExists(
+        supabase,
+        user,
+        {
+          name,
+          industry,
+          size: stage
+        },
+        {
           name: projectName,
-          description: projectDescription || null,
-          is_default: true,
-          status: 'active',
-        });
-
-      if (projectError) throw projectError;
+          description: projectDescription
+        }
+      );
 
       toast({
         title: "Información guardada",
         description: "Redirigiendo a la entrevista por voz...",
       });
 
-      // 4. Redirigir a voice diagnosis
+      // Redirigir a voice diagnosis
       setTimeout(() => {
         navigate('/voice-diagnosis');
       }, 500);
@@ -1040,57 +993,25 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
     setSending(true);
     
     try {
-      // 1. Verificar si el usuario ya tiene una empresa
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('company_id')
-        .eq('id', user.id)
-        .single();
-
-      let companyId = profile?.company_id;
-
-      // 2. Si no tiene empresa, crearla
-      if (!companyId) {
-        const { data: newCompany, error: companyError } = await supabase
-          .from('companies')
-          .insert({
-            name: tempName,
-            industry: tempIndustry,
-            size: tempStage,
-            created_by: user.id
-          })
-          .select()
-          .single();
-
-        if (companyError) throw companyError;
-        
-        companyId = newCompany.id;
-
-        // 3. Actualizar el perfil del usuario con la empresa
-        await supabase
-          .from('profiles')
-          .update({ company_id: companyId })
-          .eq('id', user.id);
-      }
-
-      // 4. Crear el proyecto
-      const { data: newProject, error: projectError } = await supabase
-        .from('projects')
-        .insert({
-          company_id: companyId,
+      // Usar helper consolidado
+      const result = await ensureProjectExists(
+        supabase,
+        user,
+        {
+          name: tempName,
+          industry: tempIndustry,
+          size: tempStage
+        },
+        {
           name: tempProjectName,
-          description: tempProjectDescription || null,
-          status: 'active'
-        })
-        .select()
-        .single();
+          description: tempProjectDescription
+        }
+      );
 
-      if (projectError) throw projectError;
+      // Establecer como proyecto actual en el contexto
+      setCurrentProject(result.project as any);
 
-      // 5. Establecer como proyecto actual en el contexto
-      setCurrentProject(newProject as any);
-
-      // 6. Guardar info en estado para uso posterior
+      // Guardar info en estado para uso posterior
       const info: CompanyInfo = {
         name: tempName,
         industry: tempIndustry,
@@ -1106,10 +1027,10 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
         description: `Proyecto "${tempProjectName}" creado exitosamente`
       });
 
-      // 7. Avanzar a selección de método
+      // Avanzar a selección de método
       setStep('method-selection');
       
-      // 8. Refrescar lista de proyectos en el contexto
+      // Refrescar lista de proyectos en el contexto
       await refreshProjects();
 
     } catch (error) {
@@ -1268,9 +1189,42 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
   };
 
   const generateDiagnosis = async () => {
-    if (!companyInfo || !currentProject) return;
+    console.log('=== GENERATE DIAGNOSIS START ===');
     
-    console.log('🎯 Iniciando generación de diagnóstico...');
+    // Validación con feedback explícito
+    if (!user) {
+      toast({
+        title: 'Error de sesión',
+        description: 'No hay usuario autenticado',
+        variant: 'destructive'
+      });
+      console.error('generateDiagnosis: user is null');
+      return;
+    }
+
+    if (!currentProject) {
+      toast({
+        title: 'Error: Proyecto no encontrado',
+        description: 'No se ha cargado el proyecto actual. Intenta recargar la página.',
+        variant: 'destructive'
+      });
+      console.error('generateDiagnosis: currentProject is null');
+      return;
+    }
+
+    if (!companyInfo) {
+      toast({
+        title: 'Error: Información de empresa faltante',
+        description: 'No se ha cargado la información de la empresa',
+        variant: 'destructive'
+      });
+      console.error('generateDiagnosis: companyInfo is null');
+      return;
+    }
+
+    console.log('user:', user?.id);
+    console.log('currentProject:', currentProject?.id, currentProject?.name);
+    console.log('companyInfo:', companyInfo);
     
     // Validar que al menos un área esté completada
     const completedAreas = areaProgress.areas.filter(a => a.status === 'completed');
@@ -1281,6 +1235,7 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
         description: 'Debes completar al menos un área para generar el diagnóstico',
         variant: 'destructive'
       });
+      console.log('No completed areas');
       return;
     }
 
@@ -1321,8 +1276,27 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
         legal: sectionAnswers.legal || '',
         technology: sectionAnswers.technology || ''
       };
+
+      // Validar que al menos UNA área tenga contenido
+      const hasAnyContent = Object.values(formResponses).some(v => v.trim().length > 0);
       
-      console.log('📤 Enviando a diagnose-company:', {
+      if (!hasAnyContent) {
+        toast({
+          title: 'Sin respuestas',
+          description: 'Debes proporcionar al menos una respuesta antes de generar el diagnóstico',
+          variant: 'destructive'
+        });
+        console.log('No content in any area');
+        return;
+      }
+
+      console.log('📊 sectionAnswers:', Object.keys(sectionAnswers).map(k => ({
+        area: k,
+        length: sectionAnswers[k].length,
+        hasContent: sectionAnswers[k].length > 0
+      })));
+      
+      console.log('📤 Sending to diagnose-company:', {
         maturityLevel: companyInfo.stage,
         companyId: currentProject.company_id,
         userId: user.id,
@@ -1383,6 +1357,7 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
       });
     } finally {
       setGeneratingDiagnosis(false);
+      console.log('=== GENERATE DIAGNOSIS END ===');
     }
   };
 
