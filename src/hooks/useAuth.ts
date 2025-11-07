@@ -124,21 +124,39 @@ export function useAuth() {
   const signOut = async () => {
     try {
       const { error } = await supabase.auth.signOut();
+
+      // If session doesn't exist, logout is effectively complete - don't show error
+      if (error && (error.message?.includes('session_not_found') || error.message?.includes('Auth session missing'))) {
+        toast({
+          title: 'Sesión cerrada',
+          description: 'Has cerrado sesión correctamente.',
+        });
+        return;
+      }
+
       if (error) throw error;
-      
+
       // Note: localStorage cleanup now happens in onAuthStateChange
-      // to avoid interfering with Supabase's logout process
-      
+      // to avoid interfering with the logout process
+
       toast({
         title: 'Sesión cerrada',
         description: 'Has cerrado sesión correctamente.',
       });
     } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: error.message,
-        variant: 'destructive',
-      });
+      // Only show error for real problems, not for "session already gone"
+      if (!error?.message?.includes('session_not_found') && !error?.message?.includes('Auth session missing')) {
+        toast({
+          title: 'Error',
+          description: error?.message ?? 'Ocurrió un error al cerrar sesión.',
+          variant: 'destructive',
+        });
+      } else {
+        toast({
+          title: 'Sesión cerrada',
+          description: 'Has cerrado sesión correctamente.',
+        });
+      }
     }
   };
 
