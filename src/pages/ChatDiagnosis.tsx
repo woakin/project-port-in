@@ -268,9 +268,9 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
   };
 
   // Función para avanzar al siguiente área
-  const handleNextArea = () => {
+  const handleNextArea = async () => {
     const currentArea = areaProgress.areas[areaProgress.currentIndex];
-    
+
     // Validar que tenga al menos 2 mensajes antes de avanzar
     if (currentArea.messageCount < 2) {
       toast({
@@ -280,7 +280,7 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
       });
       return;
     }
-    
+
     // Advertencia si las respuestas son muy cortas
     const totalChars = currentArea.responses.length;
     if (currentArea.messageCount < 3 || totalChars < 100) {
@@ -290,77 +290,166 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
         variant: 'default'
       });
     }
-    
-    // Marcar área actual como completada
+
     const nextIndex = areaProgress.currentIndex + 1;
-    
     if (nextIndex >= AREAS.length) {
       toast({
         title: 'Última área',
-        description: 'Ya completaste todas las áreas del diagnóstico'
+        description: 'Ya completaste todas las áreas del diagnóstico',
       });
       return;
     }
-    
+
+    const nextSectionId = AREAS[nextIndex].id as typeof currentSection;
+    const nextSectionName = AREAS[nextIndex].name;
+
+    // Actualizar progreso de áreas
     setAreaProgress(prev => ({
       currentIndex: nextIndex,
       areas: prev.areas.map((area, idx) => {
-        if (idx === prev.currentIndex) {
-          return { ...area, status: 'completed' };
-        }
-        if (idx === nextIndex) {
-          return { ...area, status: 'in_progress' };
-        }
+        if (idx === prev.currentIndex) return { ...area, status: 'completed' };
+        if (idx === nextIndex) return { ...area, status: 'in_progress' };
         return area;
       })
     }));
-    
-    setCurrentSection(AREAS[nextIndex].id as typeof currentSection);
-    
-    // Mensaje del sistema
-    setMessages(prev => [...prev, {
+    setCurrentSection(nextSectionId);
+
+    // Mensaje del sistema y pregunta inicial automática
+    const systemMessage = {
       role: 'assistant' as const,
-      content: `🔄 **Avanzando a: ${AREAS[nextIndex].name}**\n\nPerfecto, ahora exploremos el área de ${AREAS[nextIndex].name}.`
-    }]);
-    
+      content: `🔄 **Avanzando a: ${nextSectionName}**\n\nPerfecto, ahora exploremos el área de ${nextSectionName}.`
+    };
+    const updatedMessages = [...messages, systemMessage];
+    setMessages(updatedMessages);
+
     toast({
       title: 'Área cambiada',
-      description: `Ahora estamos en: ${AREAS[nextIndex].name}`
+      description: `Ahora estamos en: ${nextSectionName}`,
     });
+
+    // Generar pregunta inicial con el asistente
+    setSending(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('No hay sesión activa');
+
+      const areaPrompts = {
+        operations: '¿Cómo describirías tus procesos operativos actuales? ¿Qué sistemas o metodologías utilizas?',
+        finance: '¿Cuál es tu modelo de ingresos principal? ¿Cómo gestionas actualmente las finanzas de tu proyecto?',
+        marketing: '¿Qué estrategias de marketing estás utilizando? ¿Cómo adquieres y retienes clientes?',
+        legal: '¿Has considerado los aspectos legales de tu negocio? ¿Qué estructura legal tiene tu empresa?',
+        technology: '¿Qué tecnologías utilizas en tu negocio? ¿Cómo gestionas la infraestructura tecnológica?'
+      } as const;
+
+      const nextId = AREAS[nextIndex].id as keyof typeof areaPrompts;
+      const suggested = (areaPrompts as any)[nextId] || '';
+      const contextualPrompt = `El usuario acaba de avanzar al área de ${nextSectionName}. Genera una pregunta inicial contextual y amigable para comenzar a explorar esta área. ${suggested ? `La pregunta sugerida sería: "${suggested}" pero puedes adaptarla según el contexto de la conversación previa.` : ''}`;
+
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat-diagnosis`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          messages: [
+            ...updatedMessages,
+            { role: 'system', content: contextualPrompt }
+          ],
+          companyInfo,
+          isComplete: false,
+          mode: chatMode,
+        }),
+      });
+
+      if (!response.ok || !response.body) throw new Error('Error al conectar con el asistente');
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let assistantMessage = '';
+      let textBuffer = '';
+
+      // Agregar mensaje del asistente vacío que iremos llenando
+      setMessages([...updatedMessages, { role: 'assistant', content: '' }]);
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        textBuffer += decoder.decode(value, { stream: true });
+
+        let newlineIndex: number;
+        while ((newlineIndex = textBuffer.indexOf('\n')) !== -1) {
+          let line = textBuffer.slice(0, newlineIndex);
+          textBuffer = textBuffer.slice(newlineIndex + 1);
+
+          if (line.endsWith('\r')) line = line.slice(0, -1);
+          if (line.startsWith(':') || line.trim() === '') continue;
+          if (!line.startsWith('data: ')) continue;
+
+          const jsonStr = line.slice(6).trim();
+          if (jsonStr === '[DONE]') continue;
+
+          try {
+            const parsed = JSON.parse(jsonStr);
+            const content = parsed.choices?.[0]?.delta?.content;
+            if (content) {
+              assistantMessage += content;
+              const cleanContent = filterMetadata(assistantMessage);
+              setMessages([...updatedMessages, { role: 'assistant', content: cleanContent }]);
+            }
+          } catch (e) {
+            console.error('Error parsing JSON:', e);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error al avanzar de área:', error);
+      toast({
+        title: 'Error',
+        description: 'No se pudo generar la pregunta automática, pero puedes continuar escribiendo.',
+        variant: 'destructive',
+      });
+    } finally {
+      setSending(false);
+    }
   };
 
   // Función para saltar área actual
-  const handleSkipArea = () => {
+  const handleSkipArea = async () => {
     const currentIndex = areaProgress.currentIndex;
+    const currentArea = areaProgress.areas[currentIndex];
     const nextIndex = currentIndex + 1;
-    
-    // Si es la última área, marcarla como skipped y terminar
+
+    // Si es la última área
     if (nextIndex >= AREAS.length) {
       setAreaProgress(prev => ({
         ...prev,
-        areas: prev.areas.map((area, idx) => 
-          idx === currentIndex ? { ...area, status: 'skipped' } : area
+        areas: prev.areas.map((area, idx) =>
+          idx === currentIndex
+            ? { ...area, status: currentArea.messageCount >= 2 ? 'completed' : 'skipped' }
+            : area
         )
       }));
-      
+
       setMessages(prev => [...prev, {
         role: 'assistant' as const,
-        content: `⏭️ **Área saltada**\n\nHas revisado todas las áreas. Ya puedes generar el diagnóstico.`
+        content: `⏭️ **Área ${currentArea.messageCount >= 2 ? 'completada' : 'saltada'}**\n\nHas revisado todas las áreas. Ya puedes generar el diagnóstico.`
       }]);
-      
+
       toast({
-        title: 'Última área saltada',
-        description: 'Ya puedes generar el diagnóstico'
+        title: 'Fin del diagnóstico',
+        description: 'Ya puedes generar el diagnóstico',
       });
       return;
     }
-    
-    // Marcar área actual como skipped y avanzar a la siguiente
+
+    // Marcar área actual como completada si ya hay respuestas, si no, como saltada
     setAreaProgress(prev => ({
       currentIndex: nextIndex,
       areas: prev.areas.map((area, idx) => {
         if (idx === currentIndex) {
-          return { ...area, status: 'skipped' };
+          return { ...area, status: currentArea.messageCount >= 2 ? 'completed' : 'skipped' };
         }
         if (idx === nextIndex) {
           return { ...area, status: 'in_progress' };
@@ -368,18 +457,108 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
         return area;
       })
     }));
-    
-    setCurrentSection(AREAS[nextIndex].id as typeof currentSection);
-    
-    setMessages(prev => [...prev, {
+
+    const nextSectionId = AREAS[nextIndex].id as typeof currentSection;
+    const nextSectionName = AREAS[nextIndex].name;
+    setCurrentSection(nextSectionId);
+
+    const systemMessage = {
       role: 'assistant' as const,
-      content: `⏭️ **Área saltada**\n\nEntendido, continuemos con ${AREAS[nextIndex].name}.`
-    }]);
-    
+      content: `⏭️ **Área ${currentArea.messageCount >= 2 ? 'completada' : 'saltada'}**\n\nEntendido, continuemos con ${nextSectionName}.`
+    };
+    const updatedMessages = [...messages, systemMessage];
+    setMessages(updatedMessages);
+
     toast({
       title: 'Área saltada',
-      description: `Ahora estamos en: ${AREAS[nextIndex].name}`
+      description: `Ahora estamos en: ${nextSectionName}`,
     });
+
+    // Generar pregunta inicial para la nueva área
+    setSending(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('No hay sesión activa');
+
+      const areaPrompts = {
+        operations: '¿Cómo describirías tus procesos operativos actuales? ¿Qué sistemas o metodologías utilizas?',
+        finance: '¿Cuál es tu modelo de ingresos principal? ¿Cómo gestionas actualmente las finanzas de tu proyecto?',
+        marketing: '¿Qué estrategias de marketing estás utilizando? ¿Cómo adquieres y retienes clientes?',
+        legal: '¿Has considerado los aspectos legales de tu negocio? ¿Qué estructura legal tiene tu empresa?',
+        technology: '¿Qué tecnologías utilizas en tu negocio? ¿Cómo gestionas la infraestructura tecnológica?'
+      } as const;
+
+      const nextId = AREAS[nextIndex].id as keyof typeof areaPrompts;
+      const suggested = (areaPrompts as any)[nextId] || '';
+      const contextualPrompt = `El usuario decidió ${currentArea.messageCount >= 2 ? 'terminar' : 'saltar'} el área anterior. Genera una pregunta inicial para comenzar ${nextSectionName}. ${suggested ? `Sugerencia: "${suggested}"` : ''}`;
+
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat-diagnosis`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          messages: [
+            ...updatedMessages,
+            { role: 'system', content: contextualPrompt }
+          ],
+          companyInfo,
+          isComplete: false,
+          mode: chatMode,
+        }),
+      });
+
+      if (!response.ok || !response.body) throw new Error('Error al conectar con el asistente');
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let assistantMessage = '';
+      let textBuffer = '';
+
+      setMessages([...updatedMessages, { role: 'assistant', content: '' }]);
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        textBuffer += decoder.decode(value, { stream: true });
+
+        let newlineIndex: number;
+        while ((newlineIndex = textBuffer.indexOf('\n')) !== -1) {
+          let line = textBuffer.slice(0, newlineIndex);
+          textBuffer = textBuffer.slice(newlineIndex + 1);
+
+          if (line.endsWith('\r')) line = line.slice(0, -1);
+          if (line.startsWith(':') || line.trim() === '') continue;
+          if (!line.startsWith('data: ')) continue;
+
+          const jsonStr = line.slice(6).trim();
+          if (jsonStr === '[DONE]') continue;
+
+          try {
+            const parsed = JSON.parse(jsonStr);
+            const content = parsed.choices?.[0]?.delta?.content;
+            if (content) {
+              assistantMessage += content;
+              const cleanContent = filterMetadata(assistantMessage);
+              setMessages([...updatedMessages, { role: 'assistant', content: cleanContent }]);
+            }
+          } catch (e) {
+            console.error('Error parsing JSON:', e);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error al saltar área:', error);
+      toast({
+        title: 'Error',
+        description: 'No se pudo generar la pregunta automática, pero puedes continuar escribiendo.',
+        variant: 'destructive',
+      });
+    } finally {
+      setSending(false);
+    }
   };
 
   // Función para regresar a un área anterior
@@ -864,15 +1043,6 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
   const sendMessage = async () => {
     if (!input.trim() || sending || !companyInfo) return;
 
-    // FASE 1: Validación de respuestas cortas en modo diagnóstico
-    if (chatMode === 'diagnosis' && input.trim().length < 20) {
-      toast({
-        title: 'Necesito más detalle',
-        description: 'Por favor proporciona una respuesta más completa para esta área (al menos 20 caracteres)',
-        variant: 'destructive'
-      });
-      return;
-    }
 
     const userMessage: Message = { role: 'user', content: input };
     const newMessages = [...messages, userMessage];
@@ -1046,6 +1216,11 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
     console.log('📊 Áreas completadas:', completedAreas.map(a => a.name).join(', '));
     
     setGeneratingDiagnosis(true);
+
+    toast({
+      title: 'Generando diagnóstico...',
+      description: 'Esto puede tardar unos segundos'
+    });
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
