@@ -119,6 +119,9 @@ export function useAuth() {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
       
+      // CRITICAL: Clear all localStorage to prevent data leakage between sessions
+      localStorage.clear();
+      
       toast({
         title: 'Sesión cerrada',
         description: 'Has cerrado sesión correctamente.',

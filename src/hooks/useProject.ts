@@ -165,6 +165,13 @@ export function useProject() {
     }
   };
 
+  const clearProjects = () => {
+    setProjects([]);
+    setCurrentProjectState(null);
+    localStorage.removeItem(CURRENT_PROJECT_KEY);
+    setLoading(false);
+  };
+
   return {
     projects,
     currentProject,
@@ -173,6 +180,7 @@ export function useProject() {
     setCurrentProject,
     createProject,
     updateProject,
-    deleteProject
+    deleteProject,
+    clearProjects
   };
 }

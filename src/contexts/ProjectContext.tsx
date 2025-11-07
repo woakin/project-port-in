@@ -12,6 +12,7 @@ interface ProjectContextType {
   updateProject: (projectId: string, updates: Partial<Project>) => Promise<boolean>;
   deleteProject: (projectId: string, companyId: string) => Promise<boolean>;
   refreshProjects: () => Promise<void>;
+  clearProjects: () => void;
 }
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
@@ -24,11 +25,14 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let cancelled = false;
     const init = async () => {
-      // When user changes, resolve company_id and load projects
+      // When user logs out, clear all project data to prevent data leakage
       if (!user) {
+        projectHook.clearProjects();
         setProviderLoading(false);
         return;
       }
+      
+      // When user changes, resolve company_id and load projects
       try {
         const { data: profile } = await supabase
           .from('profiles')
