@@ -768,6 +768,18 @@ Extrae operaciones estructuradas del mensaje del usuario. Si no detectas ninguna
         const areaInfo = areaProgress?.areas.find(a => a.id === currentArea);
         const messageCount = areaInfo?.messageCount || 0;
         
+        // Calcular calidad de respuestas del usuario en esta área
+        const userResponses = areaInfo?.responses || [];
+        const totalChars = userResponses.reduce((sum: number, r: string) => sum + r.length, 0);
+        const avgChars = userResponses.length > 0 ? totalChars / userResponses.length : 0;
+        
+        let depthGuidance = '';
+        if (messageCount >= 2 && avgChars < 50) {
+          depthGuidance = '\n\n**IMPORTANTE**: Las respuestas del usuario son muy breves. Haz preguntas más específicas que lo motiven a dar ejemplos concretos, números, o detalles de su situación actual.';
+        } else if (messageCount >= 3 && totalChars < 150) {
+          depthGuidance = '\n\n**IMPORTANTE**: Necesitas obtener más información. Pide ejemplos específicos, datos cuantitativos si es posible, y profundiza en los puntos mencionados.';
+        }
+        
         systemPrompt = `Eres un consultor empresarial experto de Alasha AI realizando un diagnóstico para ${companyName}, empresa del sector ${industry} en etapa ${stage}.
 
 Estás evaluando el proyecto: ${projectName}${projectDesc ? ` - ${projectDesc}` : ''}
@@ -775,16 +787,18 @@ Estás evaluando el proyecto: ${projectName}${projectDesc ? ` - ${projectDesc}` 
 ÁREA ACTUAL: ${currentAreaName.toUpperCase()}
 Estado del área: ${areaInfo?.status || 'in_progress'}
 Mensajes del usuario en esta área: ${messageCount}
+Calidad de información actual: ${avgChars < 50 ? 'Respuestas muy breves' : avgChars < 100 ? 'Respuestas moderadas' : 'Buena profundidad'}
 
 INSTRUCCIONES ESPECÍFICAS PARA ${currentAreaName.toUpperCase()}:
 1. Enfócate EXCLUSIVAMENTE en el área de "${currentAreaName}"
-2. Haz preguntas profundas y específicas sobre esta área
+2. Haz preguntas profundas y específicas sobre esta área - busca información concreta: números, procesos, ejemplos específicos
 3. Contexto de progreso:
    ${messageCount === 0 ? '- Es la primera pregunta de esta área, presenta el tema de forma amigable' : ''}
-   ${messageCount >= 1 && messageCount < 3 ? '- Ya has recopilado alguna información, profundiza más' : ''}
-   ${messageCount >= 3 ? '- Ya tienes varias respuestas. Puedes sugerir: "Creo que tengo una buena comprensión de esta área. ¿Hay algo más que quieras agregar sobre ' + currentAreaName + '?"' : ''}
-4. NO menciones otras áreas del diagnóstico
-5. Si el usuario dice "ya no tengo más información" o similar, responde brevemente validando y pregunta si quiere continuar
+   ${messageCount >= 1 && messageCount < 3 ? '- Ya has recopilado alguna información, ahora profundiza más y pide ejemplos concretos' : ''}
+   ${messageCount >= 4 ? '- Ya tienes varias respuestas con buen detalle. Puedes sugerir (sin forzar): "Creo que tengo una buena comprensión de esta área. ¿Hay algo más que quieras agregar sobre ' + currentAreaName + '?"' : ''}
+4. Si las respuestas son breves o superficiales, pide ejemplos concretos y detalles específicos
+5. NO menciones otras áreas del diagnóstico
+6. Si el usuario dice "ya no tengo más información" o similar, responde brevemente validando y pregunta si quiere continuar${depthGuidance}
 
 ÁREAS DE ENFOQUE POR TIPO:
 ${currentArea === 'strategy' ? '- Visión, misión, objetivos estratégicos\n- Propuesta de valor y diferenciación\n- Modelo de negocio y posicionamiento' : ''}

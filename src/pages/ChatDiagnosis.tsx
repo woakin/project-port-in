@@ -255,6 +255,18 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
     return names[section];
   };
 
+  // Función para calcular la calidad de las respuestas de un área
+  const calculateAreaQuality = (area: typeof areaProgress.areas[0]): 'low' | 'medium' | 'high' => {
+    if (area.status !== 'completed') return 'low';
+    
+    const totalChars = area.responses.reduce((sum, r) => sum + r.length, 0);
+    const messageCount = area.messageCount;
+    
+    if (messageCount >= 4 && totalChars >= 300) return 'high';
+    if (messageCount >= 3 && totalChars >= 150) return 'medium';
+    return 'low';
+  };
+
   // Función para avanzar al siguiente área
   const handleNextArea = () => {
     const currentArea = areaProgress.areas[areaProgress.currentIndex];
@@ -267,6 +279,16 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
         variant: 'destructive'
       });
       return;
+    }
+    
+    // Advertencia si las respuestas son muy cortas
+    const totalChars = currentArea.responses.reduce((sum, r) => sum + r.length, 0);
+    if (currentArea.messageCount < 3 || totalChars < 100) {
+      toast({
+        title: '⚠️ Información limitada',
+        description: 'Cuantas más preguntas respondas, mejor será el diagnóstico',
+        variant: 'default'
+      });
     }
     
     // Marcar área actual como completada
@@ -1007,6 +1029,19 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
       });
       return;
     }
+
+    // Verificar calidad de las respuestas
+    const lowQualityAreas = completedAreas.filter(area => calculateAreaQuality(area) === 'low');
+    const hasLowQuality = lowQualityAreas.length > 0;
+    
+    if (hasLowQuality && completedAreas.length < 3) {
+      toast({
+        title: '⚠️ Información limitada detectada',
+        description: 'El diagnóstico será más preciso si completas más áreas con mayor detalle',
+        variant: 'default',
+        duration: 5000
+      });
+    }
     
     console.log('📊 Áreas completadas:', completedAreas.map(a => a.name).join(', '));
     
@@ -1416,25 +1451,58 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
           <div className="space-y-4 mt-4">
             {/* Resumen de áreas */}
             <div className="grid gap-3">
-              {areaProgress.areas.map((area, idx) => (
-                <div key={area.id} className={`border rounded-lg p-3 ${
-                  area.status === 'completed' ? 'bg-green-50 border-green-200' :
-                  area.status === 'skipped' ? 'bg-gray-50 border-gray-200' :
-                  'bg-muted/30'
-                }`}>
-                  <div className="flex items-center justify-between mb-1">
-                    <h4 className="font-medium text-sm">{area.name}</h4>
-                    {area.status === 'completed' && <CheckCircle className="h-4 w-4 text-green-500" />}
-                    {area.status === 'skipped' && <span className="text-xs text-muted-foreground">Saltada</span>}
+              {areaProgress.areas.map((area, idx) => {
+                const quality = calculateAreaQuality(area);
+                const qualityConfig = {
+                  high: { emoji: '✅', label: 'Excelente', color: 'text-green-600' },
+                  medium: { emoji: '⚠️', label: 'Aceptable', color: 'text-amber-600' },
+                  low: { emoji: '❗', label: 'Básica', color: 'text-orange-600' }
+                };
+                const config = qualityConfig[quality];
+                
+                return (
+                  <div key={area.id} className={`border rounded-lg p-3 ${
+                    area.status === 'completed' ? 'bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-900' :
+                    area.status === 'skipped' ? 'bg-gray-50 dark:bg-gray-900/20 border-gray-200 dark:border-gray-800' :
+                    'bg-muted/30'
+                  }`}>
+                    <div className="flex items-center justify-between mb-1">
+                      <h4 className="font-medium text-sm">{area.name}</h4>
+                      {area.status === 'completed' && <CheckCircle className="h-4 w-4 text-green-500" />}
+                      {area.status === 'skipped' && <span className="text-xs text-muted-foreground">Saltada</span>}
+                    </div>
+                    {area.status === 'completed' && area.responses && (
+                      <div className="space-y-1">
+                        <p className="text-xs text-muted-foreground">
+                          {area.messageCount} respuestas • {area.responses.reduce((sum, r) => sum + r.length, 0)} caracteres
+                        </p>
+                        <p className={`text-xs font-medium ${config.color}`}>
+                          {config.emoji} Calidad: {config.label}
+                        </p>
+                      </div>
+                    )}
                   </div>
-                  {area.status === 'completed' && area.responses && (
-                    <p className="text-xs text-muted-foreground">
-                      {area.messageCount} respuestas • {area.responses.length} caracteres
-                    </p>
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
+            
+            {/* Advertencia de calidad */}
+            {(() => {
+              const completedAreas = areaProgress.areas.filter(a => a.status === 'completed');
+              const lowQualityCount = completedAreas.filter(a => calculateAreaQuality(a) === 'low').length;
+              
+              if (lowQualityCount > 0) {
+                return (
+                  <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900 rounded-lg p-3">
+                    <p className="text-sm text-amber-800 dark:text-amber-300">
+                      <span className="font-semibold">⚠️ Recomendación:</span> {lowQualityCount} {lowQualityCount === 1 ? 'área tiene' : 'áreas tienen'} información limitada. 
+                      Puedes generar el diagnóstico ahora, pero será más preciso si aportas más detalles.
+                    </p>
+                  </div>
+                );
+              }
+              return null;
+            })()}
           </div>
           
           <DialogFooter className="gap-2">
