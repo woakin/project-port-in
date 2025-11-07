@@ -43,6 +43,7 @@ import { IndividualKPIChart } from "@/components/kpi/IndividualKPIChart";
 import { KPIGridView } from "@/components/kpi/KPIGridView";
 import { KPIAreaChart } from "@/components/dashboard/KPIAreaChart";
 import { KPIAlerts } from "@/components/dashboard/KPIAlerts";
+import { SuggestedKPIsModal } from "@/components/kpi/SuggestedKPIsModal";
 
 export default function KPIs() {
   const { kpis, loading, refetch, getKPIHistory, getUniqueKPINames, getKPITrend, markAsMainKPI, getLatestKPIs } = useKPIs();
@@ -60,6 +61,7 @@ export default function KPIs() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [selectedKPIName, setSelectedKPIName] = useState<string>("");
   const [activeTab, setActiveTab] = useState("overview");
+  const [isSuggestionsModalOpen, setIsSuggestionsModalOpen] = useState(false);
 
   // Form state for editing
   const [editForm, setEditForm] = useState({
@@ -357,10 +359,20 @@ export default function KPIs() {
                 Gestiona y monitorea todos tus indicadores clave de rendimiento
               </p>
             </div>
-            <Button onClick={handleCreateClick} className="gap-2">
-              <Plus className="h-4 w-4" />
-              Crear KPI
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                onClick={() => setIsSuggestionsModalOpen(true)} 
+                variant="outline" 
+                className="gap-2"
+              >
+                <BarChart3 className="h-4 w-4" />
+                Obtener KPIs recomendados
+              </Button>
+              <Button onClick={handleCreateClick} className="gap-2">
+                <Plus className="h-4 w-4" />
+                Crear KPI
+              </Button>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -925,6 +937,19 @@ export default function KPIs() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <SuggestedKPIsModal
+        isOpen={isSuggestionsModalOpen}
+        onClose={() => setIsSuggestionsModalOpen(false)}
+        onKPIsCreated={() => {
+          setIsSuggestionsModalOpen(false);
+          refetch();
+          toast({
+            title: "KPIs creados",
+            description: "Los KPIs sugeridos se han agregado correctamente",
+          });
+        }}
+      />
     </MainLayout>
   );
 }
