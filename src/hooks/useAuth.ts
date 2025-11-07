@@ -122,38 +122,66 @@ export function useAuth() {
   };
 
   const signOut = async () => {
+    // Helper: aggressive clear of auth-related storage keys
+    const clearAuthStorage = () => {
+      try {
+        const patterns = [/^sb-/i, /supabase/i, /gotrue/i];
+        const clearFrom = (storage: Storage) => {
+          const keysToRemove: string[] = [];
+          for (let i = 0; i < storage.length; i++) {
+            const key = storage.key(i);
+            if (!key) continue;
+            if (patterns.some((re) => re.test(key))) {
+              keysToRemove.push(key);
+            }
+          }
+          keysToRemove.forEach((k) => storage.removeItem(k));
+        };
+        clearFrom(localStorage);
+        clearFrom(sessionStorage);
+        // App-specific keys
+        localStorage.removeItem('current_project_id');
+        sessionStorage.removeItem('current_project_id');
+      } catch {
+        // ignore
+      }
+    };
+
     try {
-      // Caso base: limpiar SIEMPRE la sesión local primero
+      // 1) Local sign out (best effort) to stop token refreshers
       await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
-      
-      // Limpieza manual de estado y storage de la app
+
+      // 2) Aggressive storage cleanup
+      clearAuthStorage();
+
+      // 3) Clear in-memory state
       setSession(null);
       setUser(null);
       setRoles([]);
-      localStorage.removeItem('current_project_id');
-      
-      // Revocación remota best-effort (no bloqueante)
+
+      // 4) Remote revocation (non-blocking)
       supabase.auth.signOut().catch(() => {});
-      
+
+      // 5) Notify and hard redirect with cache-buster
       toast({
         title: 'Sesión cerrada',
         description: 'Has cerrado sesión correctamente.',
       });
-      
-      // Redirección dura para remontar la app en estado no autenticado
-      window.location.replace('/auth');
-    } catch (error: any) {
-      // Aún ante errores, forzar salida del estado autenticado
+
+      const url = `${window.location.origin}/auth?_=${Date.now()}`;
+      window.location.href = url;
+    } catch {
+      // Even if something fails, ensure cleanup and redirect
+      clearAuthStorage();
       setSession(null);
       setUser(null);
       setRoles([]);
-      localStorage.removeItem('current_project_id');
-      
       toast({
         title: 'Sesión cerrada',
         description: 'Has cerrado sesión correctamente.',
       });
-      window.location.replace('/auth');
+      const url = `${window.location.origin}/auth?_=${Date.now()}`;
+      window.location.href = url;
     }
   };
   const resetPassword = async (email: string) => {
