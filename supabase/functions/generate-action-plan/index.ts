@@ -181,7 +181,7 @@ REGLAS:
         description: plan.description,
         time_horizon: timeHorizon,
         complexity_level: complexityLevel,
-        status: "draft",
+        status: "active",
         version: "1.0",
       })
       .select()
