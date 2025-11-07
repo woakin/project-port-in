@@ -117,15 +117,20 @@ export default function Projects() {
     const project = projects.find(p => p.id === projectToDelete);
     if (!project) return;
 
-    await deleteProject(projectToDelete, project.company_id);
+    const success = await deleteProject(projectToDelete, project.company_id);
+    if (success) {
+      // Refresh metrics after deletion
+      await fetchProjectMetrics();
+    }
     setDeleteDialogOpen(false);
     setProjectToDelete(null);
   };
 
-  if (!user) {
-    navigate('/auth');
-    return null;
-  }
+  useEffect(() => {
+    if (!user) {
+      navigate('/auth');
+    }
+  }, [user, navigate]);
 
   if (loading) {
     return (
