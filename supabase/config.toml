@@ -17,3 +17,6 @@ verify_jwt = true
 
 [functions.suggest-kpis]
 verify_jwt = true
+
+[functions.elevenlabs-agent]
+verify_jwt = true
