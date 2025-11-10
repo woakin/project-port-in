@@ -38,6 +38,12 @@ const documentOperationSchema = z.object({
   }))
 });
 
+const areaNavigationSchema = z.object({
+  action: z.enum(['advance']),
+  current_area_id: z.string(),
+  reason: z.string().optional()
+});
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -961,6 +967,27 @@ ${contextSection}
 Estado del área: ${areaInfo?.status || 'in_progress'}
 Mensajes del usuario en esta área: ${messageCount}
 
+🤖 CAPACIDAD DE NAVEGACIÓN AUTOMÁTICA:
+Tienes acceso a la función \`advance_to_next_area\` que te permite avanzar automáticamente al siguiente área del diagnóstico.
+
+CUÁNDO USAR \`advance_to_next_area\`:
+✅ Cuando has cubierto 4-5 puntos del checklist con información de calidad
+✅ Y el usuario expresa clara intención de continuar con frases como:
+   - "sí", "siguiente", "continuemos", "adelante" 
+   - "ya", "ya está", "listo", "ok", "perfecto"
+   - "vamos con lo siguiente", "sigamos con otra área"
+   - Confirmaciones directas: "claro", "por supuesto", "sí, avancemos"
+
+❌ NO USAR si:
+- El usuario hace una pregunta adicional sobre el área actual
+- El usuario está agregando más información
+- El usuario dice "espera", "no", "antes de continuar..."
+- No has cubierto al menos 4 puntos del checklist con respuestas de calidad
+- El usuario solo responde con información sin expresar intención de avanzar
+
+⚠️ IMPORTANTE: Antes de invocar la función, confirma verbalmente:
+"Perfecto, he cubierto [menciona brevemente los puntos clave]. Continuemos con [siguiente área]."
+
 INSTRUCCIONES ESPECÍFICAS PARA ${currentAreaName.toUpperCase()}:
 
 📍 REGLA FUNDAMENTAL: Enfócate EXCLUSIVAMENTE en evaluar "${currentAreaName}". NO menciones nombres de otras áreas del diagnóstico.
@@ -1114,6 +1141,49 @@ Sé preciso, basado en datos, y conecta los números con decisiones estratégica
         systemPrompt = 'Eres un asistente útil de Alasha AI especializado en consultoría empresarial.';
     }
 
+    // Preparar tools si estamos en modo diagnosis
+    const requestBody: any = {
+      model: 'google/gemini-2.5-flash',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        ...messages
+      ],
+      stream: true,
+    };
+
+    // Agregar herramienta de navegación automática solo en modo diagnosis
+    if (mode === 'diagnosis' && currentArea) {
+      requestBody.tools = [
+        {
+          type: "function",
+          function: {
+            name: "advance_to_next_area",
+            description: "Avanza automáticamente a la siguiente área del diagnóstico cuando: (1) has evaluado que cubriste 4-5 puntos del checklist con calidad, Y (2) el usuario expresa claramente intención de continuar (palabras: 'sí', 'siguiente', 'continuemos', 'adelante', 'ya está', 'ok', 'listo'). NO uses esta función si el usuario hace otra pregunta o agrega información.",
+            parameters: {
+              type: "object",
+              properties: {
+                action: {
+                  type: "string",
+                  enum: ["advance"],
+                  description: "Acción de avanzar al siguiente área"
+                },
+                current_area_id: {
+                  type: "string",
+                  description: "ID del área actual (para validación)"
+                },
+                reason: {
+                  type: "string",
+                  description: "Breve razón de por qué consideras apropiado avanzar (puntos del checklist cubiertos)"
+                }
+              },
+              required: ["action", "current_area_id"]
+            }
+          }
+        }
+      ];
+      requestBody.tool_choice = "auto";
+    }
+
     // Call Lovable AI Gateway with streaming
     const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
@@ -1121,14 +1191,7 @@ Sé preciso, basado en datos, y conecta los números con decisiones estratégica
         'Authorization': `Bearer ${LOVABLE_API_KEY}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          ...messages
-        ],
-        stream: true,
-      }),
+      body: JSON.stringify(requestBody),
     });
 
     // Handle AI Gateway errors
@@ -1151,6 +1214,42 @@ Sé preciso, basado en datos, y conecta los números con decisiones estratégica
         JSON.stringify({ error: 'AI service error' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
+    }
+
+    // En modo diagnosis, verificar si el AI invocó advance_to_next_area
+    if (mode === 'diagnosis') {
+      // Leer la respuesta para detectar tool_calls
+      const responseClone = aiResponse.clone();
+      const responseData = await responseClone.json();
+      const toolCalls = responseData.choices?.[0]?.message?.tool_calls;
+      
+      if (toolCalls) {
+        const navigationCall = toolCalls.find((tc: any) => tc.function.name === 'advance_to_next_area');
+        if (navigationCall) {
+          try {
+            const navArgs = JSON.parse(navigationCall.function.arguments);
+            const validated = areaNavigationSchema.parse(navArgs);
+            
+            console.log('🚀 AI invocó advance_to_next_area:', validated);
+            
+            // Señalizar al cliente que debe avanzar automáticamente
+            return new Response(
+              JSON.stringify({
+                type: 'navigation_action',
+                action: 'advance_to_next_area',
+                current_area_id: validated.current_area_id,
+                reason: validated.reason,
+                message: responseData.choices?.[0]?.message?.content || 'Avanzando al siguiente área...'
+              }),
+              {
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+              }
+            );
+          } catch (e) {
+            console.error('Error parsing navigation action:', e);
+          }
+        }
+      }
     }
 
     // Return SSE stream

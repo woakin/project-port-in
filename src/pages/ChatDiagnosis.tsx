@@ -97,6 +97,7 @@ export default function ChatDiagnosis() {
   
   const [showSummary, setShowSummary] = useState(false);
   const [hasInitialized, setHasInitialized] = useState(false);
+  const [isAutoAdvancing, setIsAutoAdvancing] = useState(false);
 
   // Funciones de persistencia en localStorage
   const saveDiagnosisState = () => {
@@ -1248,13 +1249,36 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
 
           try {
             const parsed = JSON.parse(jsonStr);
-              const content = parsed.choices?.[0]?.delta?.content;
-              if (content) {
-                assistantMessage += content;
-                // Filtrar metadata técnica antes de mostrar
-                const cleanContent = filterMetadata(assistantMessage);
-                setMessages([...newMessages, { role: 'assistant', content: cleanContent }]);
-              }
+            
+            // Detectar si es una acción de navegación
+            if (parsed.type === 'navigation_action' && parsed.action === 'advance_to_next_area') {
+              console.log('🚀 AI solicitó avance automático:', parsed.reason);
+              
+              // Agregar mensaje del AI
+              const aiMessage = parsed.message || '⏭️ Perfecto, continuemos con la siguiente área.';
+              setMessages([...newMessages, { role: 'assistant', content: aiMessage }]);
+              
+              // Ejecutar avance automático después de 1.5 segundos
+              setIsAutoAdvancing(true);
+              setTimeout(() => {
+                toast({
+                  title: '⏭️ Avanzando automáticamente',
+                  description: 'El asistente considera que tiene información suficiente',
+                });
+                handleNextArea();
+                setTimeout(() => setIsAutoAdvancing(false), 500);
+              }, 1500);
+              
+              return; // No continuar procesando como streaming
+            }
+            
+            const content = parsed.choices?.[0]?.delta?.content;
+            if (content) {
+              assistantMessage += content;
+              // Filtrar metadata técnica antes de mostrar
+              const cleanContent = filterMetadata(assistantMessage);
+              setMessages([...newMessages, { role: 'assistant', content: cleanContent }]);
+            }
           } catch (e) {
             console.error('Error parsing JSON:', e);
           }
@@ -1715,17 +1739,29 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
         />
 
         {chatMode === 'diagnosis' && (
-          <AreaProgressBar
-            areas={areaProgress.areas}
-            currentIndex={areaProgress.currentIndex}
-            onGoToArea={handleGoToArea}
-            onSkipArea={handleSkipArea}
-            onNextArea={handleNextArea}
-            onGenerateDiagnosis={() => setShowSummary(true)}
-            canAdvance={areaProgress.areas[areaProgress.currentIndex]?.messageCount >= 2}
-            canGenerate={areaProgress.areas.filter(a => a.status === 'completed').length >= 3}
-            isLoading={sending || generatingDiagnosis}
-          />
+          <>
+            {/* Indicador de avance automático */}
+            {isAutoAdvancing && (
+              <div className="flex items-center gap-2 px-4 py-3 mx-4 mt-2 bg-primary/10 border border-primary/30 rounded-lg animate-pulse">
+                <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                <span className="text-sm font-medium text-primary">
+                  ⏭️ Avanzando automáticamente al siguiente área...
+                </span>
+              </div>
+            )}
+            
+            <AreaProgressBar
+              areas={areaProgress.areas}
+              currentIndex={areaProgress.currentIndex}
+              onGoToArea={handleGoToArea}
+              onSkipArea={handleSkipArea}
+              onNextArea={handleNextArea}
+              onGenerateDiagnosis={() => setShowSummary(true)}
+              canAdvance={areaProgress.areas[areaProgress.currentIndex]?.messageCount >= 2}
+              canGenerate={areaProgress.areas.filter(a => a.status === 'completed').length >= 3}
+              isLoading={sending || generatingDiagnosis}
+            />
+          </>
         )}
       </div>
 
