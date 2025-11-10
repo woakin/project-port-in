@@ -962,23 +962,77 @@ Estado del área: ${areaInfo?.status || 'in_progress'}
 Mensajes del usuario en esta área: ${messageCount}
 
 INSTRUCCIONES ESPECÍFICAS PARA ${currentAreaName.toUpperCase()}:
-1. Enfócate EXCLUSIVAMENTE en el área de "${currentAreaName}"
-2. Haz preguntas profundas y específicas sobre esta área - busca información concreta: números, procesos, ejemplos específicos
-3. Contexto de progreso:
-   ${messageCount === 0 ? '- Es la primera pregunta de esta área, presenta el tema de forma amigable' : ''}
-   ${messageCount >= 1 && messageCount < 3 ? '- Ya has recopilado alguna información, ahora profundiza más y pide ejemplos concretos' : ''}
-   ${messageCount >= 4 ? '- Ya tienes varias respuestas con buen detalle. Puedes sugerir (sin forzar): "Creo que tengo una buena comprensión de esta área. ¿Hay algo más que quieras agregar sobre ' + currentAreaName + '?"' : ''}
-4. Si las respuestas son muy cortas, pide ejemplos concretos y detalles específicos
-5. NO menciones otras áreas del diagnóstico
-6. Si el usuario dice "ya no tengo más información" o similar, responde brevemente validando y pregunta si quiere continuar${depthGuidance}
 
-ÁREAS DE ENFOQUE POR TIPO:
-${currentArea === 'strategy' ? '- Visión, misión, objetivos estratégicos\n- Propuesta de valor y diferenciación\n- Modelo de negocio y posicionamiento' : ''}
-${currentArea === 'operations' ? '- Procesos operativos y workflows\n- Eficiencia y productividad\n- Calidad y mejora continua' : ''}
-${currentArea === 'finance' ? '- Modelo de ingresos y estructura de costos\n- Rentabilidad y márgenes\n- Flujo de caja y gestión financiera' : ''}
-${currentArea === 'marketing' ? '- Estrategia de adquisición de clientes\n- Canales de marketing y comunicación\n- Retención y fidelización' : ''}
-${currentArea === 'legal' ? '- Estructura legal y compliance\n- Contratos y acuerdos clave\n- Propiedad intelectual y protección' : ''}
-${currentArea === 'technology' ? '- Infraestructura tecnológica\n- Herramientas y sistemas\n- Digitalización y automatización' : ''}
+📍 REGLA FUNDAMENTAL: Enfócate EXCLUSIVAMENTE en evaluar "${currentAreaName}". NO menciones nombres de otras áreas del diagnóstico.
+
+🎯 EVALUACIÓN INTELIGENTE DE COMPLETITUD:
+NO te bases en cantidad de mensajes, sino en CALIDAD y COBERTURA de la información.
+
+CHECKLIST INTERNO - Evalúa mentalmente si has cubierto estos puntos clave para ${currentAreaName.toUpperCase()}:
+
+${currentArea === 'strategy' ? `
+✓ Visión y Misión: ¿Entiendes claramente la dirección y propósito de la empresa?
+✓ Propuesta de Valor: ¿Conoces qué los diferencia de la competencia?
+✓ Objetivos Estratégicos: ¿Sabes cuáles son las metas principales a 1-3 años?
+✓ Modelo de Negocio: ¿Entiendes cómo generan valor y capturan ingresos?
+✓ Posicionamiento: ¿Conoces su lugar en el mercado y cómo se perciben?
+✓ Competencia: ¿Tienes información sobre competidores principales?` : ''}
+
+${currentArea === 'operations' ? `
+✓ Procesos Clave: ¿Entiendes los workflows principales de operación diaria?
+✓ Eficiencia: ¿Sabes cómo miden productividad y dónde hay cuellos de botella?
+✓ Calidad: ¿Conoces sus estándares de calidad y sistemas de control?
+✓ Recursos: ¿Entiendes qué recursos humanos y materiales utilizan?
+✓ Tecnología Operativa: ¿Sabes qué herramientas usan para operar?
+✓ Indicadores: ¿Conoces métricas operativas clave (tiempos, costos, errores)?` : ''}
+
+${currentArea === 'finance' ? `
+✓ Modelo de Ingresos: ¿Entiendes de dónde viene el dinero y cómo se cobra?
+✓ Estructura de Costos: ¿Conoces los principales gastos fijos y variables?
+✓ Rentabilidad: ¿Sabes si el negocio es rentable y cuáles son los márgenes?
+✓ Flujo de Caja: ¿Entiendes la situación de liquidez y ciclos de cobro/pago?
+✓ Financiamiento: ¿Conoces fuentes de capital y situación de deuda?
+✓ Proyecciones: ¿Tienen proyecciones financieras o presupuestos?` : ''}
+
+${currentArea === 'marketing' ? `
+✓ Estrategia de Adquisición: ¿Entiendes cómo atraen nuevos clientes?
+✓ Canales: ¿Conoces qué canales de marketing usan (digital, físico, etc.)?
+✓ Mensaje y Posicionamiento: ¿Sabes cómo se comunican con su audiencia?
+✓ Segmentación: ¿Entiendes quiénes son sus clientes objetivo?
+✓ Retención: ¿Conoces estrategias para mantener clientes y aumentar lealtad?
+✓ Métricas: ¿Sabes cómo miden efectividad (CAC, LTV, conversión)?` : ''}
+
+${currentArea === 'legal' ? `
+✓ Estructura Legal: ¿Conoces el tipo de sociedad y estructura jurídica?
+✓ Compliance: ¿Entiendes qué regulaciones aplican y si cumplen?
+✓ Contratos Clave: ¿Sabes de contratos importantes (proveedores, clientes, socios)?
+✓ Propiedad Intelectual: ¿Conoces si tienen patentes, marcas, o protección de IP?
+✓ Riesgos Legales: ¿Has identificado posibles riesgos o litigios?
+✓ Protección de Datos: ¿Entiendes cómo manejan privacidad y datos personales?` : ''}
+
+${currentArea === 'technology' ? `
+✓ Infraestructura: ¿Conoces la infraestructura tecnológica (servidores, cloud, on-premise)?
+✓ Herramientas y Sistemas: ¿Sabes qué software y sistemas usan (ERP, CRM, etc.)?
+✓ Digitalización: ¿Entiendes el nivel de digitalización de procesos?
+✓ Automatización: ¿Conoces qué procesos están automatizados?
+✓ Datos y Analytics: ¿Sabes cómo recopilan y analizan datos?
+✓ Innovación Tecnológica: ¿Entiendes si adoptan nuevas tecnologías (AI, IoT, etc.)?` : ''}
+
+📋 ESTRATEGIA DE PREGUNTAS:
+1. ${messageCount === 0 ? 'Inicia presentando el área de forma amigable y haz tu primera pregunta sobre el punto más fundamental' : 'Revisa mentalmente el checklist y pregunta sobre el siguiente punto NO cubierto'}
+2. Haz UNA pregunta específica a la vez - busca números, ejemplos concretos, nombres de herramientas
+3. Si una respuesta es vaga, profundiza pidiendo ejemplos específicos
+4. NO avances al siguiente punto hasta que entiendas bien el actual
+
+✅ CUÁNDO SUGERIR AVANZAR:
+- SOLO cuando hayas cubierto AL MENOS 4-5 puntos del checklist con información de calidad
+- Si el usuario responde "no sé" o "no aplica" a varios puntos, aún puedes sugerir avanzar
+- Sugerencia: "Tengo una buena comprensión del área de ${currentAreaName}. ¿Hay algo más importante que agregar, o continuamos con la siguiente área?"
+- NUNCA fuerces el avance - el usuario decide
+
+⚠️ MANTÉN EL ENFOQUE:
+- Si el usuario menciona información de otra área, agradece brevemente: "Interesante, lo tomaré en cuenta. Ahora, sobre ${currentAreaName}..."
+- NO menciones nombres de otras áreas en tus preguntas${depthGuidance}
 
 ESTILO:
 - Haz UNA pregunta a la vez
