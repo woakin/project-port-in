@@ -8,6 +8,7 @@ interface AreaProgressBarProps {
     name: string;
     icon: string;
     status: 'pending' | 'in_progress' | 'completed' | 'skipped';
+    messageCount?: number;
   }>;
   currentIndex: number;
   onGoToArea: (index: number) => void;
@@ -40,7 +41,24 @@ export function AreaProgressBar({
   isLoading
 }: AreaProgressBarProps) {
   const completedCount = areas.filter(a => a.status === 'completed').length;
-  const percentage = Math.round((completedCount / areas.length) * 100);
+  
+  // Calcular progreso parcial del área actual
+  const currentArea = areas[currentIndex];
+  let partialProgress = 0;
+  
+  if (currentArea && currentArea.status === 'in_progress') {
+    const msgCount = currentArea.messageCount || 0;
+    if (msgCount >= 4) {
+      partialProgress = 0.8;
+    } else if (msgCount >= 2) {
+      partialProgress = 0.5;
+    } else if (msgCount >= 1) {
+      partialProgress = 0.3;
+    }
+  }
+  
+  const totalProgress = completedCount + partialProgress;
+  const percentage = Math.round((totalProgress / areas.length) * 100);
   
   return (
     <div className="w-full bg-muted/50 border-b border-border py-2 px-4">
@@ -79,7 +97,17 @@ export function AreaProgressBar({
           </div>
           <span className="text-xs text-muted-foreground shrink-0">
             {percentage}% ({completedCount}/{areas.length})
+            {partialProgress > 0 && (
+              <span className="text-primary font-medium"> +{Math.round(partialProgress * 100)}%</span>
+            )}
           </span>
+          {currentArea && currentArea.status === 'in_progress' && currentArea.messageCount && currentArea.messageCount > 0 && (
+            <div className="flex items-center gap-1 px-2 py-0.5 bg-primary/10 rounded-md">
+              <span className="text-xs font-medium text-primary">
+                {currentArea.messageCount} {currentArea.messageCount === 1 ? 'respuesta' : 'respuestas'}
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Botones de acción (derecha) */}
