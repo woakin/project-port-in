@@ -139,9 +139,16 @@ export function useAuth() {
         };
         clearFrom(localStorage);
         clearFrom(sessionStorage);
+        
         // App-specific keys
-        localStorage.removeItem('current_project_id');
-        sessionStorage.removeItem('current_project_id');
+        const appKeys = [
+          'current_project_id',
+          'diagnosis_progress',
+        ];
+        appKeys.forEach(key => {
+          localStorage.removeItem(key);
+          sessionStorage.removeItem(key);
+        });
       } catch {
         // ignore
       }
@@ -162,14 +169,13 @@ export function useAuth() {
       // 4) Remote revocation (non-blocking)
       supabase.auth.signOut().catch(() => {});
 
-      // 5) Notify and hard redirect with cache-buster
+      // 5) Notify and redirect to homepage
       toast({
         title: 'Sesión cerrada',
         description: 'Has cerrado sesión correctamente.',
       });
 
-      const url = `${window.location.origin}/auth?_=${Date.now()}`;
-      window.location.href = url;
+      window.location.href = window.location.origin + '/';
     } catch {
       // Even if something fails, ensure cleanup and redirect
       clearAuthStorage();
@@ -180,8 +186,7 @@ export function useAuth() {
         title: 'Sesión cerrada',
         description: 'Has cerrado sesión correctamente.',
       });
-      const url = `${window.location.origin}/auth?_=${Date.now()}`;
-      window.location.href = url;
+      window.location.href = window.location.origin + '/';
     }
   };
   const resetPassword = async (email: string) => {
