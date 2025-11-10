@@ -1142,17 +1142,20 @@ Sé preciso, basado en datos, y conecta los números con decisiones estratégica
     }
 
     // Preparar tools si estamos en modo diagnosis
+    // IMPORTANT: Disable streaming when tool calling is needed, as we need to parse the full response
+    const useToolCalling = mode === 'diagnosis' && currentArea;
+    
     const requestBody: any = {
       model: 'google/gemini-2.5-flash',
       messages: [
         { role: 'system', content: systemPrompt },
         ...messages
       ],
-      stream: true,
+      stream: !useToolCalling, // Disable streaming when we need to check for tool calls
     };
 
     // Agregar herramienta de navegación automática solo en modo diagnosis
-    if (mode === 'diagnosis' && currentArea) {
+    if (useToolCalling) {
       requestBody.tools = [
         {
           type: "function",
@@ -1217,10 +1220,9 @@ Sé preciso, basado en datos, y conecta los números con decisiones estratégica
     }
 
     // En modo diagnosis, verificar si el AI invocó advance_to_next_area
-    if (mode === 'diagnosis') {
-      // Leer la respuesta para detectar tool_calls
-      const responseClone = aiResponse.clone();
-      const responseData = await responseClone.json();
+    if (useToolCalling) {
+      // Non-streaming response, parse as JSON
+      const responseData = await aiResponse.json();
       const toolCalls = responseData.choices?.[0]?.message?.tool_calls;
       
       if (toolCalls) {
@@ -1250,9 +1252,29 @@ Sé preciso, basado en datos, y conecta los números con decisiones estratégica
           }
         }
       }
+      
+      // No tool call detected, return the AI message as JSON (convert to SSE format for client)
+      const content = responseData.choices?.[0]?.message?.content || '';
+      const encoder = new TextEncoder();
+      const stream = new ReadableStream({
+        start(controller) {
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content } }] })}\n\n`));
+          controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+          controller.close();
+        }
+      });
+      
+      return new Response(stream, {
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+          'Connection': 'keep-alive',
+        }
+      });
     }
 
-    // Return SSE stream
+    // Return SSE stream for non-diagnosis modes
     return new Response(aiResponse.body, {
       headers: {
         ...corsHeaders,
