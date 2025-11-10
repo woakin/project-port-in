@@ -7,6 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card } from '@/components/shared/Card';
+import { Chrome } from 'lucide-react';
+import { toast } from '@/hooks/use-toast';
 import alashaLogo from "@/assets/alasha-logo.png";
 
 export default function Auth() {
@@ -77,6 +79,27 @@ export default function Auth() {
     setSignupLoading(false);
   };
 
+  const handleGoogleAuth = async () => {
+    try {
+      const redirectUrl = `${window.location.origin}/`;
+      
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: redirectUrl,
+        }
+      });
+
+      if (error) throw error;
+    } catch (error: any) {
+      toast({
+        title: 'Error con Google',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -137,6 +160,27 @@ export default function Auth() {
                   {loginLoading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
                 </Button>
 
+                <div className="relative my-4">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t border-border" />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-background px-2 text-muted-foreground">
+                      o continuar con
+                    </span>
+                  </div>
+                </div>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  onClick={handleGoogleAuth}
+                >
+                  <Chrome className="mr-2 h-4 w-4" />
+                  Google
+                </Button>
+
                 <Button
                   type="button"
                   variant="ghost"
@@ -194,6 +238,27 @@ export default function Auth() {
                   disabled={signupLoading}
                 >
                   {signupLoading ? 'Creando cuenta...' : 'Crear Cuenta'}
+                </Button>
+
+                <div className="relative my-4">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t border-border" />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-background px-2 text-muted-foreground">
+                      o continuar con
+                    </span>
+                  </div>
+                </div>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  onClick={handleGoogleAuth}
+                >
+                  <Chrome className="mr-2 h-4 w-4" />
+                  Google
                 </Button>
               </form>
             </TabsContent>
