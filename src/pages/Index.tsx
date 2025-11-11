@@ -116,15 +116,54 @@ const Index = () => {
 
         <main>
           {/* 1. Hero Section */}
-          <section className="relative py-24 px-4 sm:px-6 lg:px-8 bg-[linear-gradient(135deg,hsl(210_60%_25%)_0%,hsl(170_45%_45%)_100%)] text-white overflow-hidden">
+          <section className="relative py-20 sm:py-32 px-4 sm:px-6 lg:px-8 bg-[linear-gradient(135deg,hsl(210_60%_25%)_0%,hsl(170_45%_45%)_100%)] text-white overflow-hidden">
+            {/* Decorative background elements */}
+            <div className="absolute inset-0 opacity-10">
+              <div className="absolute top-20 left-10 w-72 h-72 bg-white rounded-full blur-3xl"></div>
+              <div className="absolute bottom-20 right-10 w-96 h-96 bg-secondary rounded-full blur-3xl"></div>
+            </div>
+            
             <div className="max-w-7xl mx-auto relative z-10">
-              <div className="text-center max-w-4xl mx-auto">
-                <h1 className="text-5xl sm:text-6xl font-bold mb-6 leading-tight">Escalar un negocio no se hace solo.
-Alasha AI es tu compañero de ruta para crecer con propósito y dirección.</h1>
-                <p className="text-xl text-white/90 mb-10 leading-relaxed">Te acompañamos paso a paso con inteligencia, estructura y claridad para avanzar sin perder el rumbo.</p>
+              <div className="text-center max-w-3xl mx-auto">
+                {/* Optional badge */}
+                <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full mb-8 border border-white/20">
+                  <Rocket className="h-4 w-4" />
+                  <span className="text-sm font-medium">Inteligencia Empresarial</span>
+                </div>
+                
+                {/* Title with hierarchy */}
+                <div className="mb-8 space-y-4">
+                  <h2 className="text-2xl sm:text-3xl font-semibold text-white/90 leading-relaxed">
+                    Escalar un negocio no se hace solo.
+                  </h2>
+                  <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold leading-[1.2]">
+                    <span className="text-secondary font-extrabold">Alasha AI</span> es tu compañero de ruta para crecer con propósito y dirección.
+                  </h1>
+                </div>
+                
+                {/* Subtitle */}
+                <p className="text-lg sm:text-xl text-white/95 mb-12 leading-relaxed max-w-2xl mx-auto">
+                  Te acompañamos paso a paso con inteligencia, estructura y claridad para avanzar sin perder el rumbo.
+                </p>
+                
+                {/* CTA buttons */}
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                  <Button size="lg" variant="white" onClick={() => navigate('/auth')} className="text-lg px-8">Empieza tu ascenso →</Button>
-                  <Button size="lg" variant="outline" onClick={() => navigate('/auth')} className="border-2 border-white bg-transparent text-white hover:bg-white/10 text-lg px-8">Ver cómo te acompañamos →</Button>
+                  <Button 
+                    size="lg" 
+                    variant="white" 
+                    onClick={() => navigate('/auth')} 
+                    className="text-lg px-8 shadow-xl hover:shadow-2xl transition-shadow"
+                  >
+                    Empieza tu ascenso →
+                  </Button>
+                  <Button 
+                    size="lg" 
+                    variant="outline" 
+                    onClick={() => navigate('/auth')} 
+                    className="border-2 border-white bg-transparent text-white hover:bg-white/10 text-lg px-8"
+                  >
+                    Ver cómo te acompañamos →
+                  </Button>
                 </div>
               </div>
             </div>
