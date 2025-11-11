@@ -124,35 +124,24 @@ const Index = () => {
             </div>
             
             <div className="max-w-7xl mx-auto relative z-10">
-              <div className="text-center max-w-3xl mx-auto">
-                {/* Optional badge */}
-                <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full mb-8 border border-white/20">
-                  <Rocket className="h-4 w-4" />
-                  <span className="text-sm font-medium">Inteligencia Empresarial</span>
-                </div>
+              <div className="text-center max-w-4xl mx-auto">
+                {/* Unified Title */}
+                <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold mb-8 leading-[1.15]">
+                  Escalar un negocio no se hace solo. <span className="text-secondary">Alasha AI</span> es tu compañero de ruta para crecer con propósito y dirección.
+                </h1>
                 
-                {/* Title with hierarchy */}
-                <div className="mb-8 space-y-4">
-                  <h2 className="text-2xl sm:text-3xl font-semibold text-white/90 leading-relaxed">
-                    Escalar un negocio no se hace solo.
-                  </h2>
-                  <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold leading-[1.2]">
-                    <span className="text-secondary font-extrabold">Alasha AI</span> es tu compañero de ruta para crecer con propósito y dirección.
-                  </h1>
-                </div>
-                
-                {/* Subtitle */}
-                <p className="text-lg sm:text-xl text-white/95 mb-12 leading-relaxed max-w-2xl mx-auto">
+                {/* Simplified Subtitle */}
+                <p className="text-base sm:text-lg text-white/80 mb-10 leading-relaxed max-w-2xl mx-auto">
                   Te acompañamos paso a paso con inteligencia, estructura y claridad para avanzar sin perder el rumbo.
                 </p>
                 
-                {/* CTA buttons */}
+                {/* CTA buttons with consistent styling */}
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
                   <Button 
                     size="lg" 
                     variant="white" 
                     onClick={() => navigate('/auth')} 
-                    className="text-lg px-8 shadow-xl hover:shadow-2xl transition-shadow"
+                    className="text-lg px-8"
                   >
                     Empieza tu ascenso →
                   </Button>
