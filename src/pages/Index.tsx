@@ -125,12 +125,17 @@ const Index = () => {
             
             <div className="max-w-7xl mx-auto relative z-10">
               <div className="text-center max-w-4xl mx-auto">
-                {/* Unified Title */}
+                {/* Eyebrow text */}
+                <p className="text-sm sm:text-base text-white/70 mb-4 font-medium tracking-wide uppercase">
+                  Escalar un negocio no se hace solo
+                </p>
+
+                {/* Short, punchy H1 */}
                 <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold mb-8 leading-[1.15]">
-                  Escalar un negocio no se hace solo. <span className="text-secondary">Alasha AI</span> es tu compañero de ruta para crecer con propósito y dirección.
+                  <span className="text-secondary">Alasha AI</span>: Tu compañero de ruta para crecer con propósito
                 </h1>
                 
-                {/* Simplified Subtitle */}
+                {/* Subtitle */}
                 <p className="text-base sm:text-lg text-white/80 mb-10 leading-relaxed max-w-2xl mx-auto">
                   Te acompañamos paso a paso con inteligencia, estructura y claridad para avanzar sin perder el rumbo.
                 </p>
