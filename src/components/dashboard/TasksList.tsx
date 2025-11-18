@@ -2,9 +2,10 @@ import { Card } from "@/components/shared/Card";
 import { Badge } from "@/components/shared/Badge";
 import { Button } from "@/components/ui/button";
 import { Task } from "@/types/task.types";
-import { Calendar, Clock, CheckCircle2 } from "lucide-react";
+import { Calendar, Clock, CheckCircle2, CheckSquare, Stethoscope } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import { useNavigate } from "react-router-dom";
 
 interface TasksListProps {
   tasks: Task[];
@@ -12,6 +13,8 @@ interface TasksListProps {
 }
 
 export function TasksList({ tasks, onUpdateStatus }: TasksListProps) {
+  const navigate = useNavigate();
+  
   const getPriorityColor = (priority: Task['priority']) => {
     switch (priority) {
       case 'high':
@@ -45,8 +48,18 @@ export function TasksList({ tasks, onUpdateStatus }: TasksListProps) {
 
   if (tasks.length === 0) {
     return (
-      <Card variant="content" className="p-6">
-        <p className="text-muted-foreground text-center">No hay tareas pendientes</p>
+      <Card variant="content" className="p-8">
+        <div className="text-center">
+          <CheckSquare className="h-14 w-14 mx-auto text-muted-foreground/40 mb-3" />
+          <h3 className="text-base font-semibold mb-1.5 text-foreground">No hay tareas pendientes</h3>
+          <p className="text-sm text-muted-foreground mb-5 max-w-sm mx-auto">
+            Las tareas se generarán automáticamente al completar un diagnóstico empresarial
+          </p>
+          <Button onClick={() => navigate('/diagnosticos')} variant="outline" size="sm" className="gap-2">
+            <Stethoscope className="h-4 w-4" />
+            Iniciar Diagnóstico
+          </Button>
+        </div>
       </Card>
     );
   }
