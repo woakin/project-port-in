@@ -223,7 +223,7 @@ serve(async (req) => {
               `
 
               const { error: emailError } = await resend.emails.send({
-                from: 'Alasha AI Alertas <alertas@updates.alasha.biz>',
+                from: 'Alasha Collective <joaquin@alasha.biz>',
                 to: profile.email,
                 subject: `${priorityBadge ? '⚠️ ' : ''}Alerta de KPI: ${latestKPI.name}`,
                 html: emailHtml,
