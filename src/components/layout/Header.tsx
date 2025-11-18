@@ -1,10 +1,15 @@
-import { Bell, LogOut, User, Shield } from "lucide-react";
+import { Bell, LogOut, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useAdmin } from "@/hooks/useAdmin";
-import { NavLink, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { ProjectSelector } from "@/components/projects/ProjectSelector";
-import alashaLogo from "@/assets/alasha-logo.png";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export function Header() {
   const { user, signOut, loading } = useAuth();
@@ -12,123 +17,74 @@ export function Header() {
   const navigate = useNavigate();
 
   return (
-    <header className="border-b border-border bg-card/95 backdrop-blur-md sticky top-0 z-50 shadow-sm">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-        {/* Logo and Brand */}
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg overflow-hidden shadow-md">
-            <img src={alashaLogo} alt="Alasha AI Logo" className="w-full h-full object-contain" />
-          </div>
-          <div className="flex flex-col">
-            <h1 className="text-lg font-bold text-foreground leading-none tracking-tight">Alasha AI</h1>
-            <span className="text-xs text-muted-foreground">Inteligencia Empresarial</span>
-          </div>
-        </div>
-
-        {user && (
-          <nav className="flex items-center gap-6">
-            <NavLink 
-              to="/" 
-              end
-              className={({ isActive }) => 
-                `text-sm font-medium transition-colors ${
-                  isActive 
-                    ? 'text-foreground' 
-                    : 'text-muted-foreground hover:text-foreground'
-                }`
-              }
-            >
-              Dashboard
-            </NavLink>
-            <NavLink 
-              to="/kpis" 
-              className={({ isActive }) => 
-                `text-sm font-medium transition-colors ${
-                  isActive 
-                    ? 'text-foreground' 
-                    : 'text-muted-foreground hover:text-foreground'
-                }`
-              }
-            >
-              KPIs
-            </NavLink>
-            <NavLink 
-              to="/tasks" 
-              className={({ isActive }) => 
-                `text-sm font-medium transition-colors ${
-                  isActive 
-                    ? 'text-foreground' 
-                    : 'text-muted-foreground hover:text-foreground'
-                }`
-              }
-            >
-              Tareas
-            </NavLink>
-            <NavLink 
-              to="/documents" 
-              className={({ isActive }) => 
-                `text-sm font-medium transition-colors ${
-                  isActive 
-                    ? 'text-foreground' 
-                    : 'text-muted-foreground hover:text-foreground'
-                }`
-              }
-            >
-              Documentos
-            </NavLink>
-            <NavLink 
-              to="/chat-diagnosis" 
-              className={({ isActive }) => 
-                `text-sm font-medium transition-colors ${
-                  isActive 
-                    ? 'text-foreground' 
-                    : 'text-muted-foreground hover:text-foreground'
-                }`
-              }
-            >
-              Chat
-            </NavLink>
-          </nav>
-        )}
-
-        <div className="flex items-center gap-3">
+    <TooltipProvider>
+      <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="flex h-14 items-center justify-end px-6 gap-3">
           {!loading && user ? (
             <>
               <ProjectSelector />
               
-              <Button variant="ghost" size="icon" className="relative">
-                <Bell className="h-5 w-5" />
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-destructive rounded-full" />
-              </Button>
-              
-              <div className="flex items-center gap-2 border-l border-border pl-3">
-                <User className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm text-muted-foreground max-w-[150px] truncate">{user.email}</span>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={signOut}
-                  title="Cerrar sesión"
-                >
-                  <LogOut className="h-4 w-4" />
-                </Button>
-              </div>
-              
-              {isAdmin && (
-                <NavLink to="/admin">
-                  <Button variant="ghost" size="icon" title="Administración">
-                    <Shield className="h-5 w-5" />
+              {/* Notifications Bell with Tooltip */}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="icon" className="relative">
+                    <Bell className="h-4 w-4" />
+                    <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-destructive rounded-full" />
                   </Button>
-                </NavLink>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Notificaciones pendientes</p>
+                </TooltipContent>
+              </Tooltip>
+
+              {/* Admin Link with Tooltip */}
+              {isAdmin && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="ghost" size="sm" onClick={() => navigate("/admin")}>
+                      Admin
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Panel de administración</p>
+                  </TooltipContent>
+                </Tooltip>
               )}
+
+              {/* User Info with Tooltip */}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-muted/50 cursor-default">
+                    <User className="h-3.5 w-3.5 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground max-w-[150px] truncate">{user.email}</span>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Usuario actual</p>
+                </TooltipContent>
+              </Tooltip>
+
+              {/* Logout Button with Tooltip */}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="icon" onClick={signOut}>
+                    <LogOut className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Cerrar sesión</p>
+                </TooltipContent>
+              </Tooltip>
             </>
-          ) : !loading && !user ? (
-            <Button onClick={() => navigate('/auth')} variant="gradient">
-              Iniciar Sesión
-            </Button>
-          ) : null}
+          ) : (
+            !loading && (
+              <Button size="sm" onClick={() => navigate("/auth")}>
+                Iniciar sesión
+              </Button>
+            )
+          )}
         </div>
-      </div>
-    </header>
+      </header>
+    </TooltipProvider>
   );
 }
