@@ -12,6 +12,7 @@ import { Link, useLocation } from "react-router-dom";
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -19,6 +20,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarHeader,
+  SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
 import {
@@ -78,7 +80,7 @@ const managementItems = [
 const assistantItems = [
   {
     title: "Chat IA",
-    url: "/chat",
+    url: "/chat-diagnosis",
     icon: MessageSquare,
     description: "Asistente conversacional"
   }
@@ -265,6 +267,9 @@ export function AppSidebar() {
             </SidebarGroup>
           </Collapsible>
         </SidebarContent>
+        <SidebarFooter className="border-t p-2">
+          <SidebarTrigger className="w-full" />
+        </SidebarFooter>
       </Sidebar>
     </TooltipProvider>
   );

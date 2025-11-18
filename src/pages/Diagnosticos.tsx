@@ -87,7 +87,8 @@ export default function Diagnosticos() {
 
   return (
     <MainLayout>
-      <div className="space-y-6">
+      <div className="container mx-auto px-6 py-8">
+        <div className="space-y-6">
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-3xl font-bold">Diagnósticos</h1>
@@ -231,6 +232,7 @@ export default function Diagnosticos() {
             })}
           </div>
           )}
+        </div>
         </div>
       </div>
     </MainLayout>
