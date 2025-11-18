@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,7 +25,7 @@ export function KPIConfigModal({ kpi, open, onOpenChange, onSuccess }: KPIConfig
   });
 
   // Update form when kpi changes
-  useState(() => {
+  useEffect(() => {
     if (kpi) {
       setForm({
         area: kpi.area,
@@ -33,7 +33,7 @@ export function KPIConfigModal({ kpi, open, onOpenChange, onSuccess }: KPIConfig
         unit: kpi.unit || "",
       });
     }
-  });
+  }, [kpi]);
 
   const handleSave = async () => {
     if (!kpi) return;
