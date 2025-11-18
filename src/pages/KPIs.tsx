@@ -244,20 +244,41 @@ export default function KPIs() {
 
     setIsDeleting(true);
     try {
+      // Get user's company
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('company_id')
+        .eq('id', user?.id)
+        .single();
+
+      if (!profile?.company_id) {
+        throw new Error("No se pudo obtener la empresa del usuario");
+      }
+
+      // Delete ALL records with this KPI name for this company
       const { error } = await supabase
         .from("kpis")
         .delete()
-        .eq("id", deletingKPI.id);
+        .eq("name", deletingKPI.name)
+        .eq("company_id", profile.company_id);
 
       if (error) throw error;
 
+      const historyCount = getKPIHistory(deletingKPI.name).length;
+
       toast({
-        title: "KPI eliminado",
-        description: "El KPI se ha eliminado correctamente",
+        title: "KPI eliminado completamente",
+        description: `${deletingKPI.name} y sus ${historyCount} valores históricos han sido eliminados`,
       });
 
       setIsDeleteDialogOpen(false);
       setDeletingKPI(null);
+      
+      // If we were viewing this KPI in detail, clear the selection
+      if (selectedKPIName === deletingKPI.name) {
+        setSelectedKPIName("");
+      }
+      
       refetch();
     } catch (error) {
       console.error("Error deleting KPI:", error);
@@ -596,6 +617,7 @@ export default function KPIs() {
                     <IndividualKPIChart
                       kpis={getKPIHistory(selectedKPIName)}
                       kpiName={selectedKPIName}
+                      onKPIUpdated={refetch}
                     />
                   )}
                 </div>
@@ -633,7 +655,9 @@ export default function KPIs() {
           <DialogHeader>
             <DialogTitle>Eliminar KPI</DialogTitle>
             <DialogDescription>
-              ¿Estás seguro de que deseas eliminar este KPI? Esta acción no se puede deshacer.
+              Esta acción eliminará el KPI "{deletingKPI?.name}" y sus{' '}
+              <strong>{deletingKPI ? getKPIHistory(deletingKPI.name).length : 0} valores históricos</strong>.
+              Esta acción no se puede deshacer.
             </DialogDescription>
           </DialogHeader>
 
