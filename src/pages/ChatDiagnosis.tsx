@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useProjectContext } from '@/contexts/ProjectContext';
 import { Button } from '@/components/ui/button';
@@ -51,6 +51,7 @@ export default function ChatDiagnosis() {
   const { user, loading: authLoading } = useAuth();
   const { currentProject, loading: projectLoading, setCurrentProject, refreshProjects } = useProjectContext();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
@@ -232,6 +233,14 @@ export default function ChatDiagnosis() {
     }
   }, [currentSection, step, chatMode]);
 
+  // Sincronizar modo desde URL query params
+  useEffect(() => {
+    const modeParam = searchParams.get('mode');
+    if (modeParam && ['diagnosis', 'strategic', 'follow_up', 'document'].includes(modeParam)) {
+      setChatMode(modeParam as ChatMode);
+    }
+  }, [searchParams]);
+
   const getInitialMessage = (projectName: string, mode: ChatMode, isFollowUp: boolean = false) => {
     const messages = {
       diagnosis: isFollowUp 
@@ -299,6 +308,9 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
     if (sending || generatingDiagnosis) return;
     
     setChatMode(newMode);
+    
+    // Update URL with new mode
+    navigate(`/chat-diagnosis?mode=${newMode}`, { replace: true });
     
     // Reemplazar el primer mensaje (bienvenida del modo anterior) con el nuevo mensaje de bienvenida
     const newWelcomeMessage = {
