@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { KPI } from '@/types/kpi.types';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Plus } from 'lucide-react';
+import { AddKPIValueModal } from './AddKPIValueModal';
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -35,6 +36,7 @@ export function IndividualKPIChart({ kpis, kpiName, onKPIUpdated }: IndividualKP
   const { toast } = useToast();
   const [deletingValue, setDeletingValue] = useState<KPI | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [addValueOpen, setAddValueOpen] = useState(false);
 
   const chartData = kpis.map(kpi => ({
     date: format(new Date(kpi.period_start), 'MMM yyyy', { locale: es }),
@@ -157,9 +159,19 @@ export function IndividualKPIChart({ kpis, kpiName, onKPIUpdated }: IndividualKP
 
         {/* Historical Values Table */}
         <div className="mt-8 border-t pt-6">
-          <h4 className="text-sm font-semibold mb-4 text-foreground">
-            Historial de Valores
-          </h4>
+          <div className="flex items-center justify-between mb-4">
+            <h4 className="text-sm font-semibold text-foreground">
+              Historial de Valores
+            </h4>
+            <Button
+              size="sm"
+              onClick={() => setAddValueOpen(true)}
+              className="gap-2"
+            >
+              <Plus className="h-4 w-4" />
+              Agregar Valor
+            </Button>
+          </div>
           <div className="space-y-2">
             {kpis.map((kpi) => (
               <div 
@@ -233,6 +245,20 @@ export function IndividualKPIChart({ kpis, kpiName, onKPIUpdated }: IndividualKP
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Add Value Modal */}
+      <AddKPIValueModal
+        kpi={kpis[0]}
+        open={addValueOpen}
+        onOpenChange={setAddValueOpen}
+        onSuccess={() => {
+          onKPIUpdated?.();
+          toast({
+            title: "Valor agregado",
+            description: "El nuevo valor se ha registrado correctamente",
+          });
+        }}
+      />
     </>
   );
 }
