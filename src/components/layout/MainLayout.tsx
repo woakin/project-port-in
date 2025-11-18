@@ -16,7 +16,6 @@ export function MainLayout({ children }: MainLayoutProps) {
         <SidebarInset className="flex-1 flex flex-col w-full">
           <Header />
           <div className="flex items-center gap-2 px-6 py-3 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-            <SidebarTrigger className="-ml-2" />
             <Breadcrumbs />
           </div>
           <main className="flex-1 w-full">
