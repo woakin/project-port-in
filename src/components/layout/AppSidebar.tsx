@@ -127,17 +127,9 @@ export function AppSidebar() {
   const location = useLocation();
   const currentPath = location.pathname;
   
-  const [analysisOpen, setAnalysisOpen] = useState(
-    analysisItems.some(item => currentPath === item.url)
-  );
-  const [managementOpen, setManagementOpen] = useState(
-    managementItems.some(item => currentPath === item.url)
-  );
-  const [assistantOpen, setAssistantOpen] = useState(
-    assistantItems.some(item => currentPath === item.url || 
-      (item.url === '/chat-diagnosis' && (currentPath === '/chat-diagnosis' || currentPath === '/voice-diagnosis'))
-    )
-  );
+  const [analysisOpen, setAnalysisOpen] = useState(true);
+  const [managementOpen, setManagementOpen] = useState(true);
+  const [assistantOpen, setAssistantOpen] = useState(true);
 
   const isCollapsed = !sidebarOpen;
 
