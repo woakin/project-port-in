@@ -339,6 +339,12 @@ export default function KPIs() {
     return kpi.value >= kpi.target_value;
   };
 
+  const handleKPIClick = (kpiName: string) => {
+    setSelectedKPIName(kpiName);
+    setActiveTab("trends");
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   const areaColors: Record<string, string> = {
     strategy: "bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300",
     finance: "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300",
@@ -477,13 +483,24 @@ export default function KPIs() {
                         const onTarget = isOnTarget(kpi);
 
                         return (
-                          <TableRow key={kpi.id}>
+                          <TableRow 
+                            key={kpi.id}
+                            className={selectedKPIName === kpi.name && activeTab === "trends" 
+                              ? "bg-muted/50" 
+                              : ""
+                            }
+                          >
                             <TableCell>
                               <div className="flex items-center gap-2">
                                 {kpi.is_main_kpi && (
                                   <Star className="h-4 w-4 text-secondary fill-secondary" />
                                 )}
-                                <span className="font-medium">{kpi.name}</span>
+                                <button
+                                  onClick={() => handleKPIClick(kpi.name)}
+                                  className="font-medium text-left hover:text-primary hover:underline cursor-pointer transition-colors"
+                                >
+                                  {kpi.name}
+                                </button>
                               </div>
                             </TableCell>
                             <TableCell>
