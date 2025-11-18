@@ -6,7 +6,10 @@ import {
   MessageSquare, 
   Stethoscope,
   FolderKanban,
-  ChevronRight
+  ChevronRight,
+  Target,
+  Users,
+  BarChart3
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import {
@@ -79,10 +82,32 @@ const managementItems = [
 
 const assistantItems = [
   {
-    title: "Chat IA",
-    url: "/chat-diagnosis",
+    title: "Diagnóstico Completo",
+    url: "/chat-diagnosis?mode=diagnosis",
     icon: MessageSquare,
-    description: "Asistente conversacional"
+    description: "Genera diagnóstico y plan completo",
+    mode: "diagnosis"
+  },
+  {
+    title: "Mentor Estratégico",
+    url: "/chat-diagnosis?mode=strategic",
+    icon: Target,
+    description: "Visión de largo plazo y dirección",
+    mode: "strategic"
+  },
+  {
+    title: "Coach Operativo",
+    url: "/chat-diagnosis?mode=follow_up",
+    icon: Users,
+    description: "Ejecución táctica y priorización",
+    mode: "follow_up"
+  },
+  {
+    title: "Analista de Datos",
+    url: "/chat-diagnosis?mode=document",
+    icon: BarChart3,
+    description: "Insights de datos y documentos",
+    mode: "document"
   }
 ];
 
@@ -92,6 +117,7 @@ interface NavItemProps {
     url: string;
     icon: React.ComponentType<{ className?: string }>;
     description: string;
+    mode?: string;
   };
   isActive: boolean;
   isCollapsed: boolean;
@@ -133,11 +159,25 @@ export function AppSidebar() {
 
   const isCollapsed = !sidebarOpen;
 
-  const isActive = (url: string) => {
-    if (url === '/chat-diagnosis') {
-      return currentPath === '/chat-diagnosis' || currentPath === '/voice-diagnosis';
+  const isActive = (url: string, mode?: string) => {
+    // Parse URL to get path and query params
+    const urlObj = new URL(url, window.location.origin);
+    const urlPath = urlObj.pathname;
+    const urlMode = urlObj.searchParams.get('mode');
+    
+    // For chat diagnosis modes, check both path and mode param
+    if (urlPath === '/chat-diagnosis' && mode) {
+      const currentMode = new URLSearchParams(location.search).get('mode');
+      return currentPath === '/chat-diagnosis' && currentMode === mode;
     }
-    return currentPath === url;
+    
+    // For voice diagnosis, also consider it active for diagnosis mode
+    if (currentPath === '/voice-diagnosis' && urlPath === '/chat-diagnosis' && mode === 'diagnosis') {
+      return true;
+    }
+    
+    // For other routes, simple path match
+    return currentPath === urlPath;
   };
 
   return (
@@ -257,7 +297,7 @@ export function AppSidebar() {
                       <SidebarMenuItem key={item.url}>
                         <NavItem 
                           item={item} 
-                          isActive={isActive(item.url)}
+                          isActive={isActive(item.url, item.mode)}
                           isCollapsed={isCollapsed}
                         />
                       </SidebarMenuItem>
