@@ -44,6 +44,32 @@ const areaNavigationSchema = z.object({
   reason: z.string().optional()
 });
 
+/**
+ * Calcula las fechas period_start y period_end basado en una descripción temporal
+ */
+function calculatePeriodDates(description: string): { start: string; end: string } {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = today.getMonth();
+  
+  const lowerDesc = description.toLowerCase();
+  
+  // Hoy
+  if (lowerDesc.includes('hoy') || lowerDesc.includes('today')) {
+    const todayStr = today.toISOString().split('T')[0];
+    return { start: todayStr, end: todayStr };
+  }
+  
+  // Este mes (por defecto)
+  const monthStart = new Date(year, month, 1);
+  const monthEnd = new Date(year, month + 1, 0);
+  
+  return {
+    start: monthStart.toISOString().split('T')[0],
+    end: monthEnd.toISOString().split('T')[0]
+  };
+}
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -417,10 +443,28 @@ serve(async (req) => {
 KPIs existentes: ${uniqueKPINames.join(', ')}
 
 REGLAS IMPORTANTES PARA KPIs:
-- Si el usuario dice "actualiza X a Y" SIN mencionar fechas/periodo → usa action: "update_current"
-- Si el usuario dice "registra X de Y para [mes]" o menciona fechas/periodo específico → usa action: "new_period" con period_start y period_end
-- Para "new_period", calcula las fechas apropiadas del mes mencionado (ejemplo: "noviembre" → "2025-11-01" a "2025-11-30")
-- Si es ambiguo, usa "update_current" por defecto
+COMPORTAMIENTO POR DEFECTO: Siempre usar action: "new_period" para registrar nuevos valores históricos.
+
+VERBOS QUE SIEMPRE USAN "new_period" (registrar nuevo dato):
+- "actualiza", "actualizar"
+- "agrega", "agregar", "añade", "añadir"
+- "registra", "registrar"
+- "el valor de X es Y", "X está en Y", "tenemos Y en X"
+- "hoy", "esta semana", "este mes"
+
+VERBOS QUE USAN "update_current" (corregir dato existente):
+- "corrige", "corregir" + "último", "anterior", "el más reciente"
+- "modifica", "modificar" + "último", "anterior"
+- "cambia", "cambiar" + "último valor", "valor anterior"
+- "me equivoqué", "era", "debería ser" (contexto de corrección)
+
+MANEJO DE FECHAS:
+- Si NO se menciona fecha específica → usar periodo del mes actual (ejemplo: 2025-11-01 a 2025-11-30)
+- Si se menciona "hoy" → usar periodo del día de hoy (ejemplo: 2025-11-18 a 2025-11-18)
+- Si se menciona un mes específico → calcular fechas de ese mes (ejemplo: "noviembre" → 2025-11-01 a 2025-11-30)
+- Si se menciona "esta semana" → calcular inicio y fin de la semana actual
+
+EN CASO DE DUDA: Siempre preferir "new_period" para preservar la integridad histórica.
 
 Extrae operaciones estructuradas del mensaje del usuario. Si no detectas ninguna operación, no invoques herramientas.` 
               },
@@ -435,6 +479,16 @@ Extrae operaciones estructuradas del mensaje del usuario. Si no detectas ninguna
           const extractionData = await extractionResponse.json();
           const toolCalls = extractionData.choices?.[0]?.message?.tool_calls || [];
           
+          console.log('🔍 [KPI Intent Detection]', {
+            timestamp: new Date().toISOString(),
+            userMessage: lastUserMessage,
+            detectedToolCalls: toolCalls.length,
+            tools: toolCalls.map((tc: any) => ({
+              name: tc.function.name,
+              arguments: tc.function.arguments
+            }))
+          });
+          
           // Step 2: Apply operations based on tool calls
           for (const toolCall of toolCalls) {
             console.log(`Executing tool: ${toolCall.function.name}`);
@@ -446,6 +500,16 @@ Extrae operaciones estructuradas del mensaje del usuario. Si no detectas ninguna
                 const validated = kpiUpdateSchema.parse(functionArgs);
                 
                 for (const update of validated.updates) {
+                  console.log('📊 [KPI Operation Start]', {
+                    timestamp: new Date().toISOString(),
+                    kpiName: update.name,
+                    action: update.action,
+                    value: update.value,
+                    periodStart: update.period_start,
+                    periodEnd: update.period_end,
+                    unit: update.unit,
+                    area: update.area
+                  });
                   if (update.action === 'update_current') {
                     // Actualizar el valor del periodo actual (el más reciente)
                     const { data: latest } = await admin
@@ -467,9 +531,19 @@ Extrae operaciones estructuradas del mensaje del usuario. Si no detectas ninguna
                         .eq('id', latest.id);
                       
                       if (!updateError) {
+                        console.log('✅ [KPI Update Current Success]', {
+                          timestamp: new Date().toISOString(),
+                          kpiName: update.name,
+                          kpiId: latest.id,
+                          oldValue: latest.value,
+                          newValue: update.value,
+                          unit: latest.unit || update.unit,
+                          operation: 'update_current'
+                        });
+                        
                         appliedOperations.push({
                           entity: 'kpis',
-                          summary: `Actualizado ${update.name}: ${latest.value} → ${update.value}${latest.unit || ''} (periodo actual)`
+                          summary: `✏️ Corregido valor de "${update.name}": ${latest.value} → ${update.value}${latest.unit || ''} (modificó registro más reciente)`
                         });
                         
                         await admin.from('audit_logs').insert({
@@ -499,9 +573,19 @@ Extrae operaciones estructuradas del mensaje del usuario. Si no detectas ninguna
                         });
                       
                       if (!insertError) {
+                        console.log('✅ [KPI Create (Fallback from update_current)]', {
+                          timestamp: new Date().toISOString(),
+                          kpiName: update.name,
+                          value: update.value,
+                          unit: update.unit,
+                          periodStart: periodStart.toISOString().split('T')[0],
+                          periodEnd: periodEnd.toISOString().split('T')[0],
+                          reason: 'No existing KPI found for update_current'
+                        });
+                        
                         appliedOperations.push({
                           entity: 'kpis',
-                          summary: `Creado nuevo KPI "${update.name}": ${update.value}${update.unit || ''}`
+                          summary: `🆕 Creado nuevo KPI "${update.name}": ${update.value}${update.unit || ''} (primer registro histórico)`
                         });
                         
                         await admin.from('audit_logs').insert({
@@ -514,9 +598,19 @@ Extrae operaciones estructuradas del mensaje del usuario. Si no detectas ninguna
                     }
                   } else if (update.action === 'new_period') {
                     // Crear nuevo registro histórico
-                    if (!update.period_start || !update.period_end) {
-                      console.error(`new_period requiere period_start y period_end para ${update.name}`);
-                      continue;
+                    // Calcular fechas si no se proporcionaron
+                    let periodStart = update.period_start;
+                    let periodEnd = update.period_end;
+                    
+                    if (!periodStart || !periodEnd) {
+                      console.log('📅 [Auto-calculating period dates]', {
+                        kpiName: update.name,
+                        reason: 'Missing period dates - using current month'
+                      });
+                      
+                      const dates = calculatePeriodDates(lastUserMessage);
+                      periodStart = periodStart || dates.start;
+                      periodEnd = periodEnd || dates.end;
                     }
                     
                     // Obtener el KPI más reciente para heredar área y unidad si no se especifican
@@ -538,22 +632,33 @@ Extrae operaciones estructuradas del mensaje del usuario. Si no detectas ninguna
                         area: update.area || latest?.area || 'general',
                         unit: update.unit || latest?.unit || '',
                         target_value: latest?.target_value || null,
-                        period_start: update.period_start,
-                        period_end: update.period_end,
+                        period_start: periodStart,
+                        period_end: periodEnd,
                         source: 'assistant'
                       });
                     
                     if (!insertError) {
+                      console.log('✅ [KPI New Period Success]', {
+                        timestamp: new Date().toISOString(),
+                        kpiName: update.name,
+                        value: update.value,
+                        unit: update.unit || latest?.unit,
+                        periodStart: periodStart,
+                        periodEnd: periodEnd,
+                        inheritedFrom: latest ? 'existing KPI' : 'defaults',
+                        operation: 'new_period'
+                      });
+                      
                       appliedOperations.push({
                         entity: 'kpis',
-                        summary: `Registrado nuevo periodo de "${update.name}": ${update.value}${update.unit || latest?.unit || ''} (${update.period_start} a ${update.period_end})`
+                        summary: `📈 Registrado nuevo valor de "${update.name}": ${update.value}${update.unit || latest?.unit || ''} para periodo ${periodStart} → ${periodEnd}`
                       });
                       
                       await admin.from('audit_logs').insert({
                         resource_type: 'kpi',
                         action: 'create',
                         user_id: user.id,
-                        metadata: { kpi_name: update.name, value: update.value, period_start: update.period_start, period_end: update.period_end }
+                        metadata: { kpi_name: update.name, value: update.value, period_start: periodStart, period_end: periodEnd }
                       });
                     }
                   }
@@ -721,6 +826,15 @@ Extrae operaciones estructuradas del mensaje del usuario. Si no detectas ninguna
       } catch (error) {
         console.error('Tool extraction error:', error);
       }
+      
+      console.log('📝 [Applied Operations Summary]', {
+        timestamp: new Date().toISOString(),
+        totalOperations: appliedOperations.length,
+        operations: appliedOperations.map(op => ({
+          entity: op.entity,
+          summary: op.summary
+        }))
+      });
       
       // Build system prompt
       const { currentPage, project, focus, data } = requestContext || {};
