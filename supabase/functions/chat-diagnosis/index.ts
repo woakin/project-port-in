@@ -533,7 +533,57 @@ MANEJO DE FECHAS:
 
 EN CASO DE DUDA: Siempre preferir "new_period" para preservar la integridad histórica.
 
-Extrae operaciones estructuradas del mensaje del usuario. Si no detectas ninguna operación, no invoques herramientas.`
+🎯 TU TAREA: Analiza el mensaje del usuario y detecta si contiene alguna de estas intenciones:
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📊 INTENCIONES DE KPI (invoke manage_kpis):
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+PATRONES QUE SIEMPRE DEBEN INVOCAR manage_kpis:
+✅ "actualiza [KPI] a/con [valor]" → Ejemplo: "actualiza NPS a 60"
+✅ "agrega [KPI] de/con [valor]" → Ejemplo: "agrega ventas de 1000"
+✅ "registra [KPI] en [valor]" → Ejemplo: "registra CAC en 150"
+✅ "el [KPI] es/está [valor]" → Ejemplo: "el NPS es 60"
+✅ "[KPI] tiene valor de [valor]" → Ejemplo: "ventas tiene valor de 5000"
+✅ "[valor] en/para [KPI]" → Ejemplo: "60 para NPS"
+
+EJEMPLOS DE MENSAJES QUE REQUIEREN ACCIÓN:
+• "Actualizar el kpi de NPS a 60" ✅ DEBE invocar manage_kpis
+• "Agrega el valor de 60 con fecha de hoy" ✅ DEBE invocar manage_kpis
+• "El CAC está en 150" ✅ DEBE invocar manage_kpis
+• "Registra ventas de 1000 para este mes" ✅ DEBE invocar manage_kpis
+• "60 para el NPS" ✅ DEBE invocar manage_kpis
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ INTENCIONES DE TAREAS (invoke manage_tasks):
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+• Crear, actualizar, eliminar o cambiar estado de tareas
+• Ejemplos: "crea una tarea para...", "marca como completada...", "cambia prioridad..."
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📄 INTENCIONES DE DOCUMENTOS (invoke manage_documents):
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+• Analizar, recategorizar documentos
+• Ejemplos: "analiza el documento...", "cambia categoría..."
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🚨 REGLA CRÍTICA:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Si el mensaje del usuario menciona EXPLÍCITAMENTE:
+- Actualizar/agregar/registrar un KPI + un valor numérico
+- O contiene "[nombre KPI] es/está [valor]"
+
+→ SIEMPRE debes invocar manage_kpis, NUNCA asumas que es solo conversación.
+
+⚠️ NO invoques herramientas si:
+- El usuario solo hace preguntas ("¿cuál es el valor de...?")
+- El usuario solo proporciona contexto sin solicitar acción
+- El mensaje es ambiguo y no contiene verbos de acción + valores
+
+Si NO detectas ninguna intención clara de operación, entonces no invoques herramientas.`
               },
               { role: 'user', content: lastUserMessage }
             ],
