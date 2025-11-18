@@ -8,6 +8,7 @@ import { KPICard } from "@/components/dashboard/KPICard";
 import { KPICardSkeleton } from "@/components/shared/KPICardSkeleton";
 import { TasksListSkeleton } from "@/components/shared/TaskCardSkeleton";
 import { TasksList } from "@/components/dashboard/TasksList";
+import { TaskDetails } from "@/components/tasks/TaskDetails";
 import { MainKPIChart } from "@/components/kpi/MainKPIChart";
 import { DiagnosticHeroCard } from "@/components/dashboard/DiagnosticHeroCard";
 import { Card } from "@/components/shared/Card";
@@ -18,6 +19,7 @@ import { IconCircle } from "@/components/shared/IconCircle";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { Task } from "@/types/task.types";
 import alashaLogo from "@/assets/alasha-logo.png";
 const Index = () => {
   const {
@@ -34,13 +36,16 @@ const Index = () => {
   } = useProjectContext();
   const [latestDiagnosis, setLatestDiagnosis] = useState<any>(null);
   const [loadingDiagnosis, setLoadingDiagnosis] = useState(true);
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const {
     tasks,
     loading: loadingTasks,
     getUpcomingTasks,
     getOverdueTasks,
     getTaskStats,
-    updateTaskStatus
+    updateTaskStatus,
+    refetch: refetchTasks
   } = useTasks();
   const {
     kpis,
@@ -75,6 +80,11 @@ const Index = () => {
     };
     fetchLatestDiagnosis();
   }, [user, currentProject?.id]);
+  const handleTaskClick = (task: Task) => {
+    setSelectedTask(task);
+    setDetailsOpen(true);
+  };
+
   const handleTaskStatusUpdate = async (taskId: string, status: any) => {
     try {
       await updateTaskStatus(taskId, status);
@@ -89,6 +99,12 @@ const Index = () => {
         variant: "destructive"
       });
     }
+  };
+
+  const handleDetailsClose = () => {
+    setDetailsOpen(false);
+    setSelectedTask(null);
+    refetchTasks();
   };
 
   // Show landing page for logged out users
@@ -644,7 +660,11 @@ const Index = () => {
                   No hay tareas próximas
                 </div>
               ) : (
-                <TasksList tasks={upcomingTasks.slice(0, 8)} onUpdateStatus={handleTaskStatusUpdate} />
+                <TasksList 
+                  tasks={upcomingTasks.slice(0, 8)} 
+                  onUpdateStatus={handleTaskStatusUpdate}
+                  onTaskClick={handleTaskClick}
+                />
               )}
               {upcomingTasks.length > 0 && (
                 <Button variant="ghost" className="w-full mt-4" onClick={() => navigate('/tasks')}>
@@ -664,7 +684,11 @@ const Index = () => {
                 {loadingTasks ? (
                   <TasksListSkeleton />
                 ) : (
-                  <TasksList tasks={overdueTasks.slice(0, 3)} onUpdateStatus={handleTaskStatusUpdate} />
+                  <TasksList 
+                    tasks={overdueTasks.slice(0, 3)} 
+                    onUpdateStatus={handleTaskStatusUpdate}
+                    onTaskClick={handleTaskClick}
+                  />
                 )}
               </Card>
             )}
@@ -697,6 +721,13 @@ const Index = () => {
         return null;
       })()}
       </div>
+
+      <TaskDetails 
+        task={selectedTask}
+        open={detailsOpen}
+        onOpenChange={handleDetailsClose}
+        onStatusUpdate={refetchTasks}
+      />
     </MainLayout>;
 };
 export default Index;

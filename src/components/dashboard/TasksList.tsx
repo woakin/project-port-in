@@ -10,9 +10,10 @@ import { useNavigate } from "react-router-dom";
 interface TasksListProps {
   tasks: Task[];
   onUpdateStatus?: (taskId: string, status: Task['status']) => void;
+  onTaskClick?: (task: Task) => void;
 }
 
-export function TasksList({ tasks, onUpdateStatus }: TasksListProps) {
+export function TasksList({ tasks, onUpdateStatus, onTaskClick }: TasksListProps) {
   const navigate = useNavigate();
   
   const getPriorityColor = (priority: Task['priority']) => {
@@ -67,7 +68,12 @@ export function TasksList({ tasks, onUpdateStatus }: TasksListProps) {
   return (
     <div className="space-y-3">
       {tasks.map((task) => (
-        <Card key={task.id} variant="content" className="p-4">
+        <Card 
+          key={task.id} 
+          variant="content" 
+          className="p-4 hover:shadow-md cursor-pointer transition-shadow"
+          onClick={() => onTaskClick?.(task)}
+        >
           <div className="flex flex-col gap-3">
             <div className="flex items-start justify-between gap-4">
               <div className="flex-1">
