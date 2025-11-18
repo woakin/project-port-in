@@ -7,6 +7,7 @@ import { Separator } from "@/components/ui/separator";
 import { Label } from "@/components/ui/label";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Task } from "@/types/task.types";
 import { TaskComment, TaskAttachment } from "@/types/comment.types";
 import { supabase } from "@/integrations/supabase/client";
@@ -32,14 +33,17 @@ interface TaskDetailsProps {
   task: Task | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onStatusUpdate?: () => void;
 }
 
-export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
+export function TaskDetails({ task, open, onOpenChange, onStatusUpdate }: TaskDetailsProps) {
   const [comments, setComments] = useState<TaskComment[]>([]);
   const [attachments, setAttachments] = useState<TaskAttachment[]>([]);
   const [newComment, setNewComment] = useState("");
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [currentStatus, setCurrentStatus] = useState<Task['status']>(task?.status || 'pending');
+  const [updatingStatus, setUpdatingStatus] = useState(false);
   const [startDate, setStartDate] = useState<Date | undefined>(
     task?.start_date ? new Date(task.start_date) : undefined
   );
@@ -53,7 +57,7 @@ export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
     if (task && open) {
       fetchComments();
       fetchAttachments();
-      // Update dates when task changes
+      setCurrentStatus(task.status);
       setStartDate(task.start_date ? new Date(task.start_date) : undefined);
       setDueDate(task.due_date ? new Date(task.due_date) : undefined);
     }
@@ -237,6 +241,45 @@ export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
     }
   };
 
+  const handleStatusChange = async (newStatus: Task['status']) => {
+    if (!task) return;
+
+    setUpdatingStatus(true);
+    try {
+      const updateData: any = {
+        status: newStatus,
+      };
+
+      // Auto-update completed_at based on status change
+      if (newStatus === 'completed') {
+        updateData.completed_at = new Date().toISOString();
+      } else {
+        // Clear completed_at if status is anything other than completed
+        updateData.completed_at = null;
+      }
+
+      const { error } = await supabase
+        .from('tasks')
+        .update(updateData)
+        .eq('id', task.id);
+
+      if (error) throw error;
+
+      setCurrentStatus(newStatus);
+      toast.success('Estado actualizado correctamente');
+      
+      // Call the callback to refresh tasks
+      if (onStatusUpdate) {
+        onStatusUpdate();
+      }
+    } catch (error) {
+      console.error('Error updating status:', error);
+      toast.error('Error al actualizar el estado');
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
+
   if (!task) return null;
 
   const getPriorityColor = (priority: string | null) => {
@@ -279,9 +322,21 @@ export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
                   {task.priority}
                 </Badge>
               )}
-              <Badge variant={getStatusColor(task.status)}>
-                {getStatusLabel(task.status)}
-              </Badge>
+              <Select 
+                value={currentStatus} 
+                onValueChange={handleStatusChange}
+                disabled={updatingStatus}
+              >
+                <SelectTrigger className="w-[150px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pending">Pendiente</SelectItem>
+                  <SelectItem value="in_progress">En Curso</SelectItem>
+                  <SelectItem value="completed">Completada</SelectItem>
+                  <SelectItem value="blocked">Bloqueada</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </DialogTitle>
         </DialogHeader>
