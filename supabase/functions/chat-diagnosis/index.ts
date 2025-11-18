@@ -976,6 +976,31 @@ Si NO detectas ninguna intención clara de operación, entonces no invoques herr
                       operation: 'new_period'
                     });
                     
+                    // ✅ VERIFICAR ALERTAS automáticamente después de insertar
+                    try {
+                      const alertCheckResponse = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/check-kpi-alerts`, {
+                        method: 'POST',
+                        headers: {
+                          'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                          trigger: 'kpi_insert',
+                          company_id: companyId,
+                          kpi_name: searchName
+                        })
+                      });
+                      
+                      if (alertCheckResponse.ok) {
+                        const alertResult = await alertCheckResponse.json();
+                        console.log('🔔 [Alert Check Result]', alertResult);
+                      } else {
+                        console.warn('⚠️ [Alert Check Failed]', await alertCheckResponse.text());
+                      }
+                    } catch (alertError) {
+                      console.error('❌ [Alert Check Error]', alertError);
+                      // No lanzar error, es operación secundaria
+                    }
+                    
                     appliedOperations.push({
                       entity: 'kpis',
                       summary: `📈 Registrado nuevo valor de "${searchName}": ${update.value}${kpiData.unit || ''} para periodo ${start} → ${end}${wasAdjusted ? ' (fechas ajustadas automáticamente)' : ''}`
