@@ -1,13 +1,10 @@
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { Resend } from 'https://esm.sh/resend@3.0.0'
+import { serve } from 'https://deno.land/std@0.192.0/http/server.ts'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
-
-const resend = new Resend(Deno.env.get('RESEND_API_KEY'))
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -222,17 +219,28 @@ serve(async (req) => {
                 </html>
               `
 
-              const { error: emailError } = await resend.emails.send({
-                from: 'Alasha Collective <joaquin@alasha.biz>',
-                to: profile.email,
-                subject: `${priorityBadge ? '⚠️ ' : ''}Alerta de KPI: ${latestKPI.name}`,
-                html: emailHtml,
+              // Enviar email usando Resend API directamente
+              const resendApiKey = Deno.env.get('RESEND_API_KEY')!
+              const emailResponse = await fetch('https://api.resend.com/emails', {
+                method: 'POST',
+                headers: {
+                  'Authorization': `Bearer ${resendApiKey}`,
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  from: 'Alasha Collective <joaquin@alasha.biz>',
+                  to: profile.email,
+                  subject: `${priorityBadge ? '⚠️ ' : ''}Alerta de KPI: ${latestKPI.name}`,
+                  html: emailHtml,
+                }),
               })
 
-              if (emailError) {
-                console.error('❌ [Email Send Error]', emailError)
+              const emailResult = await emailResponse.json()
+              
+              if (!emailResponse.ok) {
+                console.error('❌ [Email Send Error]', emailResult)
               } else {
-                console.log(`📧 [Email Sent] to ${profile.email}`)
+                console.log(`📧 [Email Sent] to ${profile.email}`, emailResult)
               }
             }
           } catch (emailError) {
