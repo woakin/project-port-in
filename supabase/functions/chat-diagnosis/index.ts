@@ -70,6 +70,64 @@ function calculatePeriodDates(description: string): { start: string; end: string
   };
 }
 
+/**
+ * Busca el KPI más parecido usando fuzzy matching
+ * @param searchName - Nombre buscado por el usuario (ej: "NPS")
+ * @param existingKPIs - Lista de KPIs existentes con sus nombres completos
+ * @returns El nombre exacto del KPI encontrado, o null si no hay match
+ */
+function findBestKPIMatch(
+  searchName: string, 
+  existingKPIs: Array<{ name: string }>
+): string | null {
+  if (!searchName || !existingKPIs || existingKPIs.length === 0) return null;
+  
+  const search = searchName.toLowerCase().trim();
+  
+  // 1. Match exacto (case-insensitive)
+  const exactMatch = existingKPIs.find(k => 
+    k.name.toLowerCase() === search
+  );
+  if (exactMatch) return exactMatch.name;
+  
+  // 2. Match si el nombre completo CONTIENE la búsqueda (ej: "NPS" en "NPS (Net Promoter Score)")
+  const containsMatches = existingKPIs.filter(k => 
+    k.name.toLowerCase().includes(search) || 
+    search.includes(k.name.toLowerCase())
+  );
+  
+  // Si hay solo un match, usar ese
+  if (containsMatches.length === 1) return containsMatches[0].name;
+  
+  // Si hay múltiples, preferir el más corto (más específico)
+  if (containsMatches.length > 1) {
+    return containsMatches.reduce((shortest, current) => 
+      current.name.length < shortest.name.length ? current : shortest
+    ).name;
+  }
+  
+  // 3. Match por palabras clave (ej: "rotacion empleados" → "Rotación de empleados")
+  const searchWords = search.split(/\s+/);
+  const wordMatches = existingKPIs.filter(k => {
+    const kpiWords = k.name.toLowerCase().split(/\s+/);
+    return searchWords.every(sw => 
+      kpiWords.some(kw => kw.includes(sw) || sw.includes(kw))
+    );
+  });
+  
+  if (wordMatches.length === 1) return wordMatches[0].name;
+  
+  // Si hay múltiples matches, preferir el más corto
+  if (wordMatches.length > 1) {
+    return wordMatches.reduce((shortest, current) => 
+      current.name.length < shortest.name.length ? current : shortest
+    ).name;
+  }
+  
+  // No se encontró match razonable
+  return null;
+}
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -440,7 +498,16 @@ serve(async (req) => {
               role: 'system', 
                 content: `Eres un asistente que identifica intenciones de gestión de datos.
 
-KPIs existentes: ${uniqueKPINames.join(', ')}
+📋 KPIs EXISTENTES EN EL SISTEMA:
+${uniqueKPINames.map((name, i) => `${i + 1}. "${name}"`).join('\n')}
+
+🚨 REGLA CRÍTICA - NOMBRES DE KPIs:
+Cuando el usuario mencione un KPI (ej: "NPS", "ventas", "rotación"), DEBES:
+1. Buscar en la lista de "KPIs EXISTENTES" arriba
+2. Usar el nombre EXACTO y COMPLETO del KPI que más se parezca
+3. Si el usuario dice "NPS" y existe "NPS (Net Promoter Score)", usar "NPS (Net Promoter Score)"
+4. Si el usuario dice "CAC" y existe "Costo de adquisición de cliente (CAC)", usar el nombre completo
+5. NUNCA inventes un nombre nuevo si hay uno similar existente
 
 REGLAS IMPORTANTES PARA KPIs:
 COMPORTAMIENTO POR DEFECTO: Siempre usar action: "new_period" para registrar nuevos valores históricos.
@@ -466,7 +533,7 @@ MANEJO DE FECHAS:
 
 EN CASO DE DUDA: Siempre preferir "new_period" para preservar la integridad histórica.
 
-Extrae operaciones estructuradas del mensaje del usuario. Si no detectas ninguna operación, no invoques herramientas.` 
+Extrae operaciones estructuradas del mensaje del usuario. Si no detectas ninguna operación, no invoques herramientas.`
               },
               { role: 'user', content: lastUserMessage }
             ],
@@ -511,12 +578,23 @@ Extrae operaciones estructuradas del mensaje del usuario. Si no detectas ninguna
                     area: update.area
                   });
                   if (update.action === 'update_current') {
+                    // 🔍 Buscar el KPI con fuzzy matching
+                    const bestMatch = findBestKPIMatch(update.name, existingKPIs || []);
+                    const searchName = bestMatch || update.name;
+                    
+                    console.log('🔍 [KPI Fuzzy Match - update_current]', {
+                      timestamp: new Date().toISOString(),
+                      userInput: update.name,
+                      matchFound: bestMatch,
+                      willSearchFor: searchName
+                    });
+                    
                     // Actualizar el valor del periodo actual (el más reciente)
                     const { data: latest } = await admin
                       .from('kpis')
                       .select('id, name, value, unit, area')
                       .eq('company_id', companyId)
-                      .ilike('name', update.name)
+                      .ilike('name', searchName)
                       .order('period_end', { ascending: false })
                       .limit(1)
                       .maybeSingle();
@@ -533,7 +611,8 @@ Extrae operaciones estructuradas del mensaje del usuario. Si no detectas ninguna
                       if (!updateError) {
                         console.log('✅ [KPI Update Current Success]', {
                           timestamp: new Date().toISOString(),
-                          kpiName: update.name,
+                          kpiName: searchName,
+                          originalInput: update.name !== searchName ? update.name : undefined,
                           kpiId: latest.id,
                           oldValue: latest.value,
                           newValue: update.value,
@@ -543,14 +622,14 @@ Extrae operaciones estructuradas del mensaje del usuario. Si no detectas ninguna
                         
                         appliedOperations.push({
                           entity: 'kpis',
-                          summary: `✏️ Corregido valor de "${update.name}": ${latest.value} → ${update.value}${latest.unit || ''} (modificó registro más reciente)`
+                          summary: `✏️ Corregido valor de "${searchName}": ${latest.value} → ${update.value}${latest.unit || ''} (modificó registro más reciente)`
                         });
                         
                         await admin.from('audit_logs').insert({
                           resource_type: 'kpi',
                           action: 'update',
                           user_id: user.id,
-                          metadata: { kpi_name: update.name, old_value: latest.value, new_value: update.value }
+                          metadata: { kpi_name: searchName, old_value: latest.value, new_value: update.value }
                         });
                       }
                     } else {
@@ -613,12 +692,23 @@ Extrae operaciones estructuradas del mensaje del usuario. Si no detectas ninguna
                       periodEnd = periodEnd || dates.end;
                     }
                     
+                    // 🔍 Buscar el KPI con fuzzy matching
+                    const bestMatch = findBestKPIMatch(update.name, existingKPIs || []);
+                    const searchName = bestMatch || update.name;
+                    
+                    console.log('🔍 [KPI Fuzzy Match - new_period]', {
+                      timestamp: new Date().toISOString(),
+                      userInput: update.name,
+                      matchFound: bestMatch,
+                      willSearchFor: searchName
+                    });
+                    
                     // Obtener el KPI más reciente para heredar área y unidad si no se especifican
                     const { data: latest } = await admin
                       .from('kpis')
                       .select('area, unit, target_value')
                       .eq('company_id', companyId)
-                      .ilike('name', update.name)
+                      .ilike('name', searchName)
                       .order('period_end', { ascending: false })
                       .limit(1)
                       .maybeSingle();
@@ -627,7 +717,7 @@ Extrae operaciones estructuradas del mensaje del usuario. Si no detectas ninguna
                       .from('kpis')
                       .insert({
                         company_id: companyId,
-                        name: update.name,
+                        name: searchName,
                         value: update.value,
                         area: update.area || latest?.area || 'general',
                         unit: update.unit || latest?.unit || '',
@@ -640,7 +730,8 @@ Extrae operaciones estructuradas del mensaje del usuario. Si no detectas ninguna
                     if (!insertError) {
                       console.log('✅ [KPI New Period Success]', {
                         timestamp: new Date().toISOString(),
-                        kpiName: update.name,
+                        kpiName: searchName,
+                        originalInput: update.name !== searchName ? update.name : undefined,
                         value: update.value,
                         unit: update.unit || latest?.unit,
                         periodStart: periodStart,
@@ -651,14 +742,14 @@ Extrae operaciones estructuradas del mensaje del usuario. Si no detectas ninguna
                       
                       appliedOperations.push({
                         entity: 'kpis',
-                        summary: `📈 Registrado nuevo valor de "${update.name}": ${update.value}${update.unit || latest?.unit || ''} para periodo ${periodStart} → ${periodEnd}`
+                        summary: `📈 Registrado nuevo valor de "${searchName}": ${update.value}${update.unit || latest?.unit || ''} para periodo ${periodStart} → ${periodEnd}`
                       });
                       
                       await admin.from('audit_logs').insert({
                         resource_type: 'kpi',
                         action: 'create',
                         user_id: user.id,
-                        metadata: { kpi_name: update.name, value: update.value, period_start: periodStart, period_end: periodEnd }
+                        metadata: { kpi_name: searchName, value: update.value, period_start: periodStart, period_end: periodEnd }
                       });
                     }
                   }
