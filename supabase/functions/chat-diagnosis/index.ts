@@ -11,7 +11,8 @@ const kpiUpdateSchema = z.object({
     period_start: z.string().optional(),
     period_end: z.string().optional(),
     unit: z.string().optional(),
-    area: z.string().optional()
+    area: z.string().optional(),
+    target_value: z.number().optional()
   }))
 });
 
@@ -126,6 +127,133 @@ function findBestKPIMatch(
   
   // No se encontró match razonable
   return null;
+}
+
+/**
+ * Valida y ajusta fechas de período para un KPI
+ * Asegura que period_start no sea anterior al primer KPI registrado
+ */
+async function validateAndAdjustPeriodDates(
+  companyId: string,
+  kpiName: string,
+  proposedStart: string,
+  proposedEnd: string,
+  admin: any
+): Promise<{ 
+  start: string; 
+  end: string; 
+  wasAdjusted: boolean; 
+  adjustmentReason?: string;
+}> {
+  // Obtener el primer KPI registrado (el más antiguo)
+  const { data: oldestKPI } = await admin
+    .from('kpis')
+    .select('period_start, created_at')
+    .eq('company_id', companyId)
+    .ilike('name', kpiName)
+    .order('period_start', { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  
+  let adjustedStart = proposedStart;
+  let adjustedEnd = proposedEnd;
+  let wasAdjusted = false;
+  let adjustmentReason = '';
+  
+  if (oldestKPI) {
+    const firstKPIDate = new Date(oldestKPI.period_start);
+    const proposedStartDate = new Date(proposedStart);
+    
+    // Si el período propuesto empieza ANTES del primer KPI, ajustar
+    if (proposedStartDate < firstKPIDate) {
+      adjustedStart = oldestKPI.period_start;
+      wasAdjusted = true;
+      adjustmentReason = `Período ajustado: no puede empezar antes del primer registro (${firstKPIDate.toISOString().split('T')[0]})`;
+      
+      console.warn('⚠️ [Period Date Adjustment]', {
+        kpiName,
+        proposedStart,
+        adjustedStart,
+        reason: adjustmentReason
+      });
+    }
+  }
+  
+  // Validar que start < end
+  if (new Date(adjustedStart) > new Date(adjustedEnd)) {
+    throw new Error(`Fechas inválidas: period_start (${adjustedStart}) es posterior a period_end (${adjustedEnd})`);
+  }
+  
+  return { 
+    start: adjustedStart, 
+    end: adjustedEnd, 
+    wasAdjusted, 
+    adjustmentReason 
+  };
+}
+
+/**
+ * Verifica que el KPI se insertó correctamente
+ * Retorna el registro insertado o null si hay problemas
+ */
+async function verifyKPIInsertion(
+  companyId: string,
+  expectedData: {
+    name: string;
+    value: number;
+    period_start: string;
+    period_end: string;
+  },
+  admin: any,
+  insertedId?: string
+): Promise<{ success: boolean; data?: any; error?: string }> {
+  
+  // Buscar el registro insertado (por ID si está disponible, o por datos)
+  let query = admin
+    .from('kpis')
+    .select('*')
+    .eq('company_id', companyId)
+    .ilike('name', expectedData.name)
+    .eq('value', expectedData.value)
+    .eq('period_start', expectedData.period_start)
+    .eq('period_end', expectedData.period_end)
+    .order('created_at', { ascending: false })
+    .limit(1);
+  
+  if (insertedId) {
+    query = admin.from('kpis').select('*').eq('id', insertedId).single();
+  }
+  
+  const { data, error } = await query.maybeSingle();
+  
+  if (error || !data) {
+    return {
+      success: false,
+      error: `No se pudo verificar la inserción: ${error?.message || 'Registro no encontrado'}`
+    };
+  }
+  
+  // Verificar consistencia de datos
+  if (
+    data.value !== expectedData.value ||
+    data.period_start !== expectedData.period_start ||
+    data.period_end !== expectedData.period_end
+  ) {
+    return {
+      success: false,
+      error: 'Los datos insertados no coinciden con los esperados',
+      data
+    };
+  }
+  
+  console.log('✅ [KPI Insertion Verified]', {
+    id: data.id,
+    name: data.name,
+    value: data.value,
+    period: `${data.period_start} → ${data.period_end}`
+  });
+  
+  return { success: true, data };
 }
 
 const corsHeaders = {
@@ -726,22 +854,6 @@ Si NO detectas ninguna intención clara de operación, entonces no invoques herr
                       }
                     }
                   } else if (update.action === 'new_period') {
-                    // Crear nuevo registro histórico
-                    // Calcular fechas si no se proporcionaron
-                    let periodStart = update.period_start;
-                    let periodEnd = update.period_end;
-                    
-                    if (!periodStart || !periodEnd) {
-                      console.log('📅 [Auto-calculating period dates]', {
-                        kpiName: update.name,
-                        reason: 'Missing period dates - using current month'
-                      });
-                      
-                      const dates = calculatePeriodDates(lastUserMessage);
-                      periodStart = periodStart || dates.start;
-                      periodEnd = periodEnd || dates.end;
-                    }
-                    
                     // 🔍 Buscar el KPI con fuzzy matching
                     const bestMatch = findBestKPIMatch(update.name, existingKPIs || []);
                     const searchName = bestMatch || update.name;
@@ -753,7 +865,40 @@ Si NO detectas ninguna intención clara de operación, entonces no invoques herr
                       willSearchFor: searchName
                     });
                     
-                    // Obtener el KPI más reciente para heredar área y unidad si no se especifican
+                    // Calcular fechas iniciales si no se proporcionaron
+                    let rawStart = update.period_start;
+                    let rawEnd = update.period_end;
+                    
+                    if (!rawStart || !rawEnd) {
+                      console.log('📅 [Auto-calculating period dates]', {
+                        kpiName: searchName,
+                        reason: 'Missing period dates - using current month'
+                      });
+                      
+                      const dates = calculatePeriodDates(lastUserMessage);
+                      rawStart = rawStart || dates.start;
+                      rawEnd = rawEnd || dates.end;
+                    }
+                    
+                    // ✅ VALIDACIÓN: Ajustar fechas si son inválidas
+                    const { start, end, wasAdjusted, adjustmentReason } = await validateAndAdjustPeriodDates(
+                      companyId,
+                      searchName,
+                      rawStart,
+                      rawEnd,
+                      admin
+                    );
+                    
+                    if (wasAdjusted) {
+                      console.warn('⚠️ [Auto-adjusted Period]', {
+                        kpiName: searchName,
+                        originalPeriod: `${rawStart} → ${rawEnd}`,
+                        adjustedPeriod: `${start} → ${end}`,
+                        reason: adjustmentReason
+                      });
+                    }
+                    
+                    // Obtener el KPI más reciente para heredar área y unidad
                     const { data: latest } = await admin
                       .from('kpis')
                       .select('area, unit, target_value')
@@ -763,45 +908,91 @@ Si NO detectas ninguna intención clara de operación, entonces no invoques herr
                       .limit(1)
                       .maybeSingle();
                     
-                    const { error: insertError } = await admin
-                      .from('kpis')
-                      .insert({
-                        company_id: companyId,
-                        name: searchName,
-                        value: update.value,
-                        area: update.area || latest?.area || 'general',
-                        unit: update.unit || latest?.unit || '',
-                        target_value: latest?.target_value || null,
-                        period_start: periodStart,
-                        period_end: periodEnd,
-                        source: 'assistant'
-                      });
+                    // Construir datos de inserción
+                    const kpiData = {
+                      company_id: companyId,
+                      name: searchName,
+                      value: update.value,
+                      unit: update.unit || latest?.unit || null,
+                      target_value: update.target_value || latest?.target_value || null,
+                      area: update.area || latest?.area || 'general',
+                      period_start: start,  // ✅ Usa fechas validadas
+                      period_end: end,      // ✅ Usa fechas validadas
+                      source: 'assistant',
+                      metadata: { 
+                        created_via: 'chat',
+                        date_adjusted: wasAdjusted,
+                        adjustment_reason: adjustmentReason || null
+                      }
+                    };
                     
-                    if (!insertError) {
-                      console.log('✅ [KPI New Period Success]', {
-                        timestamp: new Date().toISOString(),
-                        kpiName: searchName,
-                        originalInput: update.name !== searchName ? update.name : undefined,
-                        value: update.value,
-                        unit: update.unit || latest?.unit,
-                        periodStart: periodStart,
-                        periodEnd: periodEnd,
-                        inheritedFrom: latest ? 'existing KPI' : 'defaults',
-                        operation: 'new_period'
-                      });
-                      
-                      appliedOperations.push({
-                        entity: 'kpis',
-                        summary: `📈 Registrado nuevo valor de "${searchName}": ${update.value}${update.unit || latest?.unit || ''} para periodo ${periodStart} → ${periodEnd}`
-                      });
-                      
-                      await admin.from('audit_logs').insert({
-                        resource_type: 'kpi',
-                        action: 'create',
-                        user_id: user.id,
-                        metadata: { kpi_name: searchName, value: update.value, period_start: periodStart, period_end: periodEnd }
-                      });
+                    // Insertar y obtener el ID
+                    const { data: insertedKPI, error: insertError } = await admin
+                      .from('kpis')
+                      .insert(kpiData)
+                      .select('id')
+                      .single();
+                    
+                    if (insertError) {
+                      console.error('❌ [KPI Insertion Error]', insertError);
+                      throw insertError;
                     }
+                    
+                    // ✅ VALIDACIÓN POST-INSERCIÓN
+                    const verification = await verifyKPIInsertion(
+                      companyId,
+                      {
+                        name: kpiData.name,
+                        value: kpiData.value,
+                        period_start: kpiData.period_start,
+                        period_end: kpiData.period_end
+                      },
+                      admin,
+                      insertedKPI?.id
+                    );
+                    
+                    if (!verification.success) {
+                      console.error('❌ [KPI Verification Failed]', {
+                        expectedData: kpiData,
+                        error: verification.error,
+                        actualData: verification.data
+                      });
+                      
+                      throw new Error(`Fallo en verificación post-inserción: ${verification.error}`);
+                    }
+                    
+                    // Log de éxito con todos los detalles
+                    console.log('✅ [KPI New Period Success]', {
+                      timestamp: new Date().toISOString(),
+                      kpiName: searchName,
+                      originalInput: update.name !== searchName ? update.name : undefined,
+                      value: update.value,
+                      unit: kpiData.unit,
+                      periodStart: start,
+                      periodEnd: end,
+                      wasDateAdjusted: wasAdjusted,
+                      inheritedFrom: latest ? 'existing KPI' : 'new KPI',
+                      verifiedInDB: true,
+                      operation: 'new_period'
+                    });
+                    
+                    appliedOperations.push({
+                      entity: 'kpis',
+                      summary: `📈 Registrado nuevo valor de "${searchName}": ${update.value}${kpiData.unit || ''} para periodo ${start} → ${end}${wasAdjusted ? ' (fechas ajustadas automáticamente)' : ''}`
+                    });
+                    
+                    await admin.from('audit_logs').insert({
+                      resource_type: 'kpi',
+                      action: 'create',
+                      user_id: user.id,
+                      metadata: { 
+                        kpi_name: searchName, 
+                        value: update.value, 
+                        period_start: start, 
+                        period_end: end,
+                        date_adjusted: wasAdjusted
+                      }
+                    });
                   }
                 }
               } else if (toolCall.function.name === 'manage_tasks' && companyId && user) {
