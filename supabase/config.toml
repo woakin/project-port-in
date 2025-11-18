@@ -10,7 +10,7 @@ verify_jwt = true
 verify_jwt = true
 
 [functions.check-kpi-alerts]
-verify_jwt = true
+verify_jwt = false  # ⚠️ TEMPORAL para pruebas - volver a true en producción
 
 [functions.analyze-document]
 verify_jwt = true
