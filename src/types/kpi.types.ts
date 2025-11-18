@@ -16,11 +16,14 @@ export interface KPI {
 
 export interface KPIAlert {
   id: string;
-  kpi_id: string;
+  kpi_id: string | null;
+  kpi_name: string;
+  company_id: string;
   user_id: string;
   condition: 'above' | 'below' | 'equal';
   threshold: number;
   notification_channel: 'email' | 'in_app' | 'slack';
   is_active: boolean;
   last_triggered_at: string | null;
+  created_at?: string;
 }
