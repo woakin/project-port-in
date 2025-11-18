@@ -5,7 +5,6 @@ import { Breadcrumbs } from "./Breadcrumbs";
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { GlobalSearch } from "@/components/shared/GlobalSearch";
 import { QuickActionsFAB } from "@/components/shared/QuickActionsFAB";
-import { OnboardingTour } from "@/components/shared/OnboardingTour";
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -15,7 +14,6 @@ export function MainLayout({ children }: MainLayoutProps) {
   return (
     <SidebarProvider defaultOpen={true}>
       <GlobalSearch />
-      <OnboardingTour />
       <div className="min-h-screen w-full bg-background flex">
         <AppSidebar />
         <SidebarInset className="flex-1 flex flex-col w-full">

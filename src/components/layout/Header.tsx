@@ -1,4 +1,4 @@
-import { LogOut, User } from "lucide-react";
+import { LogOut, User, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useAdmin } from "@/hooks/useAdmin";
@@ -11,6 +11,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { Badge } from "@/components/shared/Badge";
 
 export function Header() {
   const { user, signOut, loading } = useAuth();
@@ -24,6 +25,32 @@ export function Header() {
           {!loading && user ? (
             <>
               <ProjectSelector />
+              
+              {/* Global Search Hint */}
+              <Tooltip delayDuration={100}>
+                <TooltipTrigger asChild>
+                  <button 
+                    onClick={() => {
+                      const event = new KeyboardEvent('keydown', { 
+                        key: 'k', 
+                        metaKey: true, 
+                        ctrlKey: true 
+                      });
+                      document.dispatchEvent(event);
+                    }}
+                    className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-muted/50 hover:bg-muted transition-colors cursor-pointer border border-border/50"
+                  >
+                    <Search className="h-3.5 w-3.5 text-muted-foreground" />
+                    <span className="text-xs text-muted-foreground">Buscar</span>
+                    <Badge variant="default" className="text-[10px] px-1.5 py-0 h-4 font-mono">
+                      {navigator.platform.includes('Mac') ? '⌘K' : 'Ctrl+K'}
+                    </Badge>
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <p>Búsqueda global rápida</p>
+                </TooltipContent>
+              </Tooltip>
               
               {/* Notifications Bell */}
               <NotificationPopover />
