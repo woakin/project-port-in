@@ -31,7 +31,7 @@ export function useKPIAlerts() {
     }
   };
 
-  const createAlert = async (alert: Omit<KPIAlert, 'id' | 'created_at' | 'last_triggered_at'>) => {
+  const createAlert = async (alert: Omit<KPIAlert, 'id' | 'created_at' | 'last_triggered_at' | 'user_id'>) => {
     try {
       const { error } = await supabase
         .from('kpi_alerts')

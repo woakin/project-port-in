@@ -7,35 +7,70 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useKPIs } from "@/hooks/useKPIs";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
 export function KPIAlerts() {
   const { alerts, loading, createAlert, deleteAlert, updateAlert } = useKPIAlerts();
-  const { kpis, getLatestKPIs } = useKPIs();
+  const { kpis, getUniqueKPINames } = useKPIs();
+  const { user } = useAuth();
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [companyId, setCompanyId] = useState<string | null>(null);
   const [newAlert, setNewAlert] = useState({
-    kpi_id: '',
+    kpi_name: '',
     condition: 'above' as 'above' | 'below' | 'equal',
     threshold: 0,
     notification_channel: 'in_app' as 'email' | 'in_app' | 'slack',
   });
 
-  const latestKPIs = getLatestKPIs();
+  const uniqueKPINames = getUniqueKPINames();
   const activeAlerts = alerts.filter(a => a.is_active);
 
+  useEffect(() => {
+    const fetchCompanyId = async () => {
+      if (!user) return;
+      
+      const { data } = await supabase
+        .from('profiles')
+        .select('company_id')
+        .eq('id', user.id)
+        .single();
+      
+      if (data?.company_id) {
+        setCompanyId(data.company_id);
+      }
+    };
+
+    fetchCompanyId();
+  }, [user]);
+
   const handleCreateAlert = async () => {
+    if (!companyId) {
+      toast({
+        title: "Error",
+        description: "No se pudo obtener la información de la empresa",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       await createAlert({
-        ...newAlert,
+        kpi_name: newAlert.kpi_name,
+        company_id: companyId,
+        condition: newAlert.condition,
+        threshold: newAlert.threshold,
+        notification_channel: newAlert.notification_channel,
         is_active: true,
-        user_id: '', // Will be set by hook
+        kpi_id: null,
       });
       setIsDialogOpen(false);
       setNewAlert({
-        kpi_id: '',
+        kpi_name: '',
         condition: 'above',
         threshold: 0,
         notification_channel: 'in_app',
@@ -83,11 +118,6 @@ export function KPIAlerts() {
     }
   };
 
-  const getKPIName = (kpiId: string) => {
-    const kpi = kpis.find(k => k.id === kpiId);
-    return kpi ? kpi.name : 'KPI';
-  };
-
   const getConditionLabel = (condition: string) => {
     const labels = {
       above: 'mayor que',
@@ -116,16 +146,16 @@ export function KPIAlerts() {
               <div className="space-y-2">
                 <Label htmlFor="kpi">KPI</Label>
                 <Select
-                  value={newAlert.kpi_id}
-                  onValueChange={(value) => setNewAlert({ ...newAlert, kpi_id: value })}
+                  value={newAlert.kpi_name}
+                  onValueChange={(value) => setNewAlert({ ...newAlert, kpi_name: value })}
                 >
                   <SelectTrigger id="kpi">
                     <SelectValue placeholder="Selecciona un KPI" />
                   </SelectTrigger>
                   <SelectContent>
-                    {latestKPIs.map((kpi) => (
-                      <SelectItem key={kpi.id} value={kpi.id}>
-                        {kpi.name} ({kpi.area})
+                    {uniqueKPINames.map((kpiName) => (
+                      <SelectItem key={kpiName} value={kpiName}>
+                        {kpiName}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -205,7 +235,7 @@ export function KPIAlerts() {
                 )}
                 <div className="flex-1">
                   <div className="text-sm font-medium text-foreground">
-                    {getKPIName(alert.kpi_id)}
+                    {alert.kpi_name || alert.kpi_id}
                   </div>
                   <div className="text-xs text-muted-foreground">
                     Notificar cuando sea {getConditionLabel(alert.condition)} {alert.threshold}

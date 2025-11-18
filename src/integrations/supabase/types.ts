@@ -277,39 +277,53 @@ export type Database = {
       }
       kpi_alerts: {
         Row: {
+          company_id: string
           condition: string
           created_at: string
           id: string
           is_active: boolean
-          kpi_id: string
+          kpi_id: string | null
+          kpi_name: string
           last_triggered_at: string | null
           notification_channel: string
           threshold: number
           user_id: string
         }
         Insert: {
+          company_id: string
           condition: string
           created_at?: string
           id?: string
           is_active?: boolean
-          kpi_id: string
+          kpi_id?: string | null
+          kpi_name: string
           last_triggered_at?: string | null
           notification_channel: string
           threshold: number
           user_id: string
         }
         Update: {
+          company_id?: string
           condition?: string
           created_at?: string
           id?: string
           is_active?: boolean
-          kpi_id?: string
+          kpi_id?: string | null
+          kpi_name?: string
           last_triggered_at?: string | null
           notification_channel?: string
           threshold?: number
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "kpi_alerts_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       kpis: {
         Row: {

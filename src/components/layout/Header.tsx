@@ -1,9 +1,10 @@
-import { Bell, LogOut, User } from "lucide-react";
+import { LogOut, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useAdmin } from "@/hooks/useAdmin";
 import { useNavigate } from "react-router-dom";
 import { ProjectSelector } from "@/components/projects/ProjectSelector";
+import { NotificationPopover } from "@/components/layout/NotificationPopover";
 import {
   Tooltip,
   TooltipContent,
@@ -24,18 +25,8 @@ export function Header() {
             <>
               <ProjectSelector />
               
-              {/* Notifications Bell with Tooltip */}
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="ghost" size="icon" className="relative">
-                    <Bell className="h-4 w-4" />
-                    <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-destructive rounded-full" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Notificaciones pendientes</p>
-                </TooltipContent>
-              </Tooltip>
+              {/* Notifications Bell */}
+              <NotificationPopover />
 
               {/* Admin Link with Tooltip */}
               {isAdmin && (
