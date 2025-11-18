@@ -228,7 +228,7 @@ serve(async (req) => {
                   'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                  from: 'Alasha Collective <joaquin@alasha.biz>',
+                  from: 'Alasha Collective <joaquin@updates.alasha.biz>',
                   to: profile.email,
                   subject: `${priorityBadge ? '⚠️ ' : ''}Alerta de KPI: ${latestKPI.name}`,
                   html: emailHtml,
