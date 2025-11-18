@@ -134,10 +134,19 @@ export function AppSidebar() {
     managementItems.some(item => currentPath === item.url)
   );
   const [assistantOpen, setAssistantOpen] = useState(
-    assistantItems.some(item => currentPath === item.url)
+    assistantItems.some(item => currentPath === item.url || 
+      (item.url === '/chat-diagnosis' && (currentPath === '/chat-diagnosis' || currentPath === '/voice-diagnosis'))
+    )
   );
 
   const isCollapsed = !sidebarOpen;
+
+  const isActive = (url: string) => {
+    if (url === '/chat-diagnosis') {
+      return currentPath === '/chat-diagnosis' || currentPath === '/voice-diagnosis';
+    }
+    return currentPath === url;
+  };
 
   return (
     <TooltipProvider delayDuration={0}>
@@ -165,7 +174,7 @@ export function AppSidebar() {
                   <SidebarMenuItem key={item.url}>
                     <NavItem 
                       item={item} 
-                      isActive={currentPath === item.url}
+                      isActive={isActive(item.url)}
                       isCollapsed={isCollapsed}
                     />
                   </SidebarMenuItem>
@@ -194,7 +203,7 @@ export function AppSidebar() {
                       <SidebarMenuItem key={item.url}>
                         <NavItem 
                           item={item} 
-                          isActive={currentPath === item.url}
+                          isActive={isActive(item.url)}
                           isCollapsed={isCollapsed}
                         />
                       </SidebarMenuItem>
@@ -225,7 +234,7 @@ export function AppSidebar() {
                       <SidebarMenuItem key={item.url}>
                         <NavItem 
                           item={item} 
-                          isActive={currentPath === item.url}
+                          isActive={isActive(item.url)}
                           isCollapsed={isCollapsed}
                         />
                       </SidebarMenuItem>
@@ -256,7 +265,7 @@ export function AppSidebar() {
                       <SidebarMenuItem key={item.url}>
                         <NavItem 
                           item={item} 
-                          isActive={currentPath === item.url}
+                          isActive={isActive(item.url)}
                           isCollapsed={isCollapsed}
                         />
                       </SidebarMenuItem>

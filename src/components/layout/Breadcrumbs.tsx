@@ -16,6 +16,8 @@ const routeLabels: Record<string, string> = {
   "/plans": "Planes",
   "/documents": "Documentos",
   "/chat": "Chat IA",
+  "/chat-diagnosis": "Diagnóstico",
+  "/voice-diagnosis": "Diagnóstico por Voz",
   "/diagnosticos": "Diagnósticos",
   "/projects": "Proyectos",
   "/admin": "Administración",
@@ -42,6 +44,31 @@ export function Breadcrumbs() {
       isLast,
     };
   });
+
+  // Si estamos en chat-diagnosis, agregar área actual como breadcrumb
+  if (location.pathname === '/chat-diagnosis') {
+    const currentArea = sessionStorage.getItem('current_diagnosis_area');
+    const areaLabels: Record<string, string> = {
+      strategy: 'Estrategia',
+      operations: 'Operaciones',
+      finance: 'Finanzas',
+      marketing: 'Marketing',
+      legal: 'Legal',
+      technology: 'Tecnología'
+    };
+    
+    if (currentArea && areaLabels[currentArea]) {
+      breadcrumbItems.push({
+        path: '/chat-diagnosis',
+        label: areaLabels[currentArea],
+        isLast: true
+      });
+      // Marcar el anterior como no último
+      if (breadcrumbItems.length > 1) {
+        breadcrumbItems[breadcrumbItems.length - 2].isLast = false;
+      }
+    }
+  }
 
   return (
     <Breadcrumb>
