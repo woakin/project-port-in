@@ -21,6 +21,7 @@ import TasksSheet from '@/components/chat/sheets/TasksSheet';
 import DocumentsSheet from '@/components/chat/sheets/DocumentsSheet';
 import DiagnosesSheet from '@/components/chat/sheets/DiagnosesSheet';
 import { AreaProgressBar } from '@/components/chat/AreaProgressBar';
+import { MainLayout } from '@/components/layout/MainLayout';
 
 type ChatMode = 'diagnosis' | 'strategic' | 'follow_up' | 'document';
 
@@ -223,6 +224,13 @@ export default function ChatDiagnosis() {
       }));
     }
   }, [step, chatMode]);
+
+  // Actualizar sessionStorage cuando cambie el área actual (para breadcrumbs)
+  useEffect(() => {
+    if (step === 'chat' && chatMode === 'diagnosis') {
+      sessionStorage.setItem('current_diagnosis_area', currentSection);
+    }
+  }, [currentSection, step, chatMode]);
 
   const getInitialMessage = (projectName: string, mode: ChatMode, isFollowUp: boolean = false) => {
     const messages = {
@@ -1677,93 +1685,96 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
   }
 
   return (
-    <div className="h-screen bg-background flex flex-col overflow-hidden">
-      <header className="flex-shrink-0 border-b border-border py-2 px-4 bg-card">
-        <div className="max-w-4xl mx-auto flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => navigate('/')}
-              className="shrink-0"
-            >
-              <Home className="h-5 w-5" />
-            </Button>
-            <div>
-              <h1 className="text-xl font-bold text-foreground">
-                {companyInfo?.projectName}
-              </h1>
+    <MainLayout>
+      <div className="flex flex-col h-full relative">
+        {/* Company Info Banner - Solo en diagnosis mode */}
+        {chatMode === 'diagnosis' && companyInfo && (
+          <div className="bg-muted/30 border-b px-6 py-3">
+            <div className="flex items-center justify-between max-w-7xl mx-auto">
+              <div className="flex items-center gap-4">
+                <div>
+                  <h2 className="text-sm font-semibold text-foreground">
+                    {companyInfo.name}
+                  </h2>
+                  <p className="text-xs text-muted-foreground">
+                    {companyInfo.industry} • {companyInfo.stage === 'idea' ? 'Idea' : companyInfo.stage === 'startup' ? 'Startup' : companyInfo.stage === 'pyme' ? 'PYME' : 'Corporativo'}
+                  </p>
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  Proyecto: <span className="font-medium text-foreground">
+                    {companyInfo.projectName}
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowModeInfo(!showModeInfo)}
+                  className="gap-2"
+                >
+                  <HelpCircle className="h-4 w-4" />
+                  <span className="hidden sm:inline">Ayuda</span>
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Mode Info */}
+        {showModeInfo && (
+          <div className="bg-muted/50 px-6 py-4 border-b">
+            <div className="max-w-7xl mx-auto">
               <p className="text-sm text-muted-foreground">
-                {companyInfo?.name} · {companyInfo?.industry}
+                <strong>Modo {getModeLabel(chatMode)}:</strong>{' '}
+                {chatMode === 'diagnosis' && 'Generación de diagnóstico completo y plan de acción personalizado.'}
+                {chatMode === 'strategic' && 'Consultas estratégicas puntuales sin generar diagnóstico formal.'}
+                {chatMode === 'follow_up' && 'Seguimiento del plan activo, revisión de progreso y ajustes.'}
+                {chatMode === 'document' && 'Análisis contextualizado de documentos subidos.'}
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <QuickActions 
-              projectId={currentProject?.id}
-              onActionClick={handleQuickAction}
-              onOpenSheet={setOpenSheet}
-            />
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowModeInfo(!showModeInfo)}
-              className="gap-2"
-            >
-              <HelpCircle className="h-4 w-4" />
-              <span className="hidden sm:inline">Ayuda</span>
-            </Button>
-          </div>
-        </div>
-      </header>
-
-      {showModeInfo && (
-        <div className="flex-shrink-0 bg-muted/50 p-4 border-b border-border">
-          <div className="max-w-4xl mx-auto">
-            <p className="text-sm text-muted-foreground">
-              <strong>Modo {getModeLabel(chatMode)}:</strong>{' '}
-              {chatMode === 'diagnosis' && 'Generación de diagnóstico completo y plan de acción personalizado.'}
-              {chatMode === 'strategic' && 'Consultas estratégicas puntuales sin generar diagnóstico formal.'}
-              {chatMode === 'follow_up' && 'Seguimiento del plan activo, revisión de progreso y ajustes.'}
-              {chatMode === 'document' && 'Análisis contextualizado de documentos subidos.'}
-            </p>
-          </div>
-        </div>
-      )}
-
-      <div className="flex-shrink-0">
-        <ModeSelector 
-          currentMode={chatMode} 
-          onModeChange={handleModeChange}
-          disabled={sending || generatingDiagnosis}
-        />
-
-        {chatMode === 'diagnosis' && (
-          <>
-            {/* Indicador de avance automático */}
-            {isAutoAdvancing && (
-              <div className="flex items-center gap-2 px-4 py-3 mx-4 mt-2 bg-primary/10 border border-primary/30 rounded-lg animate-pulse">
-                <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                <span className="text-sm font-medium text-primary">
-                  ⏭️ Avanzando automáticamente al siguiente área...
-                </span>
-              </div>
-            )}
-            
-            <AreaProgressBar
-              areas={areaProgress.areas}
-              currentIndex={areaProgress.currentIndex}
-              onGoToArea={handleGoToArea}
-              onSkipArea={handleSkipArea}
-              onNextArea={handleNextArea}
-              onGenerateDiagnosis={() => setShowSummary(true)}
-              canAdvance={areaProgress.areas[areaProgress.currentIndex]?.messageCount >= 2}
-              canGenerate={areaProgress.areas.filter(a => a.status === 'completed').length >= 3}
-              isLoading={sending || generatingDiagnosis}
-            />
-          </>
         )}
-      </div>
+
+        {/* Mode Selector */}
+        <div className="border-b">
+          <div className="px-6 py-3 max-w-7xl mx-auto">
+            <ModeSelector 
+              currentMode={chatMode} 
+              onModeChange={handleModeChange}
+              disabled={sending || generatingDiagnosis}
+            />
+          </div>
+        </div>
+
+        {/* Progress Bar - Solo en diagnosis mode */}
+        {chatMode === 'diagnosis' && (
+          <div className="border-b bg-background/95">
+            <div className="px-6 py-3 max-w-7xl mx-auto">
+              {/* Indicador de avance automático */}
+              {isAutoAdvancing && (
+                <div className="flex items-center gap-2 mb-3 bg-primary/10 border border-primary/30 rounded-lg px-4 py-3 animate-pulse">
+                  <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                  <span className="text-sm font-medium text-primary">
+                    ⏭️ Avanzando automáticamente al siguiente área...
+                  </span>
+                </div>
+              )}
+              
+              <AreaProgressBar
+                areas={areaProgress.areas}
+                currentIndex={areaProgress.currentIndex}
+                onGoToArea={handleGoToArea}
+                onSkipArea={handleSkipArea}
+                onNextArea={handleNextArea}
+                onGenerateDiagnosis={() => setShowSummary(true)}
+                canAdvance={areaProgress.areas[areaProgress.currentIndex]?.messageCount >= 2}
+                canGenerate={areaProgress.areas.filter(a => a.status === 'completed').length >= 3}
+                isLoading={sending || generatingDiagnosis}
+              />
+            </div>
+          </div>
+        )}
 
       {/* Side Sheets */}
       <Sheet open={openSheet === 'kpis'} onOpenChange={(open) => !open && setOpenSheet(null)}>
@@ -1909,7 +1920,7 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
         </DialogContent>
       </Dialog>
 
-      <div className="flex-1 overflow-y-auto p-4 min-h-0">
+      <div className="flex-1 overflow-y-auto px-6 py-6 min-h-0">
         <div className="max-w-4xl mx-auto space-y-4">
           {messages.map((message, idx) => (
             <div
@@ -1945,7 +1956,7 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
       </div>
 
       <div className="flex-shrink-0 border-t border-border bg-card">
-        <div className="max-w-4xl mx-auto p-4">
+        <div className="max-w-4xl mx-auto px-6 py-4">
           <div className="flex gap-2 items-end">
             <div className="relative flex-1">
               <Textarea
@@ -2008,6 +2019,8 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
           </div>
         </div>
       </div>
-    </div>
+      
+      </div> {/* Cierre del div principal flex */}
+    </MainLayout>
   );
 }
