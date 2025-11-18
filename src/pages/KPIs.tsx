@@ -32,7 +32,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { TrendingUp, TrendingDown, Edit2, Search, Target, Trash2, Plus, Star, BarChart3 } from "lucide-react";
+import { TrendingUp, TrendingDown, Settings, Search, Target, Trash2, Plus, Star, BarChart3 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { KPI } from "@/types/kpi.types";
@@ -44,6 +44,8 @@ import { KPIGridView } from "@/components/kpi/KPIGridView";
 import { KPIAreaChart } from "@/components/dashboard/KPIAreaChart";
 import { KPIAlerts } from "@/components/dashboard/KPIAlerts";
 import { SuggestedKPIsModal } from "@/components/kpi/SuggestedKPIsModal";
+import { KPIConfigModal } from "@/components/kpi/KPIConfigModal";
+import { AddKPIValueModal } from "@/components/kpi/AddKPIValueModal";
 
 export default function KPIs() {
   const { kpis, loading, refetch, getKPIHistory, getUniqueKPINames, getKPITrend, markAsMainKPI, getLatestKPIs } = useKPIs();
@@ -52,8 +54,6 @@ export default function KPIs() {
   const { updateContext } = useAIAssistant();
   const [searchTerm, setSearchTerm] = useState("");
   const [areaFilter, setAreaFilter] = useState<string>("all");
-  const [editingKPI, setEditingKPI] = useState<KPI | null>(null);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [deletingKPI, setDeletingKPI] = useState<KPI | null>(null);
@@ -62,17 +62,12 @@ export default function KPIs() {
   const [selectedKPIName, setSelectedKPIName] = useState<string>("");
   const [activeTab, setActiveTab] = useState("overview");
   const [isSuggestionsModalOpen, setIsSuggestionsModalOpen] = useState(false);
-
-  // Form state for editing
-  const [editForm, setEditForm] = useState({
-    name: "",
-    area: "",
-    value: "",
-    target_value: "",
-    unit: "",
-    period_start: "",
-    period_end: "",
-  });
+  
+  // New modals state
+  const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
+  const [isAddValueModalOpen, setIsAddValueModalOpen] = useState(false);
+  const [selectedKPIForConfig, setSelectedKPIForConfig] = useState<KPI | null>(null);
+  const [selectedKPIForValue, setSelectedKPIForValue] = useState<KPI | null>(null);
 
   // Form state for creating
   const [createForm, setCreateForm] = useState({
@@ -147,18 +142,20 @@ export default function KPIs() {
     return matchesSearch && matchesArea;
   });
 
-  const handleEditClick = (kpi: KPI) => {
-    setEditingKPI(kpi);
-    setEditForm({
-      name: kpi.name,
-      area: kpi.area,
-      value: kpi.value.toString(),
-      target_value: kpi.target_value?.toString() || "",
-      unit: kpi.unit || "",
-      period_start: kpi.period_start.split('T')[0],
-      period_end: kpi.period_end.split('T')[0],
-    });
-    setIsEditDialogOpen(true);
+  const handleConfigClick = (kpi: KPI) => {
+    setSelectedKPIForConfig(kpi);
+    setIsConfigModalOpen(true);
+  };
+
+  const handleAddValueClick = (kpi: KPI) => {
+    setSelectedKPIForValue(kpi);
+    setIsAddValueModalOpen(true);
+  };
+
+  const handleKPIClick = (kpiName: string) => {
+    setSelectedKPIName(kpiName);
+    setActiveTab("trends");
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleCreateClick = () => {
@@ -177,45 +174,6 @@ export default function KPIs() {
     setIsCreateDialogOpen(true);
   };
 
-  const handleSaveEdit = async () => {
-    if (!editingKPI) return;
-
-    setIsSaving(true);
-    try {
-      const { error } = await supabase
-        .from("kpis")
-        .update({
-          name: editForm.name,
-          area: editForm.area,
-          value: parseFloat(editForm.value),
-          target_value: editForm.target_value ? parseFloat(editForm.target_value) : null,
-          unit: editForm.unit || null,
-          period_start: editForm.period_start,
-          period_end: editForm.period_end,
-        })
-        .eq("id", editingKPI.id);
-
-      if (error) throw error;
-
-      toast({
-        title: "KPI actualizado",
-        description: "El KPI se ha actualizado correctamente",
-      });
-
-      setIsEditDialogOpen(false);
-      setEditingKPI(null);
-      refetch();
-    } catch (error) {
-      console.error("Error updating KPI:", error);
-      toast({
-        title: "Error",
-        description: "No se pudo actualizar el KPI",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSaving(false);
-    }
-  };
 
   const handleCreateKPI = async () => {
     if (!user) return;
@@ -339,11 +297,6 @@ export default function KPIs() {
     return kpi.value >= kpi.target_value;
   };
 
-  const handleKPIClick = (kpiName: string) => {
-    setSelectedKPIName(kpiName);
-    setActiveTab("trends");
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
 
   const areaColors: Record<string, string> = {
     strategy: "bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300",
@@ -586,10 +539,18 @@ export default function KPIs() {
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  onClick={() => handleEditClick(kpi)}
-                                  title="Editar KPI"
+                                  onClick={() => handleConfigClick(kpi)}
+                                  title="Editar configuración"
                                 >
-                                  <Edit2 className="h-4 w-4" />
+                                  <Settings className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleAddValueClick(kpi)}
+                                  title="Registrar nuevo valor"
+                                >
+                                  <Plus className="h-4 w-4" />
                                 </Button>
                                 <Button
                                   variant="ghost"
@@ -666,127 +627,6 @@ export default function KPIs() {
         </Tabs>
       </div>
 
-      {/* Edit Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Editar KPI</DialogTitle>
-            <DialogDescription>
-              Actualiza los valores del indicador
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Nombre</Label>
-              <Input
-                id="name"
-                value={editForm.name}
-                onChange={(e) =>
-                  setEditForm({ ...editForm, name: e.target.value })
-                }
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="area">Área</Label>
-              <Select
-                value={editForm.area}
-                onValueChange={(value) =>
-                  setEditForm({ ...editForm, area: value })
-                }
-              >
-                <SelectTrigger id="area">
-                  <SelectValue placeholder="Selecciona un área" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="strategy">Estrategia</SelectItem>
-                  <SelectItem value="finance">Finanzas</SelectItem>
-                  <SelectItem value="marketing">Marketing</SelectItem>
-                  <SelectItem value="operations">Operaciones</SelectItem>
-                  <SelectItem value="technology">Tecnología</SelectItem>
-                  <SelectItem value="legal">Legal</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="value">Valor Actual</Label>
-              <Input
-                id="value"
-                type="number"
-                value={editForm.value}
-                onChange={(e) =>
-                  setEditForm({ ...editForm, value: e.target.value })
-                }
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="target">Meta</Label>
-              <Input
-                id="target"
-                type="number"
-                value={editForm.target_value}
-                onChange={(e) =>
-                  setEditForm({ ...editForm, target_value: e.target.value })
-                }
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="unit">Unidad</Label>
-              <Input
-                id="unit"
-                value={editForm.unit}
-                onChange={(e) =>
-                  setEditForm({ ...editForm, unit: e.target.value })
-                }
-                placeholder="Ej: %, $, usuarios, etc."
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="period-start">Inicio del Periodo</Label>
-                <Input
-                  id="period-start"
-                  type="date"
-                  value={editForm.period_start}
-                  onChange={(e) =>
-                    setEditForm({ ...editForm, period_start: e.target.value })
-                  }
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="period-end">Fin del Periodo</Label>
-                <Input
-                  id="period-end"
-                  type="date"
-                  value={editForm.period_end}
-                  onChange={(e) =>
-                    setEditForm({ ...editForm, period_end: e.target.value })
-                  }
-                />
-              </div>
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setIsEditDialogOpen(false)}
-              disabled={isSaving}
-            >
-              Cancelar
-            </Button>
-            <Button onClick={handleSaveEdit} disabled={isSaving}>
-              {isSaving ? "Guardando..." : "Guardar cambios"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <DialogContent>
@@ -965,6 +805,26 @@ export default function KPIs() {
             title: "KPIs creados",
             description: "Los KPIs sugeridos se han agregado correctamente",
           });
+        }}
+      />
+
+      <KPIConfigModal
+        kpi={selectedKPIForConfig}
+        open={isConfigModalOpen}
+        onOpenChange={setIsConfigModalOpen}
+        onSuccess={() => {
+          refetch();
+          setSelectedKPIForConfig(null);
+        }}
+      />
+
+      <AddKPIValueModal
+        kpi={selectedKPIForValue}
+        open={isAddValueModalOpen}
+        onOpenChange={setIsAddValueModalOpen}
+        onSuccess={() => {
+          refetch();
+          setSelectedKPIForValue(null);
         }}
       />
     </MainLayout>
