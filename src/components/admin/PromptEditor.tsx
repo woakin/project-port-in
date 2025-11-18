@@ -16,6 +16,7 @@ interface PromptEditorProps {
   value: string;
   defaultValue: string;
   lastUpdated: string | null;
+  isExplicitlySaved: boolean;
   onChange: (value: string) => void;
   onSave: () => void;
   onRestore: () => void;
@@ -38,6 +39,7 @@ export function PromptEditor({
   value,
   defaultValue,
   lastUpdated,
+  isExplicitlySaved,
   onChange,
   onSave,
   onRestore,
@@ -47,7 +49,6 @@ export function PromptEditor({
   isSaving
 }: PromptEditorProps) {
   const [showVariables, setShowVariables] = useState(false);
-  const isUsingCustom = value.trim() !== '' && value !== defaultValue;
   const charCount = value.length;
   const isOverLimit = charCount > 4000;
 
@@ -56,15 +57,36 @@ export function PromptEditor({
       {/* Header con estado */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          {isUsingCustom ? (
-            <Badge variant="default" className="bg-yellow-500">
-              ✓ Personalizado
-            </Badge>
-          ) : (
-            <Badge variant="secondary">
-              Por Defecto
-            </Badge>
-          )}
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                {isExplicitlySaved ? (
+                  value === defaultValue ? (
+                    <Badge variant="secondary" className="bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800">
+                      ✓ Guardado (Default)
+                    </Badge>
+                  ) : (
+                    <Badge variant="default" className="bg-yellow-500 hover:bg-yellow-600">
+                      ✓ Personalizado
+                    </Badge>
+                  )
+                ) : (
+                  <Badge variant="outline" className="text-muted-foreground">
+                    Usando Default
+                  </Badge>
+                )}
+              </TooltipTrigger>
+              <TooltipContent>
+                <p className="text-xs max-w-xs">
+                  {isExplicitlySaved 
+                    ? value === defaultValue
+                      ? "Este prompt fue guardado explícitamente en el sistema y coincide con el default"
+                      : "Este prompt fue guardado explícitamente con contenido personalizado"
+                    : "Usando el prompt por defecto del sistema (no guardado en DB)"}
+                </p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           {lastUpdated && (
             <span className="text-sm text-muted-foreground">
               Última edición: {new Date(lastUpdated).toLocaleDateString()}
@@ -155,7 +177,7 @@ export function PromptEditor({
         <Button
           variant="outline"
           onClick={onRestore}
-          disabled={!isUsingCustom || isSaving}
+          disabled={!isExplicitlySaved || isSaving}
         >
           <RotateCcw className="h-4 w-4 mr-2" />
           Restaurar Default
