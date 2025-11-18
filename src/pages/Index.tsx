@@ -5,6 +5,8 @@ import { useKPIs } from "@/hooks/useKPIs";
 import { useProjectContext } from "@/contexts/ProjectContext";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { KPICard } from "@/components/dashboard/KPICard";
+import { KPICardSkeleton } from "@/components/shared/KPICardSkeleton";
+import { TasksListSkeleton } from "@/components/shared/TaskCardSkeleton";
 import { TasksList } from "@/components/dashboard/TasksList";
 import { MainKPIChart } from "@/components/kpi/MainKPIChart";
 import { DiagnosticHeroCard } from "@/components/dashboard/DiagnosticHeroCard";
@@ -589,10 +591,45 @@ const Index = () => {
 
         {/* KPI Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-standard mb-comfortable">
-          <KPICard title="Progreso General" value={completionRate.toString()} unit="%" />
-          <KPICard title="Tareas Completadas" value={taskStats.completed.toString()} unit={`de ${taskStats.total}`} />
-          <KPICard title="KPIs en Meta" value={kpiStats.onTarget.toString()} unit={`de ${kpiStats.total}`} />
-          <KPICard title="Tareas Atrasadas" value={overdueTasks.length.toString()} unit="tareas" />
+          {loadingKPIs || loadingTasks ? (
+            <>
+              <KPICardSkeleton />
+              <KPICardSkeleton />
+              <KPICardSkeleton />
+              <KPICardSkeleton />
+            </>
+          ) : (
+            <>
+              <KPICard 
+                title="Progreso General" 
+                value={completionRate.toString()} 
+                unit="%" 
+                change={completionRate > 0 ? completionRate : undefined}
+                trend={completionRate >= 75 ? 'up' : completionRate >= 50 ? 'stable' : 'down'}
+              />
+              <KPICard 
+                title="Tareas Completadas" 
+                value={taskStats.completed.toString()} 
+                unit={`de ${taskStats.total}`}
+                change={taskStats.total > 0 ? Math.round((taskStats.completed / taskStats.total) * 100) : 0}
+                trend={taskStats.completed > taskStats.pending ? 'up' : 'down'}
+              />
+              <KPICard 
+                title="KPIs en Meta" 
+                value={kpiStats.onTarget.toString()} 
+                unit={`de ${kpiStats.total}`}
+                change={kpiStats.total > 0 ? Math.round((kpiStats.onTarget / kpiStats.total) * 100) : 0}
+                trend={kpiStats.onTarget >= kpiStats.total / 2 ? 'up' : 'down'}
+              />
+              <KPICard 
+                title="Tareas Atrasadas" 
+                value={overdueTasks.length.toString()} 
+                unit="tareas"
+                change={overdueTasks.length > 0 ? -Math.min(overdueTasks.length * 10, 100) : 0}
+                trend={overdueTasks.length > 0 ? 'down' : 'up'}
+              />
+            </>
+          )}
         </div>
 
         {/* Tasks Section - 2 columns */}
@@ -600,23 +637,37 @@ const Index = () => {
           <div className="lg:col-span-2">
             <Card variant="service">
               <h3 className="text-base font-semibold text-foreground mb-4">Próximas Tareas</h3>
-              {loadingTasks ? <div className="text-sm text-muted-foreground">Cargando tareas...</div> : upcomingTasks.length === 0 ? <div className="text-sm text-muted-foreground py-8 text-center">
+              {loadingTasks ? (
+                <TasksListSkeleton />
+              ) : upcomingTasks.length === 0 ? (
+                <div className="text-sm text-muted-foreground py-8 text-center">
                   No hay tareas próximas
-                </div> : <TasksList tasks={upcomingTasks.slice(0, 8)} onUpdateStatus={handleTaskStatusUpdate} />}
-              {upcomingTasks.length > 0 && <Button variant="ghost" className="w-full mt-4" onClick={() => navigate('/tasks')}>
+                </div>
+              ) : (
+                <TasksList tasks={upcomingTasks.slice(0, 8)} onUpdateStatus={handleTaskStatusUpdate} />
+              )}
+              {upcomingTasks.length > 0 && (
+                <Button variant="ghost" className="w-full mt-4" onClick={() => navigate('/tasks')}>
                   Ver todas las tareas
                   <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>}
+                </Button>
+              )}
             </Card>
           </div>
 
           <div className="space-y-standard">
-            {overdueTasks.length > 0 && <Card variant="service" className="border-destructive">
+            {overdueTasks.length > 0 && (
+              <Card variant="service" className="border-destructive">
                 <h3 className="text-base font-semibold text-destructive mb-4">
                   Tareas Atrasadas ({overdueTasks.length})
                 </h3>
-                <TasksList tasks={overdueTasks.slice(0, 3)} onUpdateStatus={handleTaskStatusUpdate} />
-              </Card>}
+                {loadingTasks ? (
+                  <TasksListSkeleton />
+                ) : (
+                  <TasksList tasks={overdueTasks.slice(0, 3)} onUpdateStatus={handleTaskStatusUpdate} />
+                )}
+              </Card>
+            )}
           </div>
         </div>
 
