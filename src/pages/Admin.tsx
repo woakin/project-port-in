@@ -50,6 +50,7 @@ type PromptData = {
   current: string;
   original: string;
   lastUpdated: string | null;
+  isExplicitlySaved: boolean;
 };
 
 const DEFAULT_PROMPTS: Record<PromptMode, string> = {
@@ -176,10 +177,10 @@ export default function Admin() {
   
   // Estado para los prompts de cada modo
   const [prompts, setPrompts] = useState<Record<PromptMode, PromptData>>({
-    diagnosis: { current: '', original: '', lastUpdated: null },
-    strategic: { current: '', original: '', lastUpdated: null },
-    follow_up: { current: '', original: '', lastUpdated: null },
-    document: { current: '', original: '', lastUpdated: null }
+    diagnosis: { current: '', original: '', lastUpdated: null, isExplicitlySaved: false },
+    strategic: { current: '', original: '', lastUpdated: null, isExplicitlySaved: false },
+    follow_up: { current: '', original: '', lastUpdated: null, isExplicitlySaved: false },
+    document: { current: '', original: '', lastUpdated: null, isExplicitlySaved: false }
   });
   
   const [activePromptMode, setActivePromptMode] = useState<PromptMode>('diagnosis');
@@ -254,25 +255,54 @@ export default function Admin() {
         const key = `chat_${mode}_system_prompt`;
         const { data, error } = await supabase
           .from('system_config')
-          .select('value, updated_at')
+          .select('value, updated_at, updated_by')
           .eq('key', key)
           .maybeSingle();
 
         if (!error && data) {
           const promptText = (data.value as any).prompt || '';
+          const hasBeenSaved = !!data.updated_by;
+          
           updatedPrompts[mode] = {
             current: promptText,
             original: promptText,
-            lastUpdated: data.updated_at
+            lastUpdated: data.updated_at,
+            isExplicitlySaved: hasBeenSaved && promptText.trim() !== ''
           };
         } else {
+          // Inicializar con default si está vacío en DB
           updatedPrompts[mode] = {
-            current: '',
-            original: '',
-            lastUpdated: null
+            current: DEFAULT_PROMPTS[mode],
+            original: DEFAULT_PROMPTS[mode],
+            lastUpdated: null,
+            isExplicitlySaved: false
           };
         }
       }
+
+      // Logging para debugging
+      console.log('[Admin] Prompts cargados desde backend:', {
+        diagnosis: {
+          length: updatedPrompts.diagnosis.current.length,
+          isExplicitlySaved: updatedPrompts.diagnosis.isExplicitlySaved,
+          lastUpdated: updatedPrompts.diagnosis.lastUpdated
+        },
+        strategic: {
+          length: updatedPrompts.strategic.current.length,
+          isExplicitlySaved: updatedPrompts.strategic.isExplicitlySaved,
+          lastUpdated: updatedPrompts.strategic.lastUpdated
+        },
+        follow_up: {
+          length: updatedPrompts.follow_up.current.length,
+          isExplicitlySaved: updatedPrompts.follow_up.isExplicitlySaved,
+          lastUpdated: updatedPrompts.follow_up.lastUpdated
+        },
+        document: {
+          length: updatedPrompts.document.current.length,
+          isExplicitlySaved: updatedPrompts.document.isExplicitlySaved,
+          lastUpdated: updatedPrompts.document.lastUpdated
+        }
+      });
 
       setPrompts(updatedPrompts);
     } catch (error) {
@@ -318,6 +348,7 @@ export default function Admin() {
         ...prev,
         [activePromptMode]: {
           ...prev[activePromptMode],
+          isExplicitlySaved: true,
           original: currentPrompt,
           lastUpdated: new Date().toISOString()
         }
@@ -358,9 +389,10 @@ export default function Admin() {
       setPrompts(prev => ({
         ...prev,
         [activePromptMode]: {
-          current: '',
-          original: '',
-          lastUpdated: new Date().toISOString()
+          current: DEFAULT_PROMPTS[activePromptMode],
+          original: DEFAULT_PROMPTS[activePromptMode],
+          lastUpdated: new Date().toISOString(),
+          isExplicitlySaved: false
         }
       }));
 
@@ -775,6 +807,12 @@ export default function Admin() {
                       activeMode={activePromptMode}
                       onChange={handleModeChange}
                       unsavedChanges={unsavedChanges}
+                      promptsStatus={{
+                        diagnosis: { isExplicitlySaved: prompts.diagnosis.isExplicitlySaved },
+                        strategic: { isExplicitlySaved: prompts.strategic.isExplicitlySaved },
+                        follow_up: { isExplicitlySaved: prompts.follow_up.isExplicitlySaved },
+                        document: { isExplicitlySaved: prompts.document.isExplicitlySaved }
+                      }}
                     />
                     
                     <PromptEditor
@@ -782,6 +820,7 @@ export default function Admin() {
                       value={currentPromptData.current}
                       defaultValue={DEFAULT_PROMPTS[activePromptMode]}
                       lastUpdated={currentPromptData.lastUpdated}
+                      isExplicitlySaved={currentPromptData.isExplicitlySaved}
                       onChange={handlePromptChange}
                       onSave={savePrompt}
                       onRestore={restoreToDefault}
