@@ -6,7 +6,8 @@ import {
   MessageSquare, 
   Stethoscope,
   FolderKanban,
-  ChevronRight
+  ChevronRight,
+  Target
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import {
@@ -79,10 +80,32 @@ const managementItems = [
 
 const assistantItems = [
   {
-    title: "Chat IA",
-    url: "/chat-diagnosis",
+    title: "Diagnóstico Completo",
+    url: "/chat-diagnosis?mode=diagnosis",
     icon: MessageSquare,
-    description: "Asistente conversacional"
+    description: "Genera diagnóstico y plan completo",
+    mode: "diagnosis"
+  },
+  {
+    title: "Mentor Estratégico",
+    url: "/chat-diagnosis?mode=strategic",
+    icon: Target,
+    description: "Visión de largo plazo y dirección",
+    mode: "strategic"
+  },
+  {
+    title: "Coach Operativo",
+    url: "/chat-diagnosis?mode=follow_up",
+    icon: TrendingUp,
+    description: "Ejecución táctica y priorización",
+    mode: "follow_up"
+  },
+  {
+    title: "Analista de Datos",
+    url: "/chat-diagnosis?mode=document",
+    icon: FileText,
+    description: "Insights de datos y documentos",
+    mode: "document"
   }
 ];
 
@@ -92,6 +115,7 @@ interface NavItemProps {
     url: string;
     icon: React.ComponentType<{ className?: string }>;
     description: string;
+    mode?: string;
   };
   isActive: boolean;
   isCollapsed: boolean;
@@ -134,9 +158,24 @@ export function AppSidebar() {
   const isCollapsed = !sidebarOpen;
 
   const isActive = (url: string) => {
-    if (url === '/chat-diagnosis') {
-      return currentPath === '/chat-diagnosis' || currentPath === '/voice-diagnosis';
+    // Para chat-diagnosis, verificar también el modo en query params
+    if (url.includes('/chat-diagnosis')) {
+      // Si no estamos en chat-diagnosis, no está activo
+      if (!currentPath.startsWith('/chat-diagnosis')) return false;
+      
+      // Extraer el modo del URL del item
+      const itemMode = url.split('mode=')[1];
+      const currentMode = new URLSearchParams(location.search).get('mode') || 'diagnosis';
+      
+      return itemMode === currentMode;
     }
+    
+    // Para voice-diagnosis, destacar también el item de diagnosis
+    if (url.includes('mode=diagnosis') && currentPath === '/voice-diagnosis') {
+      return true;
+    }
+    
+    // Para otras rutas, match exacto
     return currentPath === url;
   };
 

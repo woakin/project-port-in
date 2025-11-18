@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useProjectContext } from '@/contexts/ProjectContext';
 import { Button } from '@/components/ui/button';
@@ -51,6 +51,7 @@ export default function ChatDiagnosis() {
   const { user, loading: authLoading } = useAuth();
   const { currentProject, loading: projectLoading, setCurrentProject, refreshProjects } = useProjectContext();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
@@ -70,6 +71,14 @@ export default function ChatDiagnosis() {
   const [hasPreviousDiagnosis, setHasPreviousDiagnosis] = useState(false);
   const [chatMode, setChatMode] = useState<ChatMode>('diagnosis');
   const [showModeInfo, setShowModeInfo] = useState(false);
+
+  // Leer modo desde query parameter
+  useEffect(() => {
+    const modeFromUrl = searchParams.get('mode') as ChatMode | null;
+    if (modeFromUrl && ['diagnosis', 'strategic', 'follow_up', 'document'].includes(modeFromUrl)) {
+      setChatMode(modeFromUrl);
+    }
+  }, [searchParams]);
   const [openSheet, setOpenSheet] = useState<SheetType>(null);
   
   // Estados para seguimiento de progreso por área (NUEVO SISTEMA)
