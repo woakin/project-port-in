@@ -36,7 +36,7 @@ serve(async (req) => {
         .select('*')
         .eq('company_id', alert.company_id)
         .ilike('name', alert.kpi_name)
-        .order('period_end', { ascending: false })
+        .order('created_at', { ascending: false })  // Ordenar por fecha de creación
         .limit(1)
         .maybeSingle()
 
