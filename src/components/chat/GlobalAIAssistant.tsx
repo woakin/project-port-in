@@ -285,6 +285,7 @@ export function GlobalAIAssistant() {
       toast.error('Error al enviar mensaje', { description: 'Por favor intenta de nuevo' });
     } finally {
       setIsStreaming(false);
+      setUploadedDocs([]);
     }
   };
 
@@ -427,7 +428,7 @@ export function GlobalAIAssistant() {
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
@@ -476,7 +477,29 @@ export function GlobalAIAssistant() {
           )}
         </SheetHeader>
 
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        <div 
+          {...getRootProps()} 
+          className={`flex-1 overflow-y-auto p-4 space-y-4 relative ${
+            isDragActive ? 'border-2 border-dashed border-primary rounded-lg bg-primary/5' : ''
+          }`}
+        >
+          <input {...getInputProps()} />
+          
+          {isDragActive && (
+            <div className="absolute inset-0 flex items-center justify-center bg-background/95 backdrop-blur-sm z-50 rounded-lg">
+              <div className="text-center">
+                <Paperclip className="w-12 h-12 mx-auto mb-3 text-primary animate-bounce" />
+                <p className="text-lg font-medium">Suelta los archivos aquí</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Máximo {MAX_FILES_PER_MESSAGE} archivos de 20MB cada uno
+                </p>
+                <p className="text-xs text-muted-foreground mt-2">
+                  PDF, Word, Excel, PowerPoint, imágenes, TXT, CSV
+                </p>
+              </div>
+            </div>
+          )}
+          
           {messages.map((message, idx) => (
             <div
               key={idx}
@@ -513,23 +536,87 @@ export function GlobalAIAssistant() {
           <div ref={messagesEndRef} />
         </div>
 
-        <div className="border-t border-border p-4">
+        <div className="border-t border-border p-4 space-y-3">
+          {/* File attachments display */}
+          {attachedFiles.length > 0 && (
+            <div className="space-y-2 p-3 bg-muted/30 rounded-lg border border-border">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+                  <Paperclip className="w-3.5 h-3.5" />
+                  Archivos adjuntos ({attachedFiles.length}/{MAX_FILES_PER_MESSAGE})
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  {formatFileSize(attachedFiles.reduce((acc, f) => acc + f.size, 0))} total
+                </span>
+              </div>
+              <div className="space-y-1.5">
+                {attachedFiles.map((file, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-center gap-2 p-2 bg-background rounded border border-border hover:border-primary/50 transition-colors"
+                  >
+                    <FileText className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium truncate">{file.name}</p>
+                      <p className="text-xs text-muted-foreground">{formatFileSize(file.size)}</p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeFile(idx)}
+                      disabled={uploading}
+                      className="h-7 w-7 p-0 hover:bg-destructive/10 hover:text-destructive"
+                      title="Quitar archivo"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+              {uploading && (
+                <div className="flex items-center gap-2 text-xs text-primary">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <span>Subiendo y analizando archivos...</span>
+                </div>
+              )}
+            </div>
+          )}
+          
           <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={open}
+              disabled={isStreaming || uploading || attachedFiles.length >= MAX_FILES_PER_MESSAGE}
+              className="shrink-0"
+              title="Adjuntar archivos"
+            >
+              <Paperclip className="h-4 w-4" />
+            </Button>
             <Textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleKeyPress}
-              placeholder="Escribe tu mensaje... (Enter para enviar)"
+              onKeyDown={handleKeyDown}
+              placeholder={
+                attachedFiles.length > 0 
+                  ? "Mensaje opcional... (Enter para enviar)" 
+                  : "Escribe tu mensaje... (Enter para enviar)"
+              }
               className="resize-none min-h-[60px]"
-              disabled={isStreaming}
+              disabled={isStreaming || uploading}
             />
             <Button
               onClick={handleSendMessage}
-              disabled={!input.trim() || isStreaming}
+              disabled={isStreaming || uploading || (!input.trim() && attachedFiles.length === 0)}
               size="icon"
               className="shrink-0"
+              title={uploading ? "Subiendo archivos..." : "Enviar mensaje"}
             >
-              <Send className="h-4 w-4" />
+              {uploading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
             </Button>
           </div>
         </div>
