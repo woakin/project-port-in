@@ -14,14 +14,14 @@ export function MainLayout({ children }: MainLayoutProps) {
   return (
     <SidebarProvider defaultOpen={true}>
       <GlobalSearch />
-      <div className="min-h-screen w-full bg-background flex">
+      <div className="h-screen w-full bg-background flex overflow-hidden">
         <AppSidebar />
-        <SidebarInset className="flex-1 flex flex-col w-full">
+        <SidebarInset className="flex-1 flex flex-col w-full overflow-hidden">
           <Header />
-          <div className="flex items-center gap-2 px-6 py-3 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+          <div className="flex items-center gap-2 px-6 py-3 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 flex-shrink-0">
             <Breadcrumbs />
           </div>
-          <main className="flex-1 w-full">
+          <main className="flex-1 w-full overflow-hidden">
             {children}
           </main>
         </SidebarInset>

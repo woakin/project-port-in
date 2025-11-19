@@ -1729,10 +1729,10 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
 
   return (
     <MainLayout>
-      <div className="flex flex-col h-full relative">
+      <div className="flex flex-col h-full">
         {/* Company Info Banner - Solo en diagnosis mode */}
         {chatMode === 'diagnosis' && companyInfo && (
-          <div className="bg-muted/30 border-b px-6 py-3">
+          <div className="bg-muted/30 border-b px-6 py-3 flex-shrink-0">
             <div className="flex items-center justify-between max-w-7xl mx-auto">
               <div className="flex items-center gap-4">
                 <div>
@@ -1766,7 +1766,7 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
 
         {/* Mode Info */}
         {showModeInfo && (
-          <div className="bg-muted/50 px-6 py-4 border-b">
+          <div className="bg-muted/50 px-6 py-4 border-b flex-shrink-0">
             <div className="max-w-7xl mx-auto">
               <p className="text-sm text-muted-foreground">
                 <strong>Modo {getModeLabel(chatMode)}:</strong>{' '}
@@ -1780,7 +1780,7 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
         )}
 
         {/* Mode Selector */}
-        <div className="border-b">
+        <div className="border-b flex-shrink-0">
           <div className="px-6 py-3 max-w-7xl mx-auto">
             <ModeSelector 
               currentMode={chatMode} 
@@ -1792,7 +1792,7 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
 
         {/* Progress Bar - Solo en diagnosis mode */}
         {chatMode === 'diagnosis' && (
-          <div className="border-b bg-background/95">
+          <div className="border-b bg-background/95 flex-shrink-0">
             <div className="px-6 py-3 max-w-7xl mx-auto">
               {/* Indicador de avance automático */}
               {isAutoAdvancing && (
