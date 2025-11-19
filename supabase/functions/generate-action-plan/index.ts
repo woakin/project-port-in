@@ -15,6 +15,75 @@ const requestSchema = z.object({
   complexityLevel: z.enum(['basic', 'medium', 'advanced'])
 });
 
+// Function to get historical context for plan generation
+async function getHistoricalPlanContext(supabaseClient: any, companyId: string, currentDiagnosisId: string) {
+  try {
+    // 1. Get previous plan (most recent before current diagnosis)
+    const { data: previousPlan } = await supabaseClient
+      .from('action_plans')
+      .select(`
+        *,
+        plan_areas (
+          *,
+          plan_objectives (
+            *,
+            tasks (
+              id,
+              title,
+              status,
+              priority,
+              completed_at,
+              due_date
+            )
+          )
+        )
+      `)
+      .eq('company_id', companyId)
+      .neq('diagnosis_id', currentDiagnosisId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    // 2. Get current company KPIs (most recent values per KPI)
+    const { data: allKPIs } = await supabaseClient
+      .from('kpis')
+      .select('name, value, target_value, unit, area, period_start')
+      .eq('company_id', companyId)
+      .order('period_start', { ascending: false });
+
+    // Get unique KPIs (most recent value per name)
+    const kpisMap = new Map();
+    allKPIs?.forEach((kpi: any) => {
+      if (!kpisMap.has(kpi.name)) {
+        kpisMap.set(kpi.name, kpi);
+      }
+    });
+    const kpis = Array.from(kpisMap.values());
+
+    // 3. Get analyzed documents
+    const { data: documents } = await supabaseClient
+      .from('documents')
+      .select('file_name, category, analysis_status, created_at')
+      .eq('company_id', companyId)
+      .eq('analysis_status', 'completed')
+      .order('created_at', { ascending: false })
+      .limit(10);
+
+    return {
+      previousPlan,
+      kpis,
+      documents
+    };
+  } catch (error) {
+    console.error('Error fetching historical context:', error);
+    return {
+      previousPlan: null,
+      kpis: [],
+      documents: []
+    };
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -61,16 +130,100 @@ serve(async (req) => {
 
     console.log("Diagnosis found:", diagnosis.companies?.name);
 
+    // Get historical context (previous plan, KPIs, documents)
+    const historicalContext = await getHistoricalPlanContext(
+      supabase,
+      diagnosis.company_id,
+      diagnosisId
+    );
+
+    // Build historical context section for prompt
+    let historicalPrompt = '';
+
+    if (historicalContext.previousPlan) {
+      const prevPlan = historicalContext.previousPlan;
+      const allTasks = prevPlan.plan_areas?.flatMap((a: any) => 
+        a.plan_objectives?.flatMap((o: any) => o.tasks || []) || []
+      ) || [];
+      const completedTasks = allTasks.filter((t: any) => t.status === 'completed');
+      const pendingTasks = allTasks.filter((t: any) => t.status === 'pending' || t.status === 'in_progress');
+      const highPriorityPending = pendingTasks.filter((t: any) => t.priority === 'high');
+
+      const progressPercentage = allTasks.length > 0 
+        ? Math.round((completedTasks.length / allTasks.length) * 100) 
+        : 0;
+
+      historicalPrompt = `
+CONTEXTO HISTÓRICO (PLAN ANTERIOR):
+📋 Plan previo: "${prevPlan.title}" (creado ${new Date(prevPlan.created_at).toLocaleDateString('es-MX')})
+📊 Progreso general: ${completedTasks.length}/${allTasks.length} tareas completadas (${progressPercentage}%)
+🎯 Áreas trabajadas: ${prevPlan.plan_areas?.map((a: any) => a.name).join(', ') || 'N/A'}
+
+✅ Tareas completadas destacadas:
+${completedTasks.slice(0, 5).map((t: any) => `  - ${t.title}`).join('\n') || '  - Ninguna aún'}
+
+⏳ Tareas pendientes de alta prioridad:
+${highPriorityPending.slice(0, 3).map((t: any) => `  - ${t.title}`).join('\n') || '  - Ninguna'}
+
+🎯 IMPORTANTE: 
+- Este es un PLAN DE CONTINUIDAD: reconoce y valida el progreso del plan anterior
+- Continúa con tareas pendientes de alta prioridad si siguen siendo relevantes
+- EVITA duplicar objetivos ya completados
+- Escala la complejidad según lo ya logrado (el nivel de madurez aumentó)
+- Enfócate en las áreas que menos progreso tuvieron o nuevas necesidades
+`;
+    }
+
+    if (historicalContext.kpis && historicalContext.kpis.length > 0) {
+      const kpisByArea = historicalContext.kpis.reduce((acc: any, kpi: any) => {
+        if (!acc[kpi.area]) acc[kpi.area] = [];
+        acc[kpi.area].push(kpi);
+        return acc;
+      }, {});
+
+      const kpiSummary = Object.entries(kpisByArea)
+        .slice(0, 6)
+        .map(([area, kpis]: [string, any]) => {
+          const kpiList = kpis.slice(0, 2).map((k: any) => 
+            `${k.name}: ${k.value}${k.unit || ''} ${k.target_value ? `(meta: ${k.target_value}${k.unit || ''})` : ''}`
+          ).join(', ');
+          return `  📈 ${area}: ${kpiList}`;
+        }).join('\n');
+
+      historicalPrompt += `
+KPIs ACTUALES DE LA EMPRESA:
+${kpiSummary}
+
+🎯 IMPORTANTE: Define objetivos y metas del nuevo plan considerando estos KPIs existentes.
+- Mejora KPIs que estén por debajo de su meta
+- Crea KPIs complementarios si hacen falta
+`;
+    }
+
+    if (historicalContext.documents && historicalContext.documents.length > 0) {
+      const docsByCategory = historicalContext.documents.reduce((acc: any, doc: any) => {
+        const cat = doc.category || 'otros';
+        acc[cat] = (acc[cat] || 0) + 1;
+        return acc;
+      }, {});
+
+      historicalPrompt += `
+📄 DOCUMENTOS ANALIZADOS: ${historicalContext.documents.length} documentos disponibles
+- Categorías: ${Object.entries(docsByCategory).map(([cat, count]) => `${cat} (${count})`).join(', ')}
+`;
+    }
+
     // Construir prompt para el LLM
     const systemPrompt = `IMPORTANTE: Usa español de México en todas tus respuestas. Sé profesional, directo y cercano.
 
-Eres un consultor estratégico experto. Genera un plan de acción empresarial estructurado.
+Eres un consultor estratégico experto. Genera un plan de acción empresarial estructurado ${historicalContext.previousPlan ? 'que SEA CONTINUACIÓN del trabajo previo' : ''}.
 
-CONTEXTO:
+CONTEXTO ACTUAL:
 - Empresa: ${diagnosis.companies?.name || "Sin nombre"}
 - Sector: ${diagnosis.companies?.industry || "General"}
 - Nivel de madurez: ${diagnosis.maturity_level || "startup"}
-- Scores actuales: 
+- Fecha del diagnóstico: ${new Date(diagnosis.created_at).toLocaleDateString('es-MX')}
+- Scores actuales (Diagnóstico actual): 
   - Estrategia: ${diagnosis.strategy_score || 0}
   - Operaciones: ${diagnosis.operations_score || 0}
   - Finanzas: ${diagnosis.finance_score || 0}
@@ -78,6 +231,7 @@ CONTEXTO:
   - Legal: ${diagnosis.legal_score || 0}
   - Tecnología: ${diagnosis.technology_score || 0}
 - Horizonte temporal: ${timeHorizon} meses
+${historicalPrompt}
 
 ESTRUCTURA REQUERIDA (JSON):
 {
@@ -109,6 +263,7 @@ ESTRUCTURA REQUERIDA (JSON):
 
 REGLAS:
 - Prioriza áreas con scores más bajos (necesitan más atención)
+${historicalContext.previousPlan ? '- CONTINÚA el trabajo del plan anterior (NO empieces de cero)\n- ESCALA la complejidad basándote en lo logrado\n- RETOMA tareas pendientes de alta prioridad si siguen siendo relevantes\n- EVITA duplicar objetivos ya completados' : ''}
 - Genera entre 3-5 áreas principales
 - Máximo 3 objetivos por área
 - Entre 2-4 acciones por objetivo
@@ -171,7 +326,21 @@ REGLAS:
     // Guardar en base de datos (transacción)
     console.log("Saving plan to database...");
 
-    // 1. Crear el plan
+    // 1. Auto-archive any existing active plans for this company
+    const { error: archiveError } = await supabase
+      .from("action_plans")
+      .update({ status: "archived" })
+      .eq("company_id", diagnosis.company_id)
+      .eq("status", "active");
+
+    if (archiveError) {
+      console.error("Error archiving previous plans:", archiveError);
+      // Continue anyway - this is not critical
+    } else {
+      console.log("Previous active plans archived successfully");
+    }
+
+    // 2. Crear el nuevo plan (será el único activo)
     const { data: newPlan, error: planError } = await supabase
       .from("action_plans")
       .insert({
@@ -194,7 +363,7 @@ REGLAS:
 
     console.log("Plan created:", newPlan.id);
 
-    // 2. Crear áreas, objetivos, tareas y KPIs
+    // 3. Crear áreas, objetivos, tareas y KPIs
     for (let areaIndex = 0; areaIndex < plan.areas.length; areaIndex++) {
       const areaData = plan.areas[areaIndex];
 
