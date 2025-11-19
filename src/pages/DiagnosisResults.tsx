@@ -294,7 +294,8 @@ export default function DiagnosisResults() {
 
   return (
     <MainLayout>
-      <div className="container mx-auto p-comfortable space-y-comfortable">
+      <div className="h-full overflow-y-auto">
+        <div className="container mx-auto p-comfortable space-y-comfortable">
         {/* Header */}
         <div>
           <h1 className="text-3xl font-bold text-foreground mb-2">
@@ -461,6 +462,7 @@ export default function DiagnosisResults() {
             )}
           </div>
         </Card>
+      </div>
       </div>
     </MainLayout>
   );
