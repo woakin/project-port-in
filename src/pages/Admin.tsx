@@ -933,6 +933,7 @@ export default function Admin() {
                       onViewDefault={() => setShowDefaultModal(true)}
                       hasChanges={hasChanges}
                       isSaving={saving}
+                      isReadOnly={activePromptMode === 'diagnosis_core'}
                     />
                   </div>
                 )}
