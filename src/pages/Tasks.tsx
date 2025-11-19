@@ -132,7 +132,8 @@ export default function Tasks() {
 
   return (
     <MainLayout>
-      <div className="container mx-auto p-6 space-y-6">
+      <div className="h-full overflow-y-auto">
+        <div className="container mx-auto p-6 space-y-6">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold">Gestión de Tareas</h1>
@@ -175,6 +176,7 @@ export default function Tasks() {
           open={detailsOpen}
           onOpenChange={setDetailsOpen}
         />
+        </div>
       </div>
     </MainLayout>
   );

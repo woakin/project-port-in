@@ -87,7 +87,8 @@ export default function Diagnosticos() {
 
   return (
     <MainLayout>
-      <div className="container mx-auto px-6 py-8">
+      <div className="h-full overflow-y-auto">
+        <div className="container mx-auto px-6 py-8">
         <div className="space-y-6">
         <div className="flex justify-between items-center">
           <div>
@@ -232,6 +233,7 @@ export default function Diagnosticos() {
             })}
           </div>
           )}
+        </div>
         </div>
         </div>
       </div>
