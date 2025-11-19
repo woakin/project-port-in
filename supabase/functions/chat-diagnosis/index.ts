@@ -900,6 +900,33 @@ Si NO detectas ninguna intención clara de operación, entonces no invoques herr
                         rawEnd = rawEnd || dates.end;
                       }
                       
+                      // Fix 4: Detectar fechas muy antiguas y usar fecha actual
+                      const today = new Date().toISOString().split('T')[0];
+                      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+                      
+                      // Si el AI propone una fecha más de 30 días en el pasado para new_period, usar hoy
+                      if (rawStart && rawStart < thirtyDaysAgo) {
+                        console.warn('⚠️ [Auto-correcting Ancient Date]', {
+                          kpiName: searchName,
+                          proposedDate: rawStart,
+                          correctedTo: today,
+                          reason: 'AI proposed date >30 days old for new_period, using current date instead'
+                        });
+                        rawStart = today;
+                        rawEnd = today;
+                      }
+                      
+                      console.info('📊 [KPI Operation Start]', {
+                        timestamp: new Date().toISOString(),
+                        kpiName: searchName,
+                        action: update.action,
+                        value: update.value,
+                        periodStart: rawStart,
+                        periodEnd: rawEnd,
+                        unit: update.unit,
+                        area: update.area
+                      });
+                      
                       // ✅ VALIDACIÓN: Ajustar fechas si son inválidas
                       const { start, end, wasAdjusted, adjustmentReason } = await validateAndAdjustPeriodDates(
                         companyId,
