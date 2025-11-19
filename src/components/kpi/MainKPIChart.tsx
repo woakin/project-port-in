@@ -1,18 +1,23 @@
 import { Card } from "@/components/shared/Card";
 import { Badge } from "@/components/shared/Badge";
-import { TrendingUp, TrendingDown, Minus, Star } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus, Star, Plus } from "lucide-react";
 import { KPI } from '@/types/kpi.types';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { Button } from "@/components/ui/button";
+import { useState } from "react";
+import { AddKPIValueModal } from "@/components/kpi/AddKPIValueModal";
 
 interface MainKPIChartProps {
   kpi: KPI;
   history: KPI[];
   trend: 'up' | 'down' | 'stable';
+  onKPIUpdated?: () => void;
 }
 
-export function MainKPIChart({ kpi, history, trend }: MainKPIChartProps) {
+export function MainKPIChart({ kpi, history, trend, onKPIUpdated }: MainKPIChartProps) {
+  const [addValueModalOpen, setAddValueModalOpen] = useState(false);
   const chartData = history.map(k => ({
     date: format(new Date(k.period_start), 'MMM yyyy', { locale: es }),
     value: Number(k.value),
@@ -75,7 +80,7 @@ export function MainKPIChart({ kpi, history, trend }: MainKPIChartProps) {
           </div>
         )}
 
-        {chartData.length > 1 && (
+        {chartData.length > 1 ? (
           <div className="pt-4">
             <h4 className="text-sm font-medium text-muted-foreground mb-3">Evolución</h4>
             <ResponsiveContainer width="100%" height={200}>
@@ -117,8 +122,78 @@ export function MainKPIChart({ kpi, history, trend }: MainKPIChartProps) {
               </LineChart>
             </ResponsiveContainer>
           </div>
+        ) : (
+          <div className="pt-4 space-y-4">
+            {/* Mensaje Principal */}
+            <div className="flex flex-col items-center justify-center py-8 px-4 bg-muted/30 rounded-lg border-2 border-dashed border-border">
+              <TrendingUp className="h-12 w-12 text-muted-foreground/40 mb-3" />
+              <h4 className="text-base font-semibold text-foreground mb-1">
+                Registra más valores para ver la evolución
+              </h4>
+              <p className="text-sm text-muted-foreground text-center max-w-md">
+                Necesitas al menos 2 registros históricos para visualizar tendencias y patrones
+              </p>
+            </div>
+
+            {/* Información Adicional */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-muted/20 rounded-lg">
+              <div className="space-y-2">
+                <div className="flex items-start gap-2">
+                  <span className="text-muted-foreground text-sm">📅 Período:</span>
+                  <span className="text-sm font-medium text-foreground">
+                    {format(new Date(kpi.period_start), 'd MMM', { locale: es })} - {format(new Date(kpi.period_end), 'd MMM yyyy', { locale: es })}
+                  </span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="text-muted-foreground text-sm">📊 Fuente:</span>
+                  <span className="text-sm font-medium text-foreground">{kpi.source}</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="text-muted-foreground text-sm">🕐 Registrado:</span>
+                  <span className="text-sm font-medium text-foreground">
+                    {format(new Date(kpi.created_at), "d MMM yyyy, HH:mm", { locale: es })}
+                  </span>
+                </div>
+              </div>
+              
+              {/* Metadata (si existe) */}
+              {kpi.metadata && Object.keys(kpi.metadata).length > 0 && (
+                <div className="space-y-2">
+                  <span className="text-muted-foreground text-sm font-medium">Información adicional:</span>
+                  {Object.entries(kpi.metadata).slice(0, 3).map(([key, value]) => (
+                    <div key={key} className="flex items-start gap-2">
+                      <span className="text-muted-foreground text-xs">{key}:</span>
+                      <span className="text-xs font-medium text-foreground">{String(value)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* CTA Button */}
+            <div className="flex justify-center pt-2">
+              <Button 
+                variant="outline" 
+                onClick={() => setAddValueModalOpen(true)}
+                className="gap-2"
+              >
+                <Plus className="h-4 w-4" />
+                Registrar Nuevo Valor
+              </Button>
+            </div>
+          </div>
         )}
       </div>
+
+      <AddKPIValueModal
+        open={addValueModalOpen}
+        onOpenChange={setAddValueModalOpen}
+        kpi={kpi}
+        onSuccess={() => {
+          setAddValueModalOpen(false);
+          onKPIUpdated?.();
+        }}
+      />
     </Card>
   );
 }
