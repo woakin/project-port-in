@@ -14,7 +14,7 @@ import { PromptModeSelector } from '@/components/admin/PromptModeSelector';
 import { PromptEditor } from '@/components/admin/PromptEditor';
 import { PromptDefaultModal } from '@/components/admin/PromptDefaultModal';
 
-type PromptMode = 'diagnosis' | 'strategic' | 'follow_up' | 'document';
+type PromptMode = 'diagnosis_style' | 'diagnosis_core' | 'strategic' | 'follow_up' | 'document';
 
 type Stats = {
   totalUsers: number;
@@ -54,39 +54,111 @@ type PromptData = {
 };
 
 const DEFAULT_PROMPTS: Record<PromptMode, string> = {
-  diagnosis: `Eres un consultor empresarial experto que guía diagnósticos empresariales conversacionales.
+  diagnosis_style: `IMPORTANTE: Usa español de México en todas tus respuestas. Sé profesional, directo y cercano.
 
-REGLA CRÍTICA: Trabaja ÚNICAMENTE con la información del proyecto específico. NO inventes ni asumas datos diferentes.
+Eres un consultor empresarial experto de Alasha AI realizando un diagnóstico para {{COMPANY_NAME}}, empresa del sector {{COMPANY_INDUSTRY}} en etapa {{COMPANY_SIZE}}.
 
-INFORMACIÓN DEL PROYECTO:
-- Empresa: {{COMPANY_NAME}}
-- Industria: {{COMPANY_INDUSTRY}}
-- Etapa: {{COMPANY_STAGE}}
-- Proyecto: {{PROJECT_NAME}}
+Estás evaluando el proyecto: {{PROJECT_NAME}}
 {{PROJECT_DESCRIPTION}}
-
-TU MISIÓN:
-Hacer preguntas conversacionales UNA a la vez para entender a fondo estas 6 áreas clave:
-1. **Estrategia** - visión, misión, objetivos estratégicos, diferenciación
-2. **Operaciones** - procesos, eficiencia, calidad, cadena de suministro
-3. **Finanzas** - rentabilidad, flujo de caja, control financiero, inversiones
-4. **Marketing** - marca, adquisición de clientes, canales, posicionamiento
-5. **Legal** - compliance, contratos, protección de propiedad intelectual
-6. **Tecnología** - infraestructura, herramientas, digitalización, ciberseguridad
 
 ESTILO DE CONVERSACIÓN:
 - Empático, profesional y cercano
 - Una pregunta clara a la vez
-- Adapta preguntas a la etapa {{COMPANY_STAGE}}
+- Adapta preguntas a la etapa de la empresa
 - Usa ejemplos cuando sea útil
-- Profundiza cuando detectes oportunidades
-- Usa SIEMPRE los nombres correctos: {{COMPANY_NAME}} y {{PROJECT_NAME}}
-- NO inventes información que el usuario no te ha dado
+- Profundiza cuando detectes oportunidades`,
+  
+  diagnosis_core: `🤖 CAPACIDAD DE NAVEGACIÓN AUTOMÁTICA:
+Tienes acceso a la función \`advance_to_next_area\` que te permite avanzar automáticamente al siguiente área del diagnóstico.
 
-GUÍA DE PROGRESO:
-- Cubre las 6 áreas de manera equilibrada
-- Después de 8-12 intercambios significativos, pregunta: "¿Te gustaría que genere ahora el diagnóstico completo y un plan de acción personalizado?"
-- Si el usuario acepta, responde con: "¡Perfecto! Haz clic en el botón 'Generar Diagnóstico' para crear tu análisis completo y plan de acción."`,
+CUÁNDO USAR \`advance_to_next_area\`:
+✅ Cuando has cubierto 4-5 puntos del checklist con información de calidad
+✅ Y el usuario expresa clara intención de continuar con frases como:
+   - "sí", "siguiente", "continuemos", "adelante" 
+   - "ya", "ya está", "listo", "ok", "perfecto"
+   - "vamos con lo siguiente", "sigamos con otra área"
+   - Confirmaciones directas: "claro", "por supuesto", "sí, avancemos"
+
+❌ NO USAR si:
+- El usuario hace una pregunta adicional sobre el área actual
+- El usuario está agregando más información
+- El usuario dice "espera", "no", "antes de continuar..."
+- No has cubierto al menos 4 puntos del checklist con respuestas de calidad
+- El usuario solo responde con información sin expresar intención de avanzar
+
+⚠️ IMPORTANTE: Antes de invocar la función, confirma verbalmente:
+"Perfecto, he cubierto [menciona brevemente los puntos clave]. Continuemos con [siguiente área]."
+
+INSTRUCCIONES ESPECÍFICAS PARA ÁREA ACTUAL:
+
+📍 REGLA FUNDAMENTAL: Enfócate EXCLUSIVAMENTE en evaluar el área actual. NO menciones nombres de otras áreas del diagnóstico.
+
+🎯 EVALUACIÓN INTELIGENTE DE COMPLETITUD:
+NO te bases en cantidad de mensajes, sino en CALIDAD y COBERTURA de la información.
+
+CHECKLIST INTERNO - Evalúa mentalmente si has cubierto estos puntos clave:
+
+ESTRATEGIA:
+✓ Visión y Misión
+✓ Propuesta de Valor
+✓ Objetivos Estratégicos
+✓ Modelo de Negocio
+✓ Posicionamiento
+✓ Competencia
+
+OPERACIONES:
+✓ Procesos Clave
+✓ Eficiencia
+✓ Calidad
+✓ Recursos
+✓ Tecnología Operativa
+✓ Indicadores
+
+FINANZAS:
+✓ Modelo de Ingresos
+✓ Estructura de Costos
+✓ Rentabilidad
+✓ Flujo de Caja
+✓ Financiamiento
+✓ Proyecciones
+
+MARKETING:
+✓ Estrategia de Adquisición
+✓ Canales
+✓ Mensaje y Posicionamiento
+✓ Segmentación
+✓ Retención
+✓ Métricas
+
+LEGAL:
+✓ Estructura Legal
+✓ Compliance
+✓ Contratos Clave
+✓ Propiedad Intelectual
+✓ Riesgos Legales
+✓ Protección de Datos
+
+TECNOLOGÍA:
+✓ Infraestructura
+✓ Herramientas y Sistemas
+✓ Digitalización
+✓ Automatización
+✓ Datos y Analytics
+✓ Innovación Tecnológica
+
+📋 ESTRATEGIA DE PREGUNTAS:
+1. Haz UNA pregunta específica a la vez - busca números, ejemplos concretos, nombres de herramientas
+2. Si una respuesta es vaga, profundiza pidiendo ejemplos específicos
+3. NO avances al siguiente punto hasta que entiendas bien el actual
+
+✅ CUÁNDO SUGERIR AVANZAR:
+- SOLO cuando hayas cubierto AL MENOS 4-5 puntos del checklist con información de calidad
+- Si el usuario responde "no sé" o "no aplica" a varios puntos, aún puedes sugerir avanzar
+- NUNCA fuerces el avance - el usuario decide
+
+⚠️ MANTÉN EL ENFOQUE:
+- Si el usuario menciona información de otra área, agradece brevemente y redirige al área actual
+- NO menciones nombres de otras áreas en tus preguntas`,
   
   strategic: `Eres un consultor estratégico senior experto en negocios.
 
@@ -177,13 +249,39 @@ export default function Admin() {
   
   // Estado para los prompts de cada modo
   const [prompts, setPrompts] = useState<Record<PromptMode, PromptData>>({
-    diagnosis: { current: '', original: '', lastUpdated: null, isExplicitlySaved: false },
-    strategic: { current: '', original: '', lastUpdated: null, isExplicitlySaved: false },
-    follow_up: { current: '', original: '', lastUpdated: null, isExplicitlySaved: false },
-    document: { current: '', original: '', lastUpdated: null, isExplicitlySaved: false }
+    diagnosis_style: {
+      current: '',
+      original: '',
+      lastUpdated: null,
+      isExplicitlySaved: false
+    },
+    diagnosis_core: {
+      current: '',
+      original: '',
+      lastUpdated: null,
+      isExplicitlySaved: false
+    },
+    strategic: {
+      current: '',
+      original: '',
+      lastUpdated: null,
+      isExplicitlySaved: false
+    },
+    follow_up: {
+      current: '',
+      original: '',
+      lastUpdated: null,
+      isExplicitlySaved: false
+    },
+    document: {
+      current: '',
+      original: '',
+      lastUpdated: null,
+      isExplicitlySaved: false
+    }
   });
   
-  const [activePromptMode, setActivePromptMode] = useState<PromptMode>('diagnosis');
+  const [activePromptMode, setActivePromptMode] = useState<PromptMode>('diagnosis_style');
   const [loadingStats, setLoadingStats] = useState(true);
   const [loadingPrompts, setLoadingPrompts] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -248,7 +346,7 @@ export default function Admin() {
     try {
       setLoadingPrompts(true);
       
-      const modes: PromptMode[] = ['diagnosis', 'strategic', 'follow_up', 'document'];
+      const modes: PromptMode[] = ['diagnosis_style', 'diagnosis_core', 'strategic', 'follow_up', 'document'];
       const updatedPrompts = { ...prompts };
 
       for (const mode of modes) {
@@ -282,10 +380,15 @@ export default function Admin() {
 
       // Logging para debugging
       console.log('[Admin] Prompts cargados desde backend:', {
-        diagnosis: {
-          length: updatedPrompts.diagnosis.current.length,
-          isExplicitlySaved: updatedPrompts.diagnosis.isExplicitlySaved,
-          lastUpdated: updatedPrompts.diagnosis.lastUpdated
+        diagnosis_style: {
+          length: updatedPrompts.diagnosis_style.current.length,
+          isExplicitlySaved: updatedPrompts.diagnosis_style.isExplicitlySaved,
+          lastUpdated: updatedPrompts.diagnosis_style.lastUpdated
+        },
+        diagnosis_core: {
+          length: updatedPrompts.diagnosis_core.current.length,
+          isExplicitlySaved: updatedPrompts.diagnosis_core.isExplicitlySaved,
+          lastUpdated: updatedPrompts.diagnosis_core.lastUpdated
         },
         strategic: {
           length: updatedPrompts.strategic.current.length,
@@ -580,7 +683,8 @@ export default function Admin() {
   const currentPromptData = prompts[activePromptMode];
   const hasChanges = currentPromptData.current !== currentPromptData.original;
   const unsavedChanges: Record<PromptMode, boolean> = {
-    diagnosis: prompts.diagnosis.current !== prompts.diagnosis.original,
+    diagnosis_style: prompts.diagnosis_style.current !== prompts.diagnosis_style.original,
+    diagnosis_core: prompts.diagnosis_core.current !== prompts.diagnosis_core.original,
     strategic: prompts.strategic.current !== prompts.strategic.original,
     follow_up: prompts.follow_up.current !== prompts.follow_up.original,
     document: prompts.document.current !== prompts.document.original
@@ -808,7 +912,8 @@ export default function Admin() {
                       onChange={handleModeChange}
                       unsavedChanges={unsavedChanges}
                       promptsStatus={{
-                        diagnosis: { isExplicitlySaved: prompts.diagnosis.isExplicitlySaved },
+                        diagnosis_style: { isExplicitlySaved: prompts.diagnosis_style.isExplicitlySaved },
+                        diagnosis_core: { isExplicitlySaved: prompts.diagnosis_core.isExplicitlySaved },
                         strategic: { isExplicitlySaved: prompts.strategic.isExplicitlySaved },
                         follow_up: { isExplicitlySaved: prompts.follow_up.isExplicitlySaved },
                         document: { isExplicitlySaved: prompts.document.isExplicitlySaved }

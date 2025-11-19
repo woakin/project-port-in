@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/tooltip";
 
 interface PromptEditorProps {
-  mode: 'diagnosis' | 'strategic' | 'follow_up' | 'document';
+  mode: 'diagnosis_style' | 'diagnosis_core' | 'strategic' | 'follow_up' | 'document';
   value: string;
   defaultValue: string;
   lastUpdated: string | null;
@@ -24,6 +24,7 @@ interface PromptEditorProps {
   onViewDefault: () => void;
   hasChanges: boolean;
   isSaving: boolean;
+  isReadOnly?: boolean;
 }
 
 const AVAILABLE_VARIABLES = [
@@ -46,7 +47,8 @@ export function PromptEditor({
   onCancel,
   onViewDefault,
   hasChanges,
-  isSaving
+  isSaving,
+  isReadOnly = false
 }: PromptEditorProps) {
   const [showVariables, setShowVariables] = useState(false);
   const charCount = value.length;
@@ -107,12 +109,23 @@ export function PromptEditor({
       <Alert>
         <AlertCircle className="h-4 w-4" />
         <AlertDescription>
-          Este prompt controla cómo el agente de IA interactúa con los usuarios en modo <strong>{mode}</strong>.
-          Usa las variables disponibles para personalizar el contexto.
+          {isReadOnly ? (
+            <>
+              Este prompt contiene la <strong>lógica crítica del diagnóstico</strong> (checklists, reglas de evaluación, herramientas).
+              <br />
+              <span className="text-destructive font-medium">⚠️ NO ES EDITABLE</span> para garantizar la funcionalidad del sistema.
+            </>
+          ) : (
+            <>
+              Este prompt controla cómo el agente de IA interactúa con los usuarios en modo <strong>{mode}</strong>.
+              Usa las variables disponibles para personalizar el contexto.
+            </>
+          )}
         </AlertDescription>
       </Alert>
 
       {/* Variables disponibles */}
+      {!isReadOnly && (
       <div className="space-y-2">
         <button
           onClick={() => setShowVariables(!showVariables)}
@@ -151,14 +164,16 @@ export function PromptEditor({
           </div>
         )}
       </div>
+      )}
 
       {/* Editor de texto */}
       <div className="space-y-2">
         <Textarea
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          placeholder="Escribe el prompt del sistema aquí..."
-          className="min-h-[400px] font-mono text-sm"
+          placeholder={isReadOnly ? "" : "Escribe el prompt del sistema aquí..."}
+          className={`min-h-[400px] font-mono text-sm ${isReadOnly ? 'bg-muted cursor-not-allowed' : ''}`}
+          disabled={isReadOnly}
         />
         <div className="flex items-center justify-between text-sm">
           <span className={isOverLimit ? 'text-destructive' : 'text-muted-foreground'}>
@@ -173,6 +188,7 @@ export function PromptEditor({
       </div>
 
       {/* Botones de acción */}
+      {!isReadOnly && (
       <div className="flex items-center justify-between pt-4 border-t">
         <Button
           variant="outline"
@@ -200,6 +216,7 @@ export function PromptEditor({
           </Button>
         </div>
       </div>
+      )}
     </div>
   );
 }
