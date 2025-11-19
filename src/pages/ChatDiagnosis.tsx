@@ -14,6 +14,7 @@ import ReactMarkdown from 'react-markdown';
 import ModeSelector from '@/components/chat/ModeSelector';
 import { ensureProjectExists } from '@/lib/projectHelpers';
 import QuickActions, { SheetType } from '@/components/chat/QuickActions';
+import { CompactDiagnosisHeader } from '@/components/chat/CompactDiagnosisHeader';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import KPIsSheet from '@/components/chat/sheets/KPIsSheet';
@@ -72,7 +73,6 @@ export default function ChatDiagnosis() {
   const [diagnosisVersion, setDiagnosisVersion] = useState<number>(0);
   const [hasPreviousDiagnosis, setHasPreviousDiagnosis] = useState(false);
   const [chatMode, setChatMode] = useState<ChatMode>('diagnosis');
-  const [showModeInfo, setShowModeInfo] = useState(false);
   const [openSheet, setOpenSheet] = useState<SheetType>(null);
   
   // Estados para subida de archivos
@@ -1730,91 +1730,41 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
   return (
     <MainLayout>
       <div className="flex flex-col h-full">
-        {/* Company Info Banner - Solo en diagnosis mode */}
-        {chatMode === 'diagnosis' && companyInfo && (
-          <div className="bg-muted/30 border-b px-6 py-3 flex-shrink-0">
-            <div className="flex items-center justify-between max-w-7xl mx-auto">
-              <div className="flex items-center gap-4">
-                <div>
-                  <h2 className="text-sm font-semibold text-foreground">
-                    {companyInfo.name}
-                  </h2>
-                  <p className="text-xs text-muted-foreground">
-                    {companyInfo.industry} • {companyInfo.stage === 'idea' ? 'Idea' : companyInfo.stage === 'startup' ? 'Startup' : companyInfo.stage === 'pyme' ? 'PYME' : 'Corporativo'}
-                  </p>
-                </div>
-                <div className="text-xs text-muted-foreground">
-                  Proyecto: <span className="font-medium text-foreground">
-                    {companyInfo.projectName}
-                  </span>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowModeInfo(!showModeInfo)}
-                  className="gap-2"
-                >
-                  <HelpCircle className="h-4 w-4" />
-                  <span className="hidden sm:inline">Ayuda</span>
-                </Button>
-              </div>
-            </div>
-          </div>
+        {/* Compact Header - Company Info + Mode Selector + Help */}
+        {companyInfo && (
+          <CompactDiagnosisHeader
+            companyName={companyInfo.name}
+            companyStage={companyInfo.stage === 'idea' ? 'Idea' : companyInfo.stage === 'startup' ? 'Startup' : companyInfo.stage === 'pyme' ? 'PYME' : 'Corporativo'}
+            currentMode={chatMode}
+            onModeChange={handleModeChange}
+          />
         )}
 
-        {/* Mode Info */}
-        {showModeInfo && (
-          <div className="bg-muted/50 px-6 py-4 border-b flex-shrink-0">
-            <div className="max-w-7xl mx-auto">
-              <p className="text-sm text-muted-foreground">
-                <strong>Modo {getModeLabel(chatMode)}:</strong>{' '}
-                {chatMode === 'diagnosis' && 'Generación de diagnóstico completo y plan de acción personalizado.'}
-                {chatMode === 'strategic' && 'Consultas estratégicas puntuales sin generar diagnóstico formal.'}
-                {chatMode === 'follow_up' && 'Seguimiento del plan activo, revisión de progreso y ajustes.'}
-                {chatMode === 'document' && 'Análisis contextualizado de documentos subidos.'}
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* Mode Selector */}
-        <div className="border-b flex-shrink-0">
-          <div className="px-6 py-3 max-w-7xl mx-auto">
-            <ModeSelector 
-              currentMode={chatMode} 
-              onModeChange={handleModeChange}
-              disabled={sending || generatingDiagnosis}
-            />
-          </div>
-        </div>
-
-        {/* Progress Bar - Solo en diagnosis mode */}
+        {/* Progress Bar - Solo en diagnosis mode - Ultra Compact */}
         {chatMode === 'diagnosis' && (
           <div className="border-b bg-background/95 flex-shrink-0">
-            <div className="px-6 py-3 max-w-7xl mx-auto">
-              {/* Indicador de avance automático */}
-              {isAutoAdvancing && (
-                <div className="flex items-center gap-2 mb-3 bg-primary/10 border border-primary/30 rounded-lg px-4 py-3 animate-pulse">
-                  <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                  <span className="text-sm font-medium text-primary">
-                    ⏭️ Avanzando automáticamente al siguiente área...
-                  </span>
+            <div className="px-6 py-2 max-w-7xl mx-auto">
+              <div className="flex items-center gap-3">
+                {isAutoAdvancing && (
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
+                    <span>⏭️ Avanzando...</span>
+                  </div>
+                )}
+                <div className="flex-1">
+                  <AreaProgressBar
+                    areas={areaProgress.areas}
+                    currentIndex={areaProgress.currentIndex}
+                    onGoToArea={handleGoToArea}
+                    onSkipArea={handleSkipArea}
+                    onNextArea={handleNextArea}
+                    onGenerateDiagnosis={() => setShowSummary(true)}
+                    canAdvance={areaProgress.areas[areaProgress.currentIndex]?.messageCount >= 2}
+                    canGenerate={areaProgress.areas.filter(a => a.status === 'completed').length >= 3}
+                    isLoading={sending || generatingDiagnosis}
+                  />
                 </div>
-              )}
-              
-              <AreaProgressBar
-                areas={areaProgress.areas}
-                currentIndex={areaProgress.currentIndex}
-                onGoToArea={handleGoToArea}
-                onSkipArea={handleSkipArea}
-                onNextArea={handleNextArea}
-                onGenerateDiagnosis={() => setShowSummary(true)}
-                canAdvance={areaProgress.areas[areaProgress.currentIndex]?.messageCount >= 2}
-                canGenerate={areaProgress.areas.filter(a => a.status === 'completed').length >= 3}
-                isLoading={sending || generatingDiagnosis}
-              />
+              </div>
             </div>
           </div>
         )}
