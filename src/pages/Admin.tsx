@@ -692,7 +692,8 @@ export default function Admin() {
 
   return (
     <MainLayout>
-      <div className="space-y-6 px-6">
+      <div className="h-full overflow-y-auto">
+        <div className="space-y-6 px-6">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Panel de Administración</h1>
           <p className="text-muted-foreground mt-2">
@@ -950,6 +951,7 @@ export default function Admin() {
         defaultPrompt={DEFAULT_PROMPTS[activePromptMode]}
         onUseAsBase={handleUseDefaultAsBase}
       />
+      </div>
     </MainLayout>
   );
 }

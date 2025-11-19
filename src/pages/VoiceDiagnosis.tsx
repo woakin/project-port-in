@@ -598,7 +598,8 @@ export default function VoiceDiagnosis() {
 
   return (
     <MainLayout>
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
+      <div className="h-full overflow-y-auto">
+        <div className="container mx-auto px-4 py-8 max-w-4xl">
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold mb-4">Entrevista de Diagnóstico por Voz</h1>
           <p className="text-muted-foreground text-lg">
@@ -731,6 +732,7 @@ export default function VoiceDiagnosis() {
             <li>• Al finalizar, se generará automáticamente tu diagnóstico</li>
           </ul>
         </Card>
+      </div>
       </div>
     </MainLayout>
   );
