@@ -574,15 +574,15 @@ const Index = () => {
                     <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-3">
                       <Activity className="h-6 w-6 text-primary" />
                     </div>
-                    <p className="text-sm font-medium text-foreground">Diagnóstico completo</p>
-                    <p className="text-xs text-muted-foreground mt-1">Análisis de 6 áreas clave</p>
+                    <p className="text-sm font-medium text-foreground">Score por área</p>
+                    <p className="text-xs text-muted-foreground mt-1">Estrategia, operaciones, finanzas</p>
                   </div>
                   <div className="flex flex-col items-center p-4 bg-background/50 rounded-lg">
                     <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-3">
                       <Target className="h-6 w-6 text-primary" />
                     </div>
-                    <p className="text-sm font-medium text-foreground">Plan personalizado</p>
-                    <p className="text-xs text-muted-foreground mt-1">Con tareas y objetivos</p>
+                    <p className="text-sm font-medium text-foreground">Plan de acción</p>
+                    <p className="text-xs text-muted-foreground mt-1">Recomendaciones priorizadas</p>
                   </div>
                   <div className="flex flex-col items-center p-4 bg-background/50 rounded-lg">
                     <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-3">
@@ -608,47 +608,101 @@ const Index = () => {
             </Card>
           </div>}
 
-        {/* KPI Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-standard mb-comfortable">
-          {loadingKPIs || loadingTasks ? (
-            <>
-              <KPICardSkeleton />
-              <KPICardSkeleton />
-              <KPICardSkeleton />
-              <KPICardSkeleton />
-            </>
-          ) : (
-            <>
-              <KPICard 
-                title="Progreso General" 
-                value={completionRate.toString()} 
-                unit="%" 
-                change={completionRate > 0 ? completionRate : undefined}
-                trend={completionRate >= 75 ? 'up' : completionRate >= 50 ? 'stable' : 'down'}
-              />
-              <KPICard 
-                title="Tareas Completadas" 
-                value={taskStats.completed.toString()} 
-                unit={`de ${taskStats.total}`}
-                change={taskStats.total > 0 ? Math.round((taskStats.completed / taskStats.total) * 100) : 0}
-                trend={taskStats.completed > taskStats.pending ? 'up' : 'down'}
-              />
-              <KPICard 
-                title="KPIs en Meta" 
-                value={kpiStats.onTarget.toString()} 
-                unit={`de ${kpiStats.total}`}
-                change={kpiStats.total > 0 ? Math.round((kpiStats.onTarget / kpiStats.total) * 100) : 0}
-                trend={kpiStats.onTarget >= kpiStats.total / 2 ? 'up' : 'down'}
-              />
-              <KPICard 
-                title="Tareas Atrasadas" 
-                value={overdueTasks.length.toString()} 
-                unit="tareas"
-                change={overdueTasks.length > 0 ? -Math.min(overdueTasks.length * 10, 100) : 0}
-                trend={overdueTasks.length > 0 ? 'down' : 'up'}
-              />
-            </>
-          )}
+        {/* Main KPI + Metrics Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-standard mb-comfortable">
+          {/* Left Column: Main KPI (2/3 width) */}
+          <div className="lg:col-span-2">
+            {(() => {
+              const mainKPI = getMainKPI();
+              if (mainKPI) {
+                const history = getKPIHistory(mainKPI.name);
+                const trend = getKPITrend(mainKPI.name);
+                return (
+                  <div>
+                    <div className="mb-4 flex items-center justify-between">
+                      <div>
+                        <h2 className="text-xl font-bold text-foreground mb-1">KPI Principal</h2>
+                        <p className="text-sm text-muted-foreground">Evolución histórica de tu indicador clave</p>
+                      </div>
+                      <Button variant="ghost" size="sm" onClick={() => navigate('/kpis')}>
+                        Ver todos los KPIs
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                      </Button>
+                    </div>
+                    {loadingKPIs ? (
+                      <div className="text-sm text-muted-foreground">Cargando KPI...</div>
+                    ) : (
+                      <MainKPIChart kpi={mainKPI} history={history} trend={trend} />
+                    )}
+                  </div>
+                );
+              }
+              return (
+                <Card variant="content" className="h-full flex items-center justify-center">
+                  <div className="text-center py-12 px-6">
+                    <div className="flex justify-center mb-4">
+                      <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+                        <TrendingUp className="h-8 w-8 text-primary" />
+                      </div>
+                    </div>
+                    <h3 className="text-lg font-semibold text-foreground mb-2">
+                      Configura tu KPI Principal
+                    </h3>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Selecciona el indicador más importante para tu negocio
+                    </p>
+                    <Button onClick={() => navigate('/kpis')} className="gap-2">
+                      <Target className="h-4 w-4" />
+                      Ir a KPIs
+                    </Button>
+                  </div>
+                </Card>
+              );
+            })()}
+          </div>
+
+          {/* Right Column: Quick Metrics (1/3 width) */}
+          <div className="space-y-standard">
+            {loadingKPIs || loadingTasks ? (
+              <>
+                <KPICardSkeleton />
+                <KPICardSkeleton />
+                <KPICardSkeleton />
+                <KPICardSkeleton />
+              </>
+            ) : (
+              <>
+                <KPICard 
+                  title="Progreso General" 
+                  value={completionRate.toString()} 
+                  unit="%" 
+                  change={completionRate > 0 ? completionRate : undefined}
+                  trend={completionRate >= 75 ? 'up' : completionRate >= 50 ? 'stable' : 'down'}
+                />
+                <KPICard 
+                  title="Tareas Completadas" 
+                  value={taskStats.completed.toString()} 
+                  unit={`de ${taskStats.total}`}
+                  change={taskStats.total > 0 ? Math.round((taskStats.completed / taskStats.total) * 100) : 0}
+                  trend={taskStats.completed > taskStats.pending ? 'up' : 'down'}
+                />
+                <KPICard 
+                  title="KPIs en Meta" 
+                  value={kpiStats.onTarget.toString()} 
+                  unit={`de ${kpiStats.total}`}
+                  change={kpiStats.total > 0 ? Math.round((kpiStats.onTarget / kpiStats.total) * 100) : 0}
+                  trend={kpiStats.onTarget >= kpiStats.total / 2 ? 'up' : 'down'}
+                />
+                <KPICard 
+                  title="Tareas Atrasadas" 
+                  value={overdueTasks.length.toString()} 
+                  unit="tareas"
+                  change={overdueTasks.length > 0 ? -Math.min(overdueTasks.length * 10, 100) : 0}
+                  trend={overdueTasks.length > 0 ? 'down' : 'up'}
+                />
+              </>
+            )}
+          </div>
         </div>
 
         {/* Tasks Section - 2 columns */}
@@ -698,31 +752,6 @@ const Index = () => {
           </div>
         </div>
 
-        {/* KPI Principal */}
-        {(() => {
-        const mainKPI = getMainKPI();
-        if (mainKPI) {
-          const history = getKPIHistory(mainKPI.name);
-          const trend = getKPITrend(mainKPI.name);
-          return <div className="mt-8 pt-8 border-t border-border">
-                <div className="mb-6">
-                  <h2 className="text-2xl font-bold text-foreground mb-2">KPI Principal</h2>
-                  <p className="text-sm text-muted-foreground">Evolución histórica de tu principal indicador</p>
-                </div>
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2">
-                    <TrendingUp className="h-5 w-5 text-primary" />
-                  </div>
-                  <Button variant="ghost" onClick={() => navigate('/kpis')}>
-                    Ver todos los KPIs
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
-                </div>
-                {loadingKPIs ? <div className="text-sm text-muted-foreground">Cargando KPI...</div> : <MainKPIChart kpi={mainKPI} history={history} trend={trend} />}
-              </div>;
-        }
-        return null;
-      })()}
         </div>
       </div>
 
