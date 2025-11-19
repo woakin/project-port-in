@@ -11,7 +11,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { toast } from 'sonner';
 import ReactMarkdown from 'react-markdown';
 import { useDropzone } from 'react-dropzone';
-import { useFileUpload, ACCEPTED_FILE_TYPES, UploadedFileInfo } from '@/hooks/useFileUpload';
+import { useFileUpload, ACCEPTED_FILE_TYPES, UploadedFileInfo, MAX_FILE_SIZE, MAX_FILES_PER_MESSAGE } from '@/hooks/useFileUpload';
 
 const PAGE_NAMES: Record<string, string> = {
   '/': 'Dashboard',
@@ -70,7 +70,7 @@ export function GlobalAIAssistant() {
   // File upload states
   const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
   const [uploadedDocs, setUploadedDocs] = useState<UploadedFileInfo[]>([]);
-  const { uploadFilesForChat, uploading, MAX_FILE_SIZE, MAX_FILES_PER_MESSAGE } = useFileUpload();
+  const { uploadFilesForChat, uploading: uploadingFiles } = useFileUpload();
   
   // Dropzone configuration
   const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
@@ -134,7 +134,7 @@ export function GlobalAIAssistant() {
   };
 
   const handleSendMessage = async () => {
-    if ((!input.trim() && attachedFiles.length === 0) || isStreaming || uploading) return;
+    if ((!input.trim() && attachedFiles.length === 0) || isStreaming || uploadingFiles) return;
 
     const userMessage = input.trim() || '📎 [Archivos adjuntos]';
     
@@ -560,7 +560,7 @@ export function GlobalAIAssistant() {
                       variant="ghost"
                       size="sm"
                       onClick={() => removeFile(idx)}
-                      disabled={uploading}
+                      disabled={uploadingFiles}
                       className="h-7 w-7 p-0 hover:bg-destructive/10 hover:text-destructive"
                       title="Quitar archivo"
                     >
@@ -569,7 +569,7 @@ export function GlobalAIAssistant() {
                   </div>
                 ))}
               </div>
-              {uploading && (
+              {uploadingFiles && (
                 <div className="flex items-center gap-2 text-xs text-primary">
                   <Loader2 className="w-3.5 h-3.5 animate-spin" />
                   <span>Subiendo y analizando archivos...</span>
@@ -583,7 +583,7 @@ export function GlobalAIAssistant() {
               variant="outline"
               size="icon"
               onClick={open}
-              disabled={isStreaming || uploading || attachedFiles.length >= MAX_FILES_PER_MESSAGE}
+              disabled={isStreaming || uploadingFiles || attachedFiles.length >= MAX_FILES_PER_MESSAGE}
               className="shrink-0"
               title="Adjuntar archivos"
             >
@@ -599,16 +599,16 @@ export function GlobalAIAssistant() {
                   : "Escribe tu mensaje... (Enter para enviar)"
               }
               className="resize-none min-h-[60px]"
-              disabled={isStreaming || uploading}
+              disabled={isStreaming || uploadingFiles}
             />
             <Button
               onClick={handleSendMessage}
-              disabled={isStreaming || uploading || (!input.trim() && attachedFiles.length === 0)}
+              disabled={isStreaming || uploadingFiles || (!input.trim() && attachedFiles.length === 0)}
               size="icon"
               className="shrink-0"
-              title={uploading ? "Subiendo archivos..." : "Enviar mensaje"}
+              title={uploadingFiles ? "Subiendo archivos..." : "Enviar mensaje"}
             >
-              {uploading ? (
+              {uploadingFiles ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
                 <Send className="h-4 w-4" />
