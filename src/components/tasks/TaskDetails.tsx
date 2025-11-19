@@ -314,31 +314,31 @@ export function TaskDetails({ task, open, onOpenChange, onStatusUpdate }: TaskDe
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-start justify-between gap-4">
-            <span className="flex-1">{task.title}</span>
-            <div className="flex gap-2">
-              {task.priority && (
-                <Badge variant={getPriorityColor(task.priority)}>
-                  {task.priority}
-                </Badge>
-              )}
-              <Select 
-                value={currentStatus} 
-                onValueChange={handleStatusChange}
-                disabled={updatingStatus}
-              >
-                <SelectTrigger className="w-[150px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="pending">Pendiente</SelectItem>
-                  <SelectItem value="in_progress">En Curso</SelectItem>
-                  <SelectItem value="completed">Completada</SelectItem>
-                  <SelectItem value="blocked">Bloqueada</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+          <DialogTitle className="pr-8">
+            {task.title}
           </DialogTitle>
+          <div className="flex gap-2 mt-2">
+            {task.priority && (
+              <Badge variant={getPriorityColor(task.priority)}>
+                {task.priority}
+              </Badge>
+            )}
+            <Select 
+              value={currentStatus} 
+              onValueChange={handleStatusChange}
+              disabled={updatingStatus}
+            >
+              <SelectTrigger className="w-[150px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="pending">Pendiente</SelectItem>
+                <SelectItem value="in_progress">En Curso</SelectItem>
+                <SelectItem value="completed">Completada</SelectItem>
+                <SelectItem value="blocked">Bloqueada</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </DialogHeader>
 
         <div className="space-y-4">
