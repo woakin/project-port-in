@@ -478,23 +478,21 @@ export function GlobalAIAssistant() {
         </SheetHeader>
 
         <div 
-          {...getRootProps()} 
-          className={`flex-1 overflow-y-auto p-4 space-y-4 relative ${
-            isDragActive ? 'border-2 border-dashed border-primary rounded-lg bg-primary/5' : ''
-          }`}
+          {...getRootProps({ onClick: (e) => e.stopPropagation() })} 
+          className="flex-1 overflow-y-auto p-4 space-y-4 relative"
         >
           <input {...getInputProps()} />
           
           {isDragActive && (
-            <div className="absolute inset-0 flex items-center justify-center bg-background/95 backdrop-blur-sm z-50 rounded-lg">
-              <div className="text-center">
-                <Paperclip className="w-12 h-12 mx-auto mb-3 text-primary animate-bounce" />
-                <p className="text-lg font-medium">Suelta los archivos aquí</p>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Máximo {MAX_FILES_PER_MESSAGE} archivos de 20MB cada uno
+            <div className="absolute inset-0 flex items-center justify-center bg-primary/10 backdrop-blur-sm z-50 rounded-lg border-2 border-dashed border-primary m-2">
+              <div className="text-center p-8 bg-background/80 rounded-lg">
+                <Paperclip className="w-16 h-16 mx-auto mb-4 text-primary animate-bounce" />
+                <p className="text-xl font-semibold text-primary mb-2">Suelta los archivos aquí</p>
+                <p className="text-sm text-muted-foreground">
+                  Máximo {MAX_FILES_PER_MESSAGE} archivos • 20MB cada uno
                 </p>
                 <p className="text-xs text-muted-foreground mt-2">
-                  PDF, Word, Excel, PowerPoint, imágenes, TXT, CSV
+                  PDF, Office, imágenes, TXT, CSV
                 </p>
               </div>
             </div>
