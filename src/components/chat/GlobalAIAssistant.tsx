@@ -83,8 +83,6 @@ export function GlobalAIAssistant() {
     },
     accept: ACCEPTED_FILE_TYPES as any,
     maxSize: MAX_FILE_SIZE,
-    noClick: true,
-    noKeyboard: true,
     multiple: true,
     maxFiles: MAX_FILES_PER_MESSAGE
   });
