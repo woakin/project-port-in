@@ -156,7 +156,8 @@ export default function Projects() {
 
   return (
     <MainLayout>
-      <div className="container mx-auto p-comfortable">
+      <div className="h-full overflow-y-auto">
+        <div className="container mx-auto p-comfortable">
         <div className="space-y-6">
           <div className="flex justify-between items-center">
             <div>
@@ -358,6 +359,7 @@ export default function Projects() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      </div>
     </MainLayout>
   );
 }

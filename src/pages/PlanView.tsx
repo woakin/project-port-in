@@ -95,7 +95,8 @@ export default function PlanView() {
 
   return (
     <MainLayout>
-      <div className="container mx-auto px-4 py-8">
+      <div className="h-full overflow-y-auto">
+        <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-6">
           <Button 
@@ -242,6 +243,7 @@ export default function PlanView() {
             </AccordionItem>
           ))}
         </Accordion>
+        </div>
       </div>
     </MainLayout>
   );

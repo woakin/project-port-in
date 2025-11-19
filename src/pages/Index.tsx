@@ -497,7 +497,8 @@ const Index = () => {
   // Si no hay proyecto, mostrar empty state
   if (user && !currentProject) {
     return <MainLayout>
-        <div className="container mx-auto p-comfortable flex items-center justify-center min-h-[70vh]">
+        <div className="h-full overflow-y-auto">
+          <div className="container mx-auto p-comfortable flex items-center justify-center min-h-[70vh]">
           <div className="text-center space-y-6 max-w-md">
             <div className="flex justify-center">
               <div className="h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center">
@@ -515,6 +516,7 @@ const Index = () => {
               Crear Primer Proyecto
             </Button>
           </div>
+          </div>
         </div>
       </MainLayout>;
   }
@@ -525,7 +527,8 @@ const Index = () => {
   const latestKPIs = getLatestKPIs();
   const completionRate = taskStats.total > 0 ? Math.round(taskStats.completed / taskStats.total * 100) : 0;
   return <MainLayout>
-      <div className="container mx-auto p-comfortable">
+      <div className="h-full overflow-y-auto">
+        <div className="container mx-auto p-comfortable">
         <div className="mb-comfortable">
           <div className="flex items-center justify-between">
             <div>
@@ -720,6 +723,7 @@ const Index = () => {
         }
         return null;
       })()}
+        </div>
       </div>
 
       <TaskDetails 

@@ -73,7 +73,8 @@ export default function Documents() {
 
   return (
     <MainLayout>
-      <div className="container mx-auto p-6 space-y-6">
+      <div className="h-full overflow-y-auto">
+        <div className="container mx-auto p-6 space-y-6">
         <div>
           <h1 className="text-3xl font-bold">Documentos</h1>
           <p className="text-muted-foreground mt-1">
@@ -285,6 +286,7 @@ export default function Documents() {
             )}
           </DialogContent>
         </Dialog>
+        </div>
       </div>
     </MainLayout>
   );
