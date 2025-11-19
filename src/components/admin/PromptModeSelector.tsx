@@ -1,6 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 
-type PromptMode = 'diagnosis' | 'strategic' | 'follow_up' | 'document';
+type PromptMode = 'diagnosis_style' | 'diagnosis_core' | 'strategic' | 'follow_up' | 'document';
 
 interface PromptModeSelectorProps {
   activeMode: PromptMode;
@@ -10,7 +10,8 @@ interface PromptModeSelectorProps {
 }
 
 const MODE_LABELS: Record<PromptMode, string> = {
-  diagnosis: 'Diagnóstico',
+  diagnosis_style: 'Diagnóstico - Style ✏️',
+  diagnosis_core: 'Diagnóstico - Core 🔒',
   strategic: 'Estratégico',
   follow_up: 'Seguimiento',
   document: 'Documentos'

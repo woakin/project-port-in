@@ -1402,7 +1402,26 @@ ${insights.length > 0 ? insights.map((i: string) => `- ${i}`).join('\n') : '- N/
 `;
         }
         
-        systemPrompt = `IMPORTANTE: Usa español de México en todas tus respuestas. Sé profesional, directo y cercano.
+        // ========== PARTE 1: STYLE (Editable) ==========
+        let stylePrompt = '';
+        try {
+          // Create admin client to fetch from system_config
+          const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+          const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+          const adminClient = createClient(supabaseUrl, supabaseServiceKey);
+          
+          const { data: styleData, error: styleError } = await adminClient
+            .from('system_config')
+            .select('value')
+            .eq('key', 'chat_diagnosis_style_prompt')
+            .maybeSingle();
+
+          if (!styleError && styleData?.value?.prompt?.trim()) {
+            stylePrompt = styleData.value.prompt;
+            console.log(`[diagnosis] Usando style prompt personalizado (${stylePrompt.length} chars)`);
+          } else {
+            // Default style prompt
+            stylePrompt = `IMPORTANTE: Usa español de México en todas tus respuestas. Sé profesional, directo y cercano.
 
 Eres un consultor empresarial experto de Alasha AI realizando un diagnóstico para ${companyName}, empresa del sector ${industry} en etapa ${stage}.
 
@@ -1411,7 +1430,25 @@ ${contextSection}
 
 ÁREA ACTUAL: ${currentAreaName.toUpperCase()}
 Estado del área: ${areaInfo?.status || 'in_progress'}
-Mensajes del usuario en esta área: ${messageCount}
+Mensajes del usuario en esta área: ${messageCount}`;
+            console.log('[diagnosis] Usando style prompt por defecto');
+          }
+        } catch (error) {
+          console.error('Error cargando style prompt:', error);
+          stylePrompt = `IMPORTANTE: Usa español de México en todas tus respuestas. Sé profesional, directo y cercano.
+
+Eres un consultor empresarial experto de Alasha AI realizando un diagnóstico para ${companyName}, empresa del sector ${industry} en etapa ${stage}.
+
+Estás evaluando el proyecto: ${projectName}${projectDesc ? ` - ${projectDesc}` : ''}
+${contextSection}
+
+ÁREA ACTUAL: ${currentAreaName.toUpperCase()}
+Estado del área: ${areaInfo?.status || 'in_progress'}
+Mensajes del usuario en esta área: ${messageCount}`;
+        }
+
+        // ========== PARTE 2: CORE LOGIC (Hardcoded, no editable) ==========
+        const coreLogic = `
 
 🤖 CAPACIDAD DE NAVEGACIÓN AUTOMÁTICA:
 Tienes acceso a la función \`advance_to_next_area\` que te permite avanzar automáticamente al siguiente área del diagnóstico.
@@ -1516,6 +1553,9 @@ ESTILO:
 - Relaciona con el sector ${industry}
 
 No menciones que eres IA, actúa como un consultor humano experimentado.`;
+
+        // ========== COMBINAR STYLE + CORE ==========
+        systemPrompt = `${stylePrompt}\n\n${coreLogic}`;
         break;
 
       case 'strategic':
