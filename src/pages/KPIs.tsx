@@ -330,7 +330,8 @@ export default function KPIs() {
 
   return (
     <MainLayout>
-      <div className="container mx-auto p-comfortable">
+      <div className="h-full overflow-y-auto">
+        <div className="container mx-auto p-comfortable">
         <div className="mb-comfortable">
           <div className="flex items-center justify-between mb-4">
             <div>
@@ -851,6 +852,7 @@ export default function KPIs() {
           setSelectedKPIForValue(null);
         }}
       />
+      </div>
     </MainLayout>
   );
 }
