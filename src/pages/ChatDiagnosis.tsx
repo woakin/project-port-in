@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card } from '@/components/shared/Card';
 import { toast } from '@/hooks/use-toast';
-import { Send, Loader2, CheckCircle, Home, Info, ArrowLeft, ArrowRight, MessageSquare, Mic, SkipForward, HelpCircle } from 'lucide-react';
+import { Send, Loader2, CheckCircle, Home, Info, ArrowLeft, ArrowRight, MessageSquare, Mic, SkipForward, HelpCircle, Paperclip, FileText, X } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { supabase } from '@/integrations/supabase/client';
 import ReactMarkdown from 'react-markdown';
@@ -22,6 +22,8 @@ import DocumentsSheet from '@/components/chat/sheets/DocumentsSheet';
 import DiagnosesSheet from '@/components/chat/sheets/DiagnosesSheet';
 import { AreaProgressBar } from '@/components/chat/AreaProgressBar';
 import { MainLayout } from '@/components/layout/MainLayout';
+import { useDropzone } from 'react-dropzone';
+import { useFileUpload, ACCEPTED_FILE_TYPES, UploadedFileInfo, MAX_FILE_SIZE, MAX_FILES_PER_MESSAGE } from '@/hooks/useFileUpload';
 
 type ChatMode = 'diagnosis' | 'strategic' | 'follow_up' | 'document';
 
@@ -72,6 +74,10 @@ export default function ChatDiagnosis() {
   const [chatMode, setChatMode] = useState<ChatMode>('diagnosis');
   const [showModeInfo, setShowModeInfo] = useState(false);
   const [openSheet, setOpenSheet] = useState<SheetType>(null);
+  
+  // Estados para subida de archivos
+  const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
+  const { uploadFilesForChat, uploading: uploadingFiles } = useFileUpload();
   
   // Estados para seguimiento de progreso por área (NUEVO SISTEMA)
   const [currentSection, setCurrentSection] = useState<'strategy'|'operations'|'finance'|'marketing'|'legal'|'technology'>('strategy');
@@ -1148,8 +1154,33 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
   const sendMessage = async () => {
     if (!input.trim() || sending || !companyInfo) return;
 
+    // Subir archivos si hay adjuntos
+    let uploadedFileInfos: UploadedFileInfo[] = [];
+    if (attachedFiles.length > 0) {
+      uploadedFileInfos = await uploadFilesForChat(attachedFiles, 'chat_upload');
+      if (uploadedFileInfos.length === 0) {
+        // Si falló la subida, no continuar
+        return;
+      }
+      // Limpiar archivos adjuntos después de subir
+      setAttachedFiles([]);
+    }
 
-    const userMessage: Message = { role: 'user', content: input };
+    // Incluir información de documentos analizados en el mensaje del usuario
+    let messageContent = input.trim();
+    if (uploadedFileInfos.length > 0) {
+      const docsContext = uploadedFileInfos
+        .map(f => {
+          if (!f.analysis) return `📎 ${f.name}`;
+          const summary = f.analysis.summary || 'No disponible';
+          const insights = f.analysis.insights?.join('; ') || 'No disponible';
+          return `📎 ${f.name}\nResumen: ${summary}\nInsights: ${insights}`;
+        })
+        .join('\n\n');
+      messageContent = `${messageContent}\n\n[Documentos adjuntos]\n${docsContext}`;
+    }
+
+    const userMessage: Message = { role: 'user', content: messageContent };
     const newMessages = [...messages, userMessage];
     setMessages(newMessages);
     
@@ -1969,6 +2000,28 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
 
       <div className="flex-shrink-0 border-t border-border bg-card">
         <div className="max-w-4xl mx-auto px-6 py-4">
+          {/* Lista de archivos adjuntos */}
+          {attachedFiles.length > 0 && (
+            <div className="mb-3 flex flex-wrap gap-2">
+              {attachedFiles.map((file, idx) => (
+                <div key={idx} className="flex items-center gap-2 bg-muted rounded-lg px-3 py-2 text-sm">
+                  <FileText className="h-4 w-4 text-muted-foreground" />
+                  <span className="truncate max-w-[200px]">{file.name}</span>
+                  <span className="text-xs text-muted-foreground">
+                    ({(file.size / 1024).toFixed(0)}KB)
+                  </span>
+                  <button
+                    onClick={() => setAttachedFiles(prev => prev.filter((_, i) => i !== idx))}
+                    className="ml-1 hover:text-destructive transition-colors"
+                    aria-label={`Remover ${file.name}`}
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          
           <div className="flex gap-2 items-end">
             <div className="relative flex-1">
               <Textarea
@@ -1986,18 +2039,58 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
                   }
                 }}
                 placeholder={getPlaceholder()}
-                disabled={sending || generatingDiagnosis}
+                disabled={sending || generatingDiagnosis || uploadingFiles}
                 autoFocus
-                className="min-h-[60px] max-h-[200px] resize-none overflow-y-auto transition-all pr-20"
+                className="min-h-[60px] max-h-[200px] resize-none overflow-y-auto transition-all pr-28"
                 rows={1}
                 style={{ height: '60px' }}
                 aria-label="Campo de entrada de mensaje"
                 aria-describedby="chat-input-hint"
                 aria-invalid={chatMode === 'diagnosis' && input.length > 0 && input.length < 20}
               />
+              
+              {/* Botón de adjuntar archivos */}
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-2 bottom-2 h-8 w-8"
+                      onClick={() => {
+                        const input = document.createElement('input');
+                        input.type = 'file';
+                        input.multiple = true;
+                        input.accept = Object.keys(ACCEPTED_FILE_TYPES).join(',');
+                        input.onchange = (e) => {
+                          const files = Array.from((e.target as HTMLInputElement).files || []);
+                          if (files.length + attachedFiles.length > MAX_FILES_PER_MESSAGE) {
+                            toast({
+                              title: 'Límite excedido',
+                              description: `Máximo ${MAX_FILES_PER_MESSAGE} archivos por mensaje`,
+                              variant: 'destructive'
+                            });
+                            return;
+                          }
+                          setAttachedFiles(prev => [...prev, ...files]);
+                        };
+                        input.click();
+                      }}
+                      disabled={sending || generatingDiagnosis || uploadingFiles}
+                    >
+                      <Paperclip className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Adjuntar archivos (máx {MAX_FILES_PER_MESSAGE}, {(MAX_FILE_SIZE / 1024 / 1024).toFixed(0)}MB c/u)</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              
               {/* FASE 3.2: Indicador de caracteres para respuestas largas */}
               {input.length > 500 && (
-                <span className="absolute bottom-2 right-2 text-xs text-muted-foreground bg-background/80 px-2 py-1 rounded">
+                <span className="absolute bottom-2 right-12 text-xs text-muted-foreground bg-background/80 px-2 py-1 rounded">
                   {input.length} caracteres
                 </span>
               )}
@@ -2012,11 +2105,11 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
                 <TooltipTrigger asChild>
                   <Button 
                     onClick={sendMessage} 
-                    disabled={sending || generatingDiagnosis || !input.trim()}
+                    disabled={sending || generatingDiagnosis || uploadingFiles || !input.trim()}
                     size="icon"
                     className="h-[60px] w-[60px] shrink-0"
                   >
-                    {sending ? (
+                    {sending || uploadingFiles ? (
                       <Loader2 className="h-5 w-5 animate-spin" />
                     ) : (
                       <Send className="h-5 w-5" />

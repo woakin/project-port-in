@@ -26,8 +26,8 @@ export const ACCEPTED_FILE_TYPES = {
 };
 
 // Límites de seguridad
-const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
-const MAX_FILES_PER_MESSAGE = 3;
+export const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
+export const MAX_FILES_PER_MESSAGE = 3;
 
 export interface UploadedFileInfo {
   id: string;
@@ -205,9 +205,6 @@ export function useFileUpload() {
 
   return {
     uploadFilesForChat,
-    uploading,
-    MAX_FILE_SIZE,
-    MAX_FILES_PER_MESSAGE,
-    ACCEPTED_FILE_TYPES
+    uploading
   };
 }
