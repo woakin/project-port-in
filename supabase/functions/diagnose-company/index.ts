@@ -158,6 +158,15 @@ Analiza estas respuestas y proporciona el diagnóstico en formato JSON.`;
       throw new Error('Invalid analysis structure from AI');
     }
 
+    // Calcular número de versión basado en diagnósticos previos
+    const { count: previousDiagnosesCount } = await supabase
+      .from('diagnoses')
+      .select('*', { count: 'exact', head: true })
+      .eq('company_id', companyId);
+
+    const newVersion = (previousDiagnosesCount || 0) + 1;
+    console.log(`Creating diagnosis version ${newVersion} for company ${companyId}`);
+
     // Guardar en base de datos
     const { data: diagnosis, error: dbError } = await supabase
       .from('diagnoses')
@@ -165,7 +174,7 @@ Analiza estas respuestas y proporciona el diagnóstico en formato JSON.`;
         company_id: companyId,
         user_id: userId,
         project_id: projectId,
-        version: 1,
+        version: newVersion,
         strategy_score: analysis.scores.strategy,
         operations_score: analysis.scores.operations,
         finance_score: analysis.scores.finance,
