@@ -145,7 +145,15 @@ export function useKPIs() {
   };
 
   const getMainKPI = () => {
-    return kpis.find(kpi => kpi.is_main_kpi);
+    // Find any record marked as main to get the KPI name
+    const mainKPIRecord = kpis.find(kpi => kpi.is_main_kpi);
+    if (!mainKPIRecord) return undefined;
+    
+    // Get ALL records of that KPI and return the most recent one
+    const allRecordsOfMainKPI = kpis.filter(kpi => kpi.name === mainKPIRecord.name);
+    return allRecordsOfMainKPI.sort((a, b) => 
+      new Date(b.period_start).getTime() - new Date(a.period_start).getTime()
+    )[0];
   };
 
   const addKPI = async (kpi: Omit<KPI, 'id' | 'created_at'>) => {
