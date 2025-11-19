@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { MessageCircle, Send, X, Sparkles, TrendingUp, CheckSquare, FileText, LayoutDashboard, Zap, Target, BarChart, Lightbulb, AlertCircle, Brain, Clock, Activity, FileCheck } from 'lucide-react';
+import { MessageCircle, Send, X, Sparkles, TrendingUp, CheckSquare, FileText, LayoutDashboard, Zap, Target, BarChart, Lightbulb, AlertCircle, Brain, Clock, Activity, FileCheck, Paperclip, Bot, User, Loader2 } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -10,6 +10,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { toast } from 'sonner';
 import ReactMarkdown from 'react-markdown';
+import { useDropzone } from 'react-dropzone';
+import { useFileUpload, ACCEPTED_FILE_TYPES, UploadedFileInfo } from '@/hooks/useFileUpload';
 
 const PAGE_NAMES: Record<string, string> = {
   '/': 'Dashboard',
@@ -64,6 +66,28 @@ export function GlobalAIAssistant() {
   const [isStreaming, setIsStreaming] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const previousPath = useRef(location.pathname);
+  
+  // File upload states
+  const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
+  const [uploadedDocs, setUploadedDocs] = useState<UploadedFileInfo[]>([]);
+  const { uploadFilesForChat, uploading, MAX_FILE_SIZE, MAX_FILES_PER_MESSAGE } = useFileUpload();
+  
+  // Dropzone configuration
+  const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
+    onDrop: (acceptedFiles) => {
+      const newFiles = [...attachedFiles, ...acceptedFiles].slice(0, MAX_FILES_PER_MESSAGE);
+      setAttachedFiles(newFiles);
+      if (acceptedFiles.length + attachedFiles.length > MAX_FILES_PER_MESSAGE) {
+        toast.warning(`Máximo ${MAX_FILES_PER_MESSAGE} archivos por mensaje`);
+      }
+    },
+    accept: ACCEPTED_FILE_TYPES as any,
+    maxSize: MAX_FILE_SIZE,
+    noClick: true,
+    noKeyboard: true,
+    multiple: true,
+    maxFiles: MAX_FILES_PER_MESSAGE
+  });
 
   // Update context when location or project changes
   useEffect(() => {
@@ -101,13 +125,33 @@ export function GlobalAIAssistant() {
     }
   }, [isOpen]);
 
-  const handleSendMessage = async () => {
-    if (!input.trim() || isStreaming) return;
+  const removeFile = (index: number) => {
+    setAttachedFiles(prev => prev.filter((_, i) => i !== index));
+  };
+  
+  const formatFileSize = (bytes: number): string => {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  };
 
-    const userMessage = input.trim();
+  const handleSendMessage = async () => {
+    if ((!input.trim() && attachedFiles.length === 0) || isStreaming || uploading) return;
+
+    const userMessage = input.trim() || '📎 [Archivos adjuntos]';
+    
+    // Upload files first if any
+    let uploadedFileInfo: UploadedFileInfo[] = [];
+    if (attachedFiles.length > 0) {
+      uploadedFileInfo = await uploadFilesForChat(attachedFiles);
+      if (uploadedFileInfo.length === 0) return;
+      setUploadedDocs(uploadedFileInfo);
+    }
+
     const currentMessages = [...messages, { role: 'user' as const, content: userMessage }];
     
     setInput('');
+    setAttachedFiles([]);
     addMessage({ role: 'user', content: userMessage });
     setIsStreaming(true);
 
@@ -135,6 +179,7 @@ export function GlobalAIAssistant() {
               data: context.data,
             },
             mode: 'contextual',
+            attachedDocuments: uploadedFileInfo.length > 0 ? uploadedFileInfo : undefined,
           }),
         }
       );

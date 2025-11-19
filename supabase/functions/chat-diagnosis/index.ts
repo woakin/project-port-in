@@ -306,7 +306,12 @@ const requestSchema = z.object({
       documentId: z.string().optional()
     }).optional(),
     data: z.any().optional()
-  }).optional()
+  }).optional(),
+  attachedDocuments: z.array(z.object({
+    id: z.string(),
+    name: z.string(),
+    analysis: z.any().nullable()
+  })).optional()
 });
 
 const kpiDataSchema = z.object({
@@ -446,7 +451,7 @@ serve(async (req) => {
       );
     }
 
-    const { messages, companyInfo, isComplete, mode = 'diagnosis', currentArea, areaProgress, context: requestContext } = validationResult.data;
+    const { messages, companyInfo, isComplete, mode = 'diagnosis', currentArea, areaProgress, context: requestContext, attachedDocuments = [] } = validationResult.data;
     
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
@@ -1348,6 +1353,42 @@ Eres Alasha AI, un asistente empresarial experto que ayuda al usuario en la pág
           depthGuidance = '\n\n**IMPORTANTE**: Solo has obtenido pocas respuestas. Haz preguntas más específicas que motiven ejemplos concretos, números, o detalles de su situación actual.';
         } else if (messageCount >= 3 && messageCount < 4) {
           depthGuidance = '\n\n**IMPORTANTE**: Necesitas obtener más información. Pide ejemplos específicos, datos cuantitativos si es posible, y profundiza en los puntos mencionados.';
+        }
+
+        // Build attached documents section
+        let attachedDocsSection = '';
+        if (attachedDocuments.length > 0) {
+          console.log(`📎 Processing ${attachedDocuments.length} attached documents`);
+          attachedDocsSection = `
+
+📎 DOCUMENTOS ADJUNTOS AL MENSAJE DEL USUARIO:
+
+El usuario ha compartido ${attachedDocuments.length} documento(s) relevante(s):
+
+${attachedDocuments.map((doc: any) => `
+📄 **${doc.name}**
+${doc.analysis ? `
+Categoría: ${doc.analysis.category || 'Sin categorizar'}
+Resumen: ${doc.analysis.summary || 'Sin análisis disponible'}
+
+Datos clave extraídos:
+${doc.analysis.key_data ? `
+- Fechas: ${doc.analysis.key_data.dates?.join(', ') || 'N/A'}
+- Números: ${doc.analysis.key_data.numbers?.join(', ') || 'N/A'}
+- Entidades: ${doc.analysis.key_data.entities?.join(', ') || 'N/A'}
+` : '- Sin datos clave extraídos'}
+
+Insights del análisis:
+${doc.analysis.insights && doc.analysis.insights.length > 0 ? doc.analysis.insights.map((i: string) => `- ${i}`).join('\n') : '- Sin insights disponibles'}
+` : 'Análisis aún no disponible'}
+`).join('\n')}
+
+⚠️ INSTRUCCIONES PARA USO DE DOCUMENTOS ADJUNTOS:
+1. Usa la información de estos documentos para responder con más precisión y contexto
+2. Referencia explícitamente el contenido cuando sea relevante (ej: "Según el documento de visión/misión que compartiste...")
+3. Si encuentras datos numéricos o KPIs en los documentos, menciónalos
+4. Si detectas insights importantes, incorpóralos en tu análisis del área actual
+`;
         }
 
         // Build context section based on historical data
