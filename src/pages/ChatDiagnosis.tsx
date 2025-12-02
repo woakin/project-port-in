@@ -106,6 +106,7 @@ export default function ChatDiagnosis() {
   const [showSummary, setShowSummary] = useState(false);
   const [hasInitialized, setHasInitialized] = useState(false);
   const [isAutoAdvancing, setIsAutoAdvancing] = useState(false);
+  const [sessionStartTime, setSessionStartTime] = useState<string | null>(null);
 
   // Funciones de persistencia en localStorage
   const saveDiagnosisState = () => {
@@ -119,6 +120,7 @@ export default function ChatDiagnosis() {
       currentSection,
       companyInfo,
       chatMode,
+      sessionStartTime,
       timestamp: Date.now()
     };
     
@@ -165,6 +167,7 @@ export default function ChatDiagnosis() {
         setCurrentSection(savedState.currentSection);
         setCompanyInfo(savedState.companyInfo);
         setChatMode(savedState.chatMode);
+        setSessionStartTime(savedState.sessionStartTime || new Date().toISOString());
         setStep('chat');
         
         toast({
@@ -197,6 +200,7 @@ export default function ChatDiagnosis() {
         if (data) {
           setDiagnosisVersion(data.version);
           setHasPreviousDiagnosis(true);
+          setSessionStartTime(new Date().toISOString());
           setStep('chat');
           const initialMessage = getInitialMessage(currentProject.name, 'diagnosis', true);
           setMessages([{ role: 'assistant', content: initialMessage }]);
@@ -1464,14 +1468,23 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
         completedAreas: completedAreas.map(a => a.name).join(', ')
       });
 
+      // Calcular duración de la sesión
+      const calculateDurationMinutes = (): number => {
+        if (!sessionStartTime) return 0;
+        const startDate = new Date(sessionStartTime);
+        const endDate = new Date();
+        const diffMs = endDate.getTime() - startDate.getTime();
+        return Math.round(diffMs / (1000 * 60));
+      };
+
       // Construir el transcript del chat
       const chatTranscript = {
         messages: messages.map(m => ({ role: m.role, content: m.content })),
         areas_covered: areaProgress.areas
           .filter(a => a.status === 'completed' || a.status === 'in_progress')
           .map(a => a.id),
-        duration_minutes: undefined, // Se podría calcular si se trackea el tiempo
-        started_at: undefined,
+        duration_minutes: calculateDurationMinutes(),
+        started_at: sessionStartTime,
         completed_at: new Date().toISOString()
       };
 
@@ -1665,6 +1678,7 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
             <div className="grid md:grid-cols-2 gap-6">
               {/* Opción: Chat con IA */}
               <div onClick={() => {
+                setSessionStartTime(new Date().toISOString());
                 setStep('chat');
                 const initialMessage = getInitialMessage(companyInfo?.projectName || 'tu proyecto', 'diagnosis');
                 setMessages([{
