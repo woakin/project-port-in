@@ -7,6 +7,21 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Chat message schema for transcript
+const chatMessageSchema = z.object({
+  role: z.enum(['user', 'assistant']),
+  content: z.string()
+});
+
+// Chat transcript schema
+const chatTranscriptSchema = z.object({
+  messages: z.array(chatMessageSchema),
+  areas_covered: z.array(z.string()),
+  duration_minutes: z.number().optional(),
+  started_at: z.string().optional(),
+  completed_at: z.string().optional()
+}).optional();
+
 // Validation schema
 const requestSchema = z.object({
   formResponses: z.object({
@@ -20,7 +35,8 @@ const requestSchema = z.object({
   maturityLevel: z.enum(['idea', 'startup', 'pyme', 'corporate']),
   companyId: z.string().uuid('Invalid company ID format'),
   userId: z.string().uuid('Invalid user ID format'),
-  projectId: z.string().uuid('Invalid project ID format')
+  projectId: z.string().uuid('Invalid project ID format'),
+  chatTranscript: chatTranscriptSchema
 });
 
 serve(async (req) => {
@@ -57,9 +73,10 @@ serve(async (req) => {
       );
     }
 
-    const { formResponses, maturityLevel, companyId, userId, projectId } = validationResult.data;
+    const { formResponses, maturityLevel, companyId, userId, projectId, chatTranscript } = validationResult.data;
 
     console.log('Analyzing diagnosis for company:', companyId);
+    console.log('Chat transcript provided:', !!chatTranscript, chatTranscript ? `${chatTranscript.messages.length} messages` : 'none');
 
     // Construir prompt para análisis
     const systemPrompt = `IMPORTANTE: Usa español de México en todas tus respuestas. Sé profesional, directo y cercano.
@@ -186,7 +203,8 @@ Analiza estas respuestas y proporciona el diagnóstico en formato JSON.`;
         insights: {
           insights: analysis.insights,
           critical_areas: analysis.critical_areas
-        }
+        },
+        chat_transcript: chatTranscript || null
       })
       .select()
       .single();
@@ -197,6 +215,7 @@ Analiza estas respuestas y proporciona el diagnóstico en formato JSON.`;
     }
 
     console.log('Diagnosis saved successfully:', diagnosis.id);
+    console.log('Chat transcript saved:', !!chatTranscript);
 
     return new Response(
       JSON.stringify({

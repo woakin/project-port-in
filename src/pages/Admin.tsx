@@ -8,11 +8,14 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Users, FileText, TrendingUp, Loader2, Building2, Activity } from 'lucide-react';
+import { Users, FileText, TrendingUp, Loader2, Building2, Activity, MessageSquare, BarChart3, ChevronDown, ChevronUp } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { PromptModeSelector } from '@/components/admin/PromptModeSelector';
 import { PromptEditor } from '@/components/admin/PromptEditor';
 import { PromptDefaultModal } from '@/components/admin/PromptDefaultModal';
+import { DiagnosisTranscriptModal } from '@/components/admin/DiagnosisTranscriptModal';
+import { CompanyStatusSummary } from '@/components/admin/CompanyStatusSummary';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 type PromptMode = 'diagnosis_style' | 'diagnosis_core' | 'strategic' | 'follow_up' | 'document';
 
@@ -21,6 +24,31 @@ type Stats = {
   totalDiagnoses: number;
   totalCompanies: number;
 };
+
+interface ChatTranscript {
+  messages: { role: 'user' | 'assistant'; content: string }[];
+  areas_covered: string[];
+  duration_minutes?: number;
+  started_at?: string;
+  completed_at?: string;
+}
+
+interface DiagnosisWithTranscript {
+  id: string;
+  maturity_level: string | null;
+  strategy_score: number | null;
+  operations_score: number | null;
+  finance_score: number | null;
+  marketing_score: number | null;
+  legal_score: number | null;
+  technology_score: number | null;
+  created_at: string;
+  chat_transcript: ChatTranscript | null;
+  insights: {
+    insights?: string[];
+    critical_areas?: string[];
+  } | null;
+}
 
 type UserWithDetails = {
   id: string;
@@ -33,17 +61,7 @@ type UserWithDetails = {
     name: string;
     industry: string | null;
   };
-  diagnoses: {
-    id: string;
-    maturity_level: string | null;
-    strategy_score: number | null;
-    operations_score: number | null;
-    finance_score: number | null;
-    marketing_score: number | null;
-    legal_score: number | null;
-    technology_score: number | null;
-    created_at: string;
-  }[];
+  diagnoses: DiagnosisWithTranscript[];
 };
 
 type PromptData = {
@@ -289,6 +307,12 @@ export default function Admin() {
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
   const [showDefaultModal, setShowDefaultModal] = useState(false);
+  const [selectedTranscript, setSelectedTranscript] = useState<{
+    transcript: ChatTranscript | null;
+    date: string;
+    companyName?: string;
+  } | null>(null);
+  const [expandedUsers, setExpandedUsers] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (authLoading || adminLoading) return;
@@ -601,7 +625,7 @@ export default function Admin() {
 
           const { data: diagnosesData } = await supabase
             .from('diagnoses')
-            .select('id, maturity_level, strategy_score, operations_score, finance_score, marketing_score, legal_score, technology_score, created_at')
+            .select('id, maturity_level, strategy_score, operations_score, finance_score, marketing_score, legal_score, technology_score, created_at, chat_transcript, insights')
             .eq('user_id', profile.id)
             .order('created_at', { ascending: false });
 
@@ -612,7 +636,11 @@ export default function Admin() {
             created_at: profile.created_at,
             company_id: profile.company_id,
             company: company || undefined,
-            diagnoses: diagnosesData || []
+            diagnoses: (diagnosesData || []).map(d => ({
+              ...d,
+              chat_transcript: d.chat_transcript as unknown as ChatTranscript | null,
+              insights: d.insights as unknown as { insights?: string[]; critical_areas?: string[] } | null
+            }))
           };
         })
       );
@@ -797,73 +825,120 @@ export default function Admin() {
                             <Activity className="h-4 w-4" />
                             Diagnósticos Realizados
                           </div>
-                          <div className="space-y-2">
+                          <div className="space-y-4">
                             {user.diagnoses.map((diagnosis) => (
-                              <div
-                                key={diagnosis.id}
-                                className="p-3 border border-border rounded-lg space-y-2"
-                              >
-                                <div className="flex items-center justify-between">
-                                  <div className="flex items-center gap-2">
-                                    <div
-                                      className={`w-2 h-2 rounded-full ${getMaturityColor(diagnosis.maturity_level)}`}
-                                    />
-                                    <span className="text-sm font-medium text-foreground">
-                                      {getMaturityLabel(diagnosis.maturity_level)}
-                                    </span>
-                                  </div>
-                                  <span className="text-xs text-muted-foreground">
-                                    {new Date(diagnosis.created_at).toLocaleDateString('es-ES')}
-                                  </span>
-                                </div>
-
-                                <div className="grid grid-cols-3 gap-2 text-xs">
-                                  <div className="space-y-1">
-                                    <p className="text-muted-foreground">Estrategia</p>
-                                    <p className="font-semibold text-foreground">
-                                      {diagnosis.strategy_score ?? '-'}/100
-                                    </p>
-                                  </div>
-                                  <div className="space-y-1">
-                                    <p className="text-muted-foreground">Operaciones</p>
-                                    <p className="font-semibold text-foreground">
-                                      {diagnosis.operations_score ?? '-'}/100
-                                    </p>
-                                  </div>
-                                  <div className="space-y-1">
-                                    <p className="text-muted-foreground">Finanzas</p>
-                                    <p className="font-semibold text-foreground">
-                                      {diagnosis.finance_score ?? '-'}/100
-                                    </p>
-                                  </div>
-                                  <div className="space-y-1">
-                                    <p className="text-muted-foreground">Marketing</p>
-                                    <p className="font-semibold text-foreground">
-                                      {diagnosis.marketing_score ?? '-'}/100
-                                    </p>
-                                  </div>
-                                  <div className="space-y-1">
-                                    <p className="text-muted-foreground">Legal</p>
-                                    <p className="font-semibold text-foreground">
-                                      {diagnosis.legal_score ?? '-'}/100
-                                    </p>
-                                  </div>
-                                  <div className="space-y-1">
-                                    <p className="text-muted-foreground">Tecnología</p>
-                                    <p className="font-semibold text-foreground">
-                                      {diagnosis.technology_score ?? '-'}/100
-                                    </p>
-                                  </div>
-                                </div>
-
-                                <div className="pt-2 border-t border-border">
+                              <div key={diagnosis.id} className="space-y-3">
+                                <div className="p-3 border border-border rounded-lg space-y-2">
                                   <div className="flex items-center justify-between">
-                                    <span className="text-xs text-muted-foreground">Promedio General</span>
-                                    <span className="text-sm font-bold text-primary">
-                                      {getAverageScore(diagnosis)}/100
+                                    <div className="flex items-center gap-2">
+                                      <div
+                                        className={`w-2 h-2 rounded-full ${getMaturityColor(diagnosis.maturity_level)}`}
+                                      />
+                                      <span className="text-sm font-medium text-foreground">
+                                        {getMaturityLabel(diagnosis.maturity_level)}
+                                      </span>
+                                    </div>
+                                    <span className="text-xs text-muted-foreground">
+                                      {new Date(diagnosis.created_at).toLocaleDateString('es-ES')}
                                     </span>
                                   </div>
+
+                                  <div className="grid grid-cols-3 gap-2 text-xs">
+                                    <div className="space-y-1">
+                                      <p className="text-muted-foreground">Estrategia</p>
+                                      <p className="font-semibold text-foreground">
+                                        {diagnosis.strategy_score ?? '-'}/100
+                                      </p>
+                                    </div>
+                                    <div className="space-y-1">
+                                      <p className="text-muted-foreground">Operaciones</p>
+                                      <p className="font-semibold text-foreground">
+                                        {diagnosis.operations_score ?? '-'}/100
+                                      </p>
+                                    </div>
+                                    <div className="space-y-1">
+                                      <p className="text-muted-foreground">Finanzas</p>
+                                      <p className="font-semibold text-foreground">
+                                        {diagnosis.finance_score ?? '-'}/100
+                                      </p>
+                                    </div>
+                                    <div className="space-y-1">
+                                      <p className="text-muted-foreground">Marketing</p>
+                                      <p className="font-semibold text-foreground">
+                                        {diagnosis.marketing_score ?? '-'}/100
+                                      </p>
+                                    </div>
+                                    <div className="space-y-1">
+                                      <p className="text-muted-foreground">Legal</p>
+                                      <p className="font-semibold text-foreground">
+                                        {diagnosis.legal_score ?? '-'}/100
+                                      </p>
+                                    </div>
+                                    <div className="space-y-1">
+                                      <p className="text-muted-foreground">Tecnología</p>
+                                      <p className="font-semibold text-foreground">
+                                        {diagnosis.technology_score ?? '-'}/100
+                                      </p>
+                                    </div>
+                                  </div>
+
+                                  <div className="pt-2 border-t border-border">
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-xs text-muted-foreground">Promedio General</span>
+                                      <span className="text-sm font-bold text-primary">
+                                        {getAverageScore(diagnosis)}/100
+                                      </span>
+                                    </div>
+                                  </div>
+
+                                  {/* Action Buttons */}
+                                  <div className="flex gap-2 pt-2">
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => setSelectedTranscript({
+                                        transcript: diagnosis.chat_transcript,
+                                        date: diagnosis.created_at,
+                                        companyName: user.company?.name
+                                      })}
+                                      className="flex-1"
+                                    >
+                                      <MessageSquare className="h-3 w-3 mr-1" />
+                                      Ver Transcripción
+                                    </Button>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => {
+                                        const newExpanded = new Set(expandedUsers);
+                                        const key = `${user.id}-${diagnosis.id}`;
+                                        if (newExpanded.has(key)) {
+                                          newExpanded.delete(key);
+                                        } else {
+                                          newExpanded.add(key);
+                                        }
+                                        setExpandedUsers(newExpanded);
+                                      }}
+                                      className="flex-1"
+                                    >
+                                      <BarChart3 className="h-3 w-3 mr-1" />
+                                      Resumen
+                                      {expandedUsers.has(`${user.id}-${diagnosis.id}`) ? (
+                                        <ChevronUp className="h-3 w-3 ml-1" />
+                                      ) : (
+                                        <ChevronDown className="h-3 w-3 ml-1" />
+                                      )}
+                                    </Button>
+                                  </div>
                                 </div>
+
+                                {/* Expanded Status Summary */}
+                                {expandedUsers.has(`${user.id}-${diagnosis.id}`) && (
+                                  <CompanyStatusSummary
+                                    diagnosis={diagnosis}
+                                    companyName={user.company?.name}
+                                  />
+                                )}
                               </div>
                             ))}
                           </div>
@@ -950,6 +1025,14 @@ export default function Admin() {
         mode={activePromptMode}
         defaultPrompt={DEFAULT_PROMPTS[activePromptMode]}
         onUseAsBase={handleUseDefaultAsBase}
+      />
+
+      <DiagnosisTranscriptModal
+        open={!!selectedTranscript}
+        onOpenChange={(open) => !open && setSelectedTranscript(null)}
+        transcript={selectedTranscript?.transcript || null}
+        diagnosisDate={selectedTranscript?.date || ''}
+        companyName={selectedTranscript?.companyName}
       />
       </div>
     </MainLayout>

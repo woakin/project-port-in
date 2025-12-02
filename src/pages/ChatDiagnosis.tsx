@@ -1464,6 +1464,19 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
         completedAreas: completedAreas.map(a => a.name).join(', ')
       });
 
+      // Construir el transcript del chat
+      const chatTranscript = {
+        messages: messages.map(m => ({ role: m.role, content: m.content })),
+        areas_covered: areaProgress.areas
+          .filter(a => a.status === 'completed' || a.status === 'in_progress')
+          .map(a => a.id),
+        duration_minutes: undefined, // Se podría calcular si se trackea el tiempo
+        started_at: undefined,
+        completed_at: new Date().toISOString()
+      };
+
+      console.log('📝 Chat transcript prepared:', chatTranscript.messages.length, 'messages');
+
       // Llamar a diagnose-company
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/diagnose-company`,
@@ -1478,7 +1491,8 @@ Puedo ayudarte a analizar documentos, extraer insights de métricas, identificar
             maturityLevel: companyInfo.stage,
             companyId: currentProject.company_id,
             userId: user.id,
-            projectId: currentProject.id
+            projectId: currentProject.id,
+            chatTranscript: chatTranscript
           }),
         }
       );
