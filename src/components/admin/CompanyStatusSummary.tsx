@@ -34,6 +34,7 @@ interface DiagnosisData {
 interface CompanyStatusSummaryProps {
   diagnosis: DiagnosisData;
   companyName?: string;
+  variant?: 'compact' | 'full';
 }
 
 const AREA_CONFIG = [
@@ -54,7 +55,7 @@ const AREA_NAMES: Record<string, string> = {
   technology: 'Tecnología'
 };
 
-export function CompanyStatusSummary({ diagnosis, companyName }: CompanyStatusSummaryProps) {
+export function CompanyStatusSummary({ diagnosis, companyName, variant = 'full' }: CompanyStatusSummaryProps) {
   const scores = AREA_CONFIG.map(area => ({
     ...area,
     score: diagnosis[area.key as keyof DiagnosisData] as number | null
@@ -87,34 +88,42 @@ export function CompanyStatusSummary({ diagnosis, companyName }: CompanyStatusSu
   const sortedScores = [...scores].sort((a, b) => (a.score || 0) - (b.score || 0));
   const weakestAreas = sortedScores.slice(0, 3).filter(a => (a.score || 0) < 60);
 
+  // Compact variant shows only header + overall score
+  if (variant === 'compact') {
+    return (
+      <div className="space-y-3">
+        {/* Header with overall health */}
+        <div className="flex items-start justify-between">
+          <div>
+            <h3 className="text-sm font-semibold text-foreground">
+              Resumen de Estatus
+              {companyName && <span className="font-normal text-muted-foreground"> - {companyName}</span>}
+            </h3>
+            <p className="text-xs text-muted-foreground">
+              Diagnóstico del {new Date(diagnosis.created_at).toLocaleDateString('es-ES')}
+            </p>
+          </div>
+          <div className={cn('flex items-center gap-2 px-2 py-1 rounded-full', status.bgColor)}>
+            <StatusIcon className={cn('h-3 w-3', status.color)} />
+            <span className={cn('text-xs font-medium', status.color)}>{status.label}</span>
+          </div>
+        </div>
+
+        {/* Score Overview */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-foreground">Puntuación General</span>
+            <span className="text-lg font-bold text-foreground">{avgScore}/100</span>
+          </div>
+          <Progress value={avgScore} className="h-2" />
+        </div>
+      </div>
+    );
+  }
+
+  // Full variant shows detailed information (without header, used for expansion)
   return (
-    <Card variant="content" className="space-y-6">
-      {/* Header with overall health */}
-      <div className="flex items-start justify-between">
-        <div>
-          <h3 className="text-lg font-semibold text-foreground">
-            Resumen de Estatus
-            {companyName && <span className="font-normal text-muted-foreground"> - {companyName}</span>}
-          </h3>
-          <p className="text-sm text-muted-foreground">
-            Diagnóstico del {new Date(diagnosis.created_at).toLocaleDateString('es-ES')}
-          </p>
-        </div>
-        <div className={cn('flex items-center gap-2 px-3 py-1.5 rounded-full', status.bgColor)}>
-          <StatusIcon className={cn('h-4 w-4', status.color)} />
-          <span className={cn('text-sm font-medium', status.color)}>{status.label}</span>
-        </div>
-      </div>
-
-      {/* Score Overview */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <span className="text-sm font-medium text-foreground">Puntuación General</span>
-          <span className="text-2xl font-bold text-foreground">{avgScore}/100</span>
-        </div>
-        <Progress value={avgScore} className="h-3" />
-      </div>
-
+    <Card variant="content" className="space-y-4">
       {/* Area Scores Grid */}
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
         {AREA_CONFIG.map(area => {

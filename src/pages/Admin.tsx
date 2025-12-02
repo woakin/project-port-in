@@ -828,23 +828,16 @@ export default function Admin() {
                           <div className="space-y-4">
                             {user.diagnoses.map((diagnosis) => (
                               <div key={diagnosis.id} className="space-y-3">
-                                <div className="p-3 border border-border rounded-lg space-y-2">
-                                  <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-2">
-                                      <div
-                                        className={`w-2 h-2 rounded-full ${getMaturityColor(diagnosis.maturity_level)}`}
-                                      />
-                                      <span className="text-sm font-medium text-foreground">
-                                        {getMaturityLabel(diagnosis.maturity_level)}
-                                      </span>
-                                    </div>
-                                    <span className="text-xs text-muted-foreground">
-                                      {new Date(diagnosis.created_at).toLocaleDateString('es-ES')}
-                                    </span>
-                                  </div>
+                                <div className="p-3 border border-border rounded-lg space-y-3">
+                                  {/* Always visible: Compact summary with overall score */}
+                                  <CompanyStatusSummary
+                                    diagnosis={diagnosis}
+                                    companyName={user.company?.name}
+                                    variant="compact"
+                                  />
 
                                   {/* Action Buttons */}
-                                  <div className="flex gap-2 pt-2">
+                                  <div className="flex gap-2 pt-2 border-t border-border">
                                     <Button
                                       variant="outline"
                                       size="sm"
@@ -874,7 +867,7 @@ export default function Admin() {
                                       className="flex-1"
                                     >
                                       <BarChart3 className="h-3 w-3 mr-1" />
-                                      Resumen
+                                      Ver Detalle
                                       {expandedUsers.has(`${user.id}-${diagnosis.id}`) ? (
                                         <ChevronUp className="h-3 w-3 ml-1" />
                                       ) : (
@@ -884,11 +877,11 @@ export default function Admin() {
                                   </div>
                                 </div>
 
-                                {/* Expanded Status Summary */}
+                                {/* Expanded: Full detail with area scores and insights */}
                                 {expandedUsers.has(`${user.id}-${diagnosis.id}`) && (
                                   <CompanyStatusSummary
                                     diagnosis={diagnosis}
-                                    companyName={user.company?.name}
+                                    variant="full"
                                   />
                                 )}
                               </div>
