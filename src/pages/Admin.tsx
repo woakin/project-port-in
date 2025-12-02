@@ -843,54 +843,6 @@ export default function Admin() {
                                     </span>
                                   </div>
 
-                                  <div className="grid grid-cols-3 gap-2 text-xs">
-                                    <div className="space-y-1">
-                                      <p className="text-muted-foreground">Estrategia</p>
-                                      <p className="font-semibold text-foreground">
-                                        {diagnosis.strategy_score ?? '-'}/100
-                                      </p>
-                                    </div>
-                                    <div className="space-y-1">
-                                      <p className="text-muted-foreground">Operaciones</p>
-                                      <p className="font-semibold text-foreground">
-                                        {diagnosis.operations_score ?? '-'}/100
-                                      </p>
-                                    </div>
-                                    <div className="space-y-1">
-                                      <p className="text-muted-foreground">Finanzas</p>
-                                      <p className="font-semibold text-foreground">
-                                        {diagnosis.finance_score ?? '-'}/100
-                                      </p>
-                                    </div>
-                                    <div className="space-y-1">
-                                      <p className="text-muted-foreground">Marketing</p>
-                                      <p className="font-semibold text-foreground">
-                                        {diagnosis.marketing_score ?? '-'}/100
-                                      </p>
-                                    </div>
-                                    <div className="space-y-1">
-                                      <p className="text-muted-foreground">Legal</p>
-                                      <p className="font-semibold text-foreground">
-                                        {diagnosis.legal_score ?? '-'}/100
-                                      </p>
-                                    </div>
-                                    <div className="space-y-1">
-                                      <p className="text-muted-foreground">Tecnología</p>
-                                      <p className="font-semibold text-foreground">
-                                        {diagnosis.technology_score ?? '-'}/100
-                                      </p>
-                                    </div>
-                                  </div>
-
-                                  <div className="pt-2 border-t border-border">
-                                    <div className="flex items-center justify-between">
-                                      <span className="text-xs text-muted-foreground">Promedio General</span>
-                                      <span className="text-sm font-bold text-primary">
-                                        {getAverageScore(diagnosis)}/100
-                                      </span>
-                                    </div>
-                                  </div>
-
                                   {/* Action Buttons */}
                                   <div className="flex gap-2 pt-2">
                                     <Button
