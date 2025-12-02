@@ -152,6 +152,7 @@ export type Database = {
       }
       diagnoses: {
         Row: {
+          chat_transcript: Json | null
           company_id: string
           created_at: string | null
           finance_score: number | null
@@ -170,6 +171,7 @@ export type Database = {
           version: number | null
         }
         Insert: {
+          chat_transcript?: Json | null
           company_id: string
           created_at?: string | null
           finance_score?: number | null
@@ -188,6 +190,7 @@ export type Database = {
           version?: number | null
         }
         Update: {
+          chat_transcript?: Json | null
           company_id?: string
           created_at?: string | null
           finance_score?: number | null
